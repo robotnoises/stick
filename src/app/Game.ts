@@ -1,0 +1,69 @@
+import { BabylonBootstrap } from '../engine/BabylonBootstrap';
+import { DebugOverlay } from '../debug/DebugOverlay';
+import { LightingController } from '../environment/LightingController';
+import { TimeOfDaySystem } from '../environment/TimeOfDaySystem';
+import { PlayerController } from '../player/PlayerController';
+import { TestTerrainSystem } from '../world/TestTerrainSystem';
+import { EngineContext } from './EngineContext';
+import { defaultGameConfig, type GameConfig } from './GameConfig';
+import type { GameSystem } from './GameSystem';
+
+export class Game {
+  private _context: EngineContext | null = null;
+  private readonly _systems: GameSystem[] = [];
+  private _lastFrameTime = 0;
+
+  public constructor(
+    private readonly _canvas: HTMLCanvasElement,
+    private readonly _config: GameConfig = defaultGameConfig,
+  ) {}
+
+  public async start(): Promise<void> {
+    const engine = await BabylonBootstrap.createEngine(this._canvas);
+    const scene = BabylonBootstrap.createScene(engine);
+    this._context = new EngineContext(this._canvas, engine, scene, this._config);
+
+    const time = new TimeOfDaySystem(this._config.startTimeOfDayHours, this._config.timeScale);
+    const terrain = new TestTerrainSystem(this._context);
+    const player = new PlayerController(this._context);
+    const lighting = new LightingController(this._context, time);
+    const debug = new DebugOverlay(player, time);
+
+    this._systems.push(time, terrain, player, lighting, debug);
+
+    for (const system of this._systems) {
+      await system.initialize?.();
+    }
+
+    window.addEventListener('resize', this._handleResize);
+    this._lastFrameTime = performance.now();
+
+    engine.runRenderLoop(() => {
+      const now = performance.now();
+      const deltaSeconds = Math.min((now - this._lastFrameTime) / 1000, 0.1);
+      this._lastFrameTime = now;
+
+      for (const system of this._systems) {
+        system.update(deltaSeconds);
+      }
+
+      scene.render();
+    });
+  }
+
+  public dispose(): void {
+    window.removeEventListener('resize', this._handleResize);
+
+    for (const system of [...this._systems].reverse()) {
+      system.dispose?.();
+    }
+
+    this._systems.length = 0;
+    this._context?.engine.dispose();
+    this._context = null;
+  }
+
+  private readonly _handleResize = (): void => {
+    this._context?.engine.resize();
+  };
+}
