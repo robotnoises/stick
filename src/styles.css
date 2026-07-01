@@ -28,7 +28,13 @@ body {
   border-radius: 4px;
   color: #f3ead8;
   background: rgb(0 0 0 / 45%);
-  font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font:
+    12px/1.4 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Monaco,
+    Consolas,
+    monospace;
   pointer-events: none;
   white-space: pre;
 }

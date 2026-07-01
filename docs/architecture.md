@@ -99,9 +99,9 @@ Use a small lifecycle interface so major systems can be started, updated, and di
 
 ```ts
 export interface GameSystem {
-  initialize?(): Promise<void> | void;
-  update(deltaSeconds: number): void;
-  dispose?(): void;
+  initialize?(): Promise<void> | void
+  update(deltaSeconds: number): void
+  dispose?(): void
 }
 ```
 
@@ -117,7 +117,7 @@ export class ChunkCoord {
   ) {}
 
   public get key(): string {
-    return `${this.x}_${this.z}`;
+    return `${this.x}_${this.z}`
   }
 }
 ```
@@ -211,30 +211,30 @@ Responsibilities:
 
 ```ts
 export interface SaveGame {
-  version: number;
-  seed: number;
+  version: number
+  seed: number
   player: {
-    position: [number, number, number];
-    yaw: number;
-    survival: PlayerSurvivalSnapshot;
-  };
+    position: [number, number, number]
+    yaw: number
+    survival: PlayerSurvivalSnapshot
+  }
   world: {
-    timeOfDayHours: number;
-    elapsedWorldSeconds: number;
-  };
+    timeOfDayHours: number
+    elapsedWorldSeconds: number
+  }
 }
 
 export interface ChunkSaveData {
-  key: string;
-  coordX: number;
-  coordZ: number;
-  lastSavedTimestamp: number;
-  mutations: ChunkMutation[];
+  key: string
+  coordX: number
+  coordZ: number
+  lastSavedTimestamp: number
+  mutations: ChunkMutation[]
 }
 
 export type ChunkMutation =
-  | { type: 'propRemoved'; propId: string }
-  | { type: 'terrainDelta'; vertexIndex: number; deltaY: number };
+  | { type: "propRemoved"; propId: string }
+  | { type: "terrainDelta"; vertexIndex: number; deltaY: number }
 ```
 
 ## Near-Term Implementation Recommendation
