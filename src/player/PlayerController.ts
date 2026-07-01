@@ -5,6 +5,8 @@ import type { GameSystem } from "../app/GameSystem"
 import { Compass } from "./Compass"
 
 export class PlayerController implements GameSystem {
+  private static readonly _mouseSensitivity = 1 / 2800
+
   private readonly _camera: UniversalCamera
   private readonly _compass: Compass
 
@@ -17,6 +19,7 @@ export class PlayerController implements GameSystem {
     this._camera.minZ = 0.05
     this._camera.speed = 1.4
     this._camera.angularSensibility = 2800
+    this.setInvertMouseY(false)
     this._camera.keysUp = [87]
     this._camera.keysDown = [83]
     this._camera.keysLeft = [65]
@@ -33,6 +36,15 @@ export class PlayerController implements GameSystem {
 
   public get headingDegrees(): number {
     return this._compass.getHeadingDegrees()
+  }
+
+  public setInvertMouseY(invertMouseY: boolean): void {
+    const pointerRotateEntries = this._camera.movement.input.getEntries("pointer", "rotate")
+
+    for (const entry of pointerRotateEntries) {
+      entry.sensitivityX = PlayerController._mouseSensitivity
+      entry.sensitivityY = (invertMouseY ? -1 : 1) * PlayerController._mouseSensitivity
+    }
   }
 
   public update(_deltaSeconds: number): void {

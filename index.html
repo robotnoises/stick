@@ -7,6 +7,18 @@
   </head>
   <body>
     <canvas id="game-canvas"></canvas>
+
+    <div id="options-ui" aria-label="Game options">
+      <button id="options-button" type="button">Options</button>
+      <section id="options-panel" hidden>
+        <h2>Options</h2>
+        <label>
+          <input id="invert-mouse-y" type="checkbox" />
+          Invert mouse Y axis
+        </label>
+      </section>
+    </div>
+
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

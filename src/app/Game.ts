@@ -6,16 +6,19 @@ import { PlayerController } from "../player/PlayerController"
 import { TestTerrainSystem } from "../world/TestTerrainSystem"
 import { EngineContext } from "./EngineContext"
 import { defaultGameConfig, type GameConfig } from "./GameConfig"
+import { defaultGameSettings, type GameSettings } from "./GameSettings"
 import type { GameSystem } from "./GameSystem"
 
 export class Game {
   private _context: EngineContext | null = null
   private readonly _systems: GameSystem[] = []
   private _lastFrameTime = 0
+  private _player: PlayerController | null = null
 
   public constructor(
     private readonly _canvas: HTMLCanvasElement,
     private readonly _config: GameConfig = defaultGameConfig,
+    private _settings: GameSettings = defaultGameSettings,
   ) {}
 
   public async start(): Promise<void> {
@@ -27,6 +30,9 @@ export class Game {
     const time = new TimeOfDaySystem(this._config.startTimeOfDayHours, this._config.timeScale)
     const terrain = new TestTerrainSystem(this._context)
     const player = new PlayerController(this._context)
+    player.setInvertMouseY(this._settings.invertMouseY)
+    this._player = player
+
     const lighting = new LightingController(this._context, time)
     const debug = new DebugOverlay(player, time)
 
@@ -54,6 +60,11 @@ export class Game {
     })
   }
 
+  public updateSettings(settings: GameSettings): void {
+    this._settings = settings
+    this._player?.setInvertMouseY(settings.invertMouseY)
+  }
+
   public dispose(): void {
     window.removeEventListener("resize", this._handleResize)
 
@@ -62,6 +73,7 @@ export class Game {
     }
 
     this._systems.length = 0
+    this._player = null
     this._context?.engine.dispose()
     this._context = null
   }
