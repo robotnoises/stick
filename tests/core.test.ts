@@ -175,9 +175,16 @@ describe("player, compass, debug overlay, and time", () => {
     expect((context.scene.activeCamera as any).rotation.y).toBeCloseTo((270 * Math.PI) / 180)
 
     player.setInvertMouseY(true)
+    player.setPositionClampProvider((x, z) => ({
+      x: Math.min(Math.max(x, 0), 5),
+      z: Math.min(Math.max(z, 0), 5),
+    }))
+    player.setPosition(10, 0, -10)
     player.setGroundHeightProvider((x, z) => x + z)
     player.update(0.016)
 
+    expect(player.position.x).toBe(5)
+    expect(player.position.z).toBe(0)
     expect(player.position.y).toBeCloseTo(player.position.x + player.position.z + 1.7)
     expect(player.headingDegrees).toBe(0)
     expect(player.forwardDirection).toEqual(new FakeVector3(0, 0, 1))

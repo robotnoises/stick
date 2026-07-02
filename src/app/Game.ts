@@ -7,6 +7,7 @@ import { FlashlightController } from "../items/FlashlightController"
 import { InventorySystem } from "../items/InventorySystem"
 import { PlayerController } from "../player/PlayerController"
 import { ProgressiveTerrainSystem } from "../world/ProgressiveTerrainSystem"
+import { WorldBoundsHelper } from "../world/WorldBounds"
 import { EngineContext } from "./EngineContext"
 import { defaultGameConfig, type GameConfig } from "./GameConfig"
 import { defaultGameSettings, type GameSettings } from "./GameSettings"
@@ -33,8 +34,10 @@ export class Game {
     const time = new TimeOfDaySystem(this._config.startTimeOfDayHours, this._config.timeScale)
     const player = new PlayerController(this._context)
     const terrain = new ProgressiveTerrainSystem(this._context, player)
+    const worldBounds = new WorldBoundsHelper(this._context.config.worldBounds)
 
     player.setInvertMouseY(this._settings.invertMouseY)
+    player.setPositionClampProvider((worldX, worldZ) => worldBounds.clampPosition(worldX, worldZ))
     player.setGroundHeightProvider((worldX, worldZ) => terrain.getHeightAt(worldX, worldZ))
     this._player = player
 

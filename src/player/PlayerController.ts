@@ -12,6 +12,7 @@ export class PlayerController implements GameSystem {
   private readonly _camera: UniversalCamera
   private readonly _compass: Compass
   private _groundHeightProvider: ((worldX: number, worldZ: number) => number) | null = null
+  private _positionClampProvider: ((worldX: number, worldZ: number) => { readonly x: number; readonly z: number }) | null = null
 
   public constructor(private readonly _context: EngineContext) {
     this._camera = new UniversalCamera(
@@ -59,6 +60,12 @@ export class PlayerController implements GameSystem {
     this._groundHeightProvider = provider
   }
 
+  public setPositionClampProvider(
+    provider: (worldX: number, worldZ: number) => { readonly x: number; readonly z: number },
+  ): void {
+    this._positionClampProvider = provider
+  }
+
   public setPosition(x: number, y: number, z: number): void {
     this._camera.position.set(x, y, z)
   }
@@ -68,6 +75,13 @@ export class PlayerController implements GameSystem {
   }
 
   public update(_deltaSeconds: number): void {
+    const clampedPosition = this._positionClampProvider?.(this._camera.position.x, this._camera.position.z)
+
+    if (clampedPosition) {
+      this._camera.position.x = clampedPosition.x
+      this._camera.position.z = clampedPosition.z
+    }
+
     const groundHeight =
       this._groundHeightProvider?.(this._camera.position.x, this._camera.position.z) ?? 0
 
