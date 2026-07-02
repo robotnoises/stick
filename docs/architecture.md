@@ -199,13 +199,9 @@ Responsibilities:
 - use instancing/thin instances where possible
 - avoid storing every generated prop unless mutated by the player
 
-### PersistenceSystem
+### Persistence Repositories
 
-Responsibilities:
-
-- save/load global game state
-- save/load chunk mutation records
-- hide IndexedDB/localForage implementation details
+Persistence should be accessed through repository classes/interfaces, not directly from gameplay systems. See [Data and Persistence](data.md) for repository contracts, storage boundary rules, and initial persistence shapes.
 
 ## Persistence Shape
 

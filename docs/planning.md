@@ -66,7 +66,12 @@ Build a playable vertical slice proving scale, navigation, terrain streaming, an
 
 ### Milestone 2: Terrain Prototype
 
+See [Progressive Terrain Plan](progressive-terrain.md).
+
 - Deterministic seed-based chunk coordinates.
+- First-generate terrain into memory, then persist visited chunk snapshots to IndexedDB.
+- Rehydrate persisted chunks when the player returns to an area.
+- Dispose distant rendered terrain and evict far raw chunk data from memory.
 - Heightmap generation in worker.
 - Chunk mesh generation on main thread or worker-assisted pipeline.
 - Load/unload chunks around player.
