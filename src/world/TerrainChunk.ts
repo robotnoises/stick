@@ -10,6 +10,7 @@ export interface TerrainChunkMaterials {
   readonly terrain: StandardMaterial
   readonly trunk: StandardMaterial
   readonly needles: StandardMaterial
+  readonly rock: StandardMaterial
 }
 
 export class TerrainChunk {
@@ -104,10 +105,20 @@ export class TerrainChunk {
   }
 
   private _createProp(prop: GeneratedPropData): void {
-    if (prop.type !== "pine") {
-      return
+    switch (prop.type) {
+      case "pine":
+        this._createPineProp(prop)
+        return
+      case "rock":
+        this._createRockProp(prop)
+        return
+      case "log":
+        this._createLogProp(prop)
+        return
     }
+  }
 
+  private _createPineProp(prop: GeneratedPropData): void {
     const position = new Vector3(prop.position[0], prop.position[1], prop.position[2])
     const trunkHeight = 4.5 * prop.scale
     const needlesHeight = 6 * prop.scale
@@ -142,5 +153,44 @@ export class TerrainChunk {
     needles.material = this._materials.needles
 
     this._props.push(trunk, needles)
+  }
+
+  private _createRockProp(prop: GeneratedPropData): void {
+    const rock = MeshBuilder.CreateSphere(
+      prop.id,
+      {
+        diameter: 1.2 * prop.scale,
+        segments: 6,
+      },
+      this._context.scene,
+    )
+
+    rock.position = new Vector3(prop.position[0], prop.position[1] + 0.35 * prop.scale, prop.position[2])
+    rock.rotation.y = prop.rotationY
+    rock.material = this._materials.rock
+
+    this._props.push(rock)
+  }
+
+  private _createLogProp(prop: GeneratedPropData): void {
+    const logLength = 3.2 * prop.scale
+    const logDiameter = 0.45 * prop.scale
+    const log = MeshBuilder.CreateCylinder(
+      prop.id,
+      {
+        height: logLength,
+        diameterTop: logDiameter,
+        diameterBottom: logDiameter,
+        tessellation: 8,
+      },
+      this._context.scene,
+    )
+
+    log.position = new Vector3(prop.position[0], prop.position[1] + logDiameter / 2, prop.position[2])
+    log.rotation.y = prop.rotationY
+    log.rotation.z = Math.PI / 2
+    log.material = this._materials.trunk
+
+    this._props.push(log)
   }
 }

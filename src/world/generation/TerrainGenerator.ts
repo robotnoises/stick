@@ -85,26 +85,72 @@ export class TerrainGenerator {
 
   private _generateProps(coord: ChunkCoord): GeneratedPropData[] {
     const random = this._createRandom(this._hash(coord.x, coord.z, 97))
-    const propCount = 3 + Math.floor(random() * 5)
+    const candidateCount = 12
     const props: GeneratedPropData[] = []
 
-    for (let index = 0; index < propCount; index += 1) {
+    for (let index = 0; index < candidateCount; index += 1) {
       const localX = 4 + random() * (this._options.chunkSizeMeters - 8)
       const localZ = 4 + random() * (this._options.chunkSizeMeters - 8)
       const worldX = coord.x * this._options.chunkSizeMeters + localX
       const worldZ = coord.z * this._options.chunkSizeMeters + localZ
       const height = this.getHeight(worldX, worldZ)
+      const material = this.getTerrainMaterial(worldX, worldZ, height)
+      const propType = this._choosePropType(material, random())
+
+      if (!propType) {
+        continue
+      }
 
       props.push({
-        id: `${coord.key}_pine_${index}`,
-        type: "pine",
+        id: `${coord.key}_${propType}_${index}`,
+        type: propType,
         position: [worldX, height, worldZ],
         rotationY: random() * Math.PI * 2,
-        scale: 0.75 + random() * 0.75,
+        scale: this._getPropScale(propType, random()),
       })
     }
 
     return props
+  }
+
+  private _choosePropType(
+    material: TerrainMaterialId,
+    roll: number,
+  ): GeneratedPropData["type"] | null {
+    switch (material) {
+      case TerrainMaterial.Sand:
+        return roll > 0.93 ? "rock" : null
+      case TerrainMaterial.Dirt:
+        if (roll < 0.18) {
+          return "rock"
+        }
+
+        return roll < 0.24 ? "pine" : null
+      case TerrainMaterial.PineNeedles:
+        if (roll < 0.46) {
+          return "pine"
+        }
+
+        return roll < 0.62 ? "log" : null
+      case TerrainMaterial.Grass:
+      default:
+        if (roll < 0.28) {
+          return "pine"
+        }
+
+        return roll < 0.36 ? "rock" : null
+    }
+  }
+
+  private _getPropScale(type: GeneratedPropData["type"], roll: number): number {
+    switch (type) {
+      case "rock":
+        return 0.45 + roll * 1.1
+      case "log":
+        return 0.7 + roll * 0.8
+      case "pine":
+        return 0.75 + roll * 0.75
+    }
   }
 
   private _toWorldCoordinate(chunkAxis: number, vertexAxis: number): number {

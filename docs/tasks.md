@@ -87,7 +87,7 @@
 - [ ] Add tree states:
   - [ ] alive
   - [ ] dead
-  - [ ] fallen/log variants
+  - [X] fallen/log variants
 - [ ] Add water features:
   - [ ] lakes
   - [ ] ponds

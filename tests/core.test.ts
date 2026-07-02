@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { defaultGameConfig } from "../src/app/GameConfig"
 import { EngineContext } from "../src/app/EngineContext"
-import { loadGameSettings, saveGameSettings } from "../src/app/GameSettings"
+import { defaultGameSettings, loadGameSettings, saveGameSettings } from "../src/app/GameSettings"
 import { DebugOverlay } from "../src/debug/DebugOverlay"
 import { BabylonBootstrap } from "../src/engine/BabylonBootstrap"
 import { LightingController } from "../src/environment/LightingController"
@@ -74,6 +74,13 @@ function createSmallChunkData(): ChunkTerrainData {
         type: "rock",
         position: [1, 0, 1],
         rotationY: 0,
+        scale: 1,
+      },
+      {
+        id: "log-1",
+        type: "log",
+        position: [1.5, 0, 1.5],
+        rotationY: 0.25,
         scale: 1,
       },
     ],
@@ -208,7 +215,8 @@ describe("player, compass, debug overlay, and time", () => {
       }),
     }
     const time = new TimeOfDaySystem(8.5, 1)
-    const overlay = new DebugOverlay(player as any, time)
+    const resetWorld = vi.fn()
+    const overlay = new DebugOverlay(player as any, time, { resetWorld })
 
     overlay.update(0.016)
     expect(document.querySelector("#debug-overlay")?.textContent).toContain("elevation: 2.9m")
@@ -226,6 +234,14 @@ describe("player, compass, debug overlay, and time", () => {
     expect(document.querySelector("#debug-overlay-editor")).toBeNull()
 
     document.querySelector<HTMLElement>("#debug-overlay")?.click()
+    vi.spyOn(window, "confirm").mockReturnValueOnce(false)
+    document.querySelectorAll<HTMLButtonElement>("#debug-overlay-editor button[type='button']")[1]?.click()
+    expect(resetWorld).not.toHaveBeenCalled()
+
+    vi.spyOn(window, "confirm").mockReturnValueOnce(true)
+    document.querySelectorAll<HTMLButtonElement>("#debug-overlay-editor button[type='button']")[1]?.click()
+    expect(resetWorld).toHaveBeenCalledOnce()
+
     ;(document.querySelector<HTMLInputElement>("input[name='positionX']")!.value = "10")
     ;(document.querySelector<HTMLInputElement>("input[name='positionY']")!.value = "11")
     ;(document.querySelector<HTMLInputElement>("input[name='positionZ']")!.value = "12")
@@ -249,6 +265,12 @@ describe("player, compass, debug overlay, and time", () => {
 
     overlay.dispose()
     expect(document.querySelector("#debug-overlay")).toBeNull()
+
+    const overlayWithoutActions = new DebugOverlay(player as any, time)
+
+    document.querySelector<HTMLElement>("#debug-overlay")?.click()
+    document.querySelectorAll<HTMLButtonElement>("#debug-overlay-editor button[type='button']")[1]?.click()
+    overlayWithoutActions.dispose()
   })
 })
 
@@ -466,6 +488,7 @@ describe("chunk coordinates and generation", () => {
     expect([...a.heights]).toEqual([...b.heights])
     expect([...a.terrainMaterials]).toEqual([...b.terrainMaterials])
     expect(a.props.length).toBeGreaterThan(0)
+    expect(new Set(a.props.map((prop) => prop.type)).size).toBeGreaterThan(1)
     let foundDirt = false
 
     for (let z = 0; z < 20 && !foundDirt; z += 1) {
@@ -485,6 +508,7 @@ describe("chunk coordinates and generation", () => {
       terrain: { diffuseColor: new FakeColor3(), dispose: vi.fn() } as any,
       trunk: { diffuseColor: new FakeColor3(), dispose: vi.fn() } as any,
       needles: { diffuseColor: new FakeColor3(), dispose: vi.fn() } as any,
+      rock: { diffuseColor: new FakeColor3(), dispose: vi.fn() } as any,
     }
     const chunk = new TerrainChunk(context, createSmallChunkData(), material)
     const sparseChunk = new TerrainChunk(
@@ -676,7 +700,7 @@ describe("terrain systems", () => {
   it("initializes, updates, samples, and disposes progressive terrain", async () => {
     const context = createContext()
     const player = new PlayerController(context)
-    const terrain = new ProgressiveTerrainSystem(context, player)
+    const terrain = new ProgressiveTerrainSystem(context, player, new MemoryChunkRepository())
 
     await terrain.initialize()
     expect(terrain.getHeightAt(0, 0)).toBeTypeOf("number")
@@ -745,10 +769,17 @@ describe("game runtime", () => {
   it("starts, renders, updates settings, resizes, and disposes", async () => {
     const { Game } = await import("../src/app/Game")
     const canvas = document.createElement("canvas")
-    const game = new Game(canvas)
+    const reloadWindow = vi.fn()
+    const game = new Game(canvas, defaultGameConfig, defaultGameSettings, reloadWindow)
 
     await game.start()
     game.updateSettings({ invertMouseY: true })
+
+    document.querySelector<HTMLElement>("#debug-overlay")?.click()
+    vi.spyOn(window, "confirm").mockReturnValueOnce(true)
+    document.querySelectorAll<HTMLButtonElement>("#debug-overlay-editor button[type='button']")[1]?.click()
+    await new Promise((resolve) => window.setTimeout(resolve, 0))
+    expect(reloadWindow).toHaveBeenCalledOnce()
 
     window.dispatchEvent(new Event("resize"))
     ;((game as any)._context.engine.renderLoop as () => void)()

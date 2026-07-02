@@ -2,6 +2,10 @@ import type { GameSystem } from "../app/GameSystem"
 import type { TimeOfDaySystem } from "../environment/TimeOfDaySystem"
 import type { PlayerController } from "../player/PlayerController"
 
+export interface DebugOverlayActions {
+  resetWorld?(): Promise<void> | void
+}
+
 export class DebugOverlay implements GameSystem {
   private static readonly _playerEyeHeightMeters = 1.7
 
@@ -11,6 +15,7 @@ export class DebugOverlay implements GameSystem {
   public constructor(
     private readonly _player: PlayerController,
     private readonly _time: TimeOfDaySystem,
+    private readonly _actions: DebugOverlayActions = {},
   ) {
     this._element = document.createElement("div")
     this._element.id = "debug-overlay"
@@ -51,6 +56,7 @@ export class DebugOverlay implements GameSystem {
     const form = document.createElement("form")
     const submitButton = document.createElement("button")
     const cancelButton = document.createElement("button")
+    const resetWorldButton = document.createElement("button")
 
     this._isEditing = true
     form.id = "debug-overlay-editor"
@@ -62,6 +68,9 @@ export class DebugOverlay implements GameSystem {
     cancelButton.type = "button"
     cancelButton.textContent = "Cancel"
     cancelButton.addEventListener("click", this._handleCancel)
+    resetWorldButton.type = "button"
+    resetWorldButton.textContent = "Reset world"
+    resetWorldButton.addEventListener("click", this._handleResetWorld)
 
     form.append(
       this._createHeading(),
@@ -72,6 +81,7 @@ export class DebugOverlay implements GameSystem {
       this._createNumberField("day", "day", this._time.day),
       this._createNumberField("timeOfDay", "time", this._time.timeOfDayHours),
       this._createButtonRow(submitButton, cancelButton),
+      this._createDangerRow(resetWorldButton),
     )
 
     this._element.replaceChildren(form)
@@ -110,6 +120,15 @@ export class DebugOverlay implements GameSystem {
 
     row.className = "debug-overlay-actions"
     row.append(submitButton, cancelButton)
+
+    return row
+  }
+
+  private _createDangerRow(resetWorldButton: HTMLButtonElement): HTMLDivElement {
+    const row = document.createElement("div")
+
+    row.className = "debug-overlay-actions debug-overlay-danger-actions"
+    row.append(resetWorldButton)
 
     return row
   }
@@ -160,5 +179,21 @@ export class DebugOverlay implements GameSystem {
 
   private readonly _handleCancel = (): void => {
     this._exitEditor()
+  }
+
+  private readonly _handleResetWorld = (): void => {
+    if (!this._actions.resetWorld) {
+      return
+    }
+
+    const confirmed = window.confirm(
+      "Reset the world? This deletes persisted terrain chunks and reloads the game.",
+    )
+
+    if (!confirmed) {
+      return
+    }
+
+    void this._actions.resetWorld()
   }
 }

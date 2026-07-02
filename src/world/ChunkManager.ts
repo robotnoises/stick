@@ -78,6 +78,7 @@ export class ChunkManager {
     this._materials.terrain.dispose()
     this._materials.trunk.dispose()
     this._materials.needles.dispose()
+    this._materials.rock.dispose()
   }
 
   private async _ensureChunk(coord: ChunkCoord): Promise<void> {
@@ -314,6 +315,7 @@ export class ChunkManager {
     const terrain = new StandardMaterial("progressive-terrain-material", this._context.scene)
     const trunk = new StandardMaterial("progressive-pine-trunk-material", this._context.scene)
     const needles = new StandardMaterial("progressive-pine-needles-material", this._context.scene)
+    const rock = new StandardMaterial("progressive-rock-material", this._context.scene)
 
     terrain.diffuseColor = new Color3(1, 1, 1)
     terrain.ambientColor = new Color3(0.22, 0.22, 0.22)
@@ -324,8 +326,10 @@ export class ChunkManager {
     trunk.specularColor = Color3.Black()
     needles.diffuseColor = new Color3(0.11, 0.27, 0.14)
     needles.specularColor = Color3.Black()
+    rock.diffuseColor = new Color3(0.36, 0.35, 0.31)
+    rock.specularColor = Color3.Black()
 
-    return { terrain, trunk, needles }
+    return { terrain, trunk, needles, rock }
   }
 
   private _lerp(from: number, to: number, amount: number): number {

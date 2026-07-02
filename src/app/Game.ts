@@ -1,4 +1,5 @@
 import { BabylonBootstrap } from "../engine/BabylonBootstrap"
+import { LocalForageChunkRepository } from "../data/LocalForageChunkRepository"
 import { DebugOverlay } from "../debug/DebugOverlay"
 import { LightingController } from "../environment/LightingController"
 import { TimeOfDaySystem } from "../environment/TimeOfDaySystem"
@@ -23,6 +24,7 @@ export class Game {
     private readonly _canvas: HTMLCanvasElement,
     private readonly _config: GameConfig = defaultGameConfig,
     private _settings: GameSettings = defaultGameSettings,
+    private readonly _reloadWindow: () => void = window.location.reload.bind(window.location),
   ) {}
 
   public async start(): Promise<void> {
@@ -33,7 +35,8 @@ export class Game {
 
     const time = new TimeOfDaySystem(this._config.startTimeOfDayHours, this._config.timeScale)
     const player = new PlayerController(this._context)
-    const terrain = new ProgressiveTerrainSystem(this._context, player)
+    const chunkRepository = new LocalForageChunkRepository()
+    const terrain = new ProgressiveTerrainSystem(this._context, player, chunkRepository)
     const worldBounds = new WorldBoundsHelper(this._context.config.worldBounds)
 
     player.setInvertMouseY(this._settings.invertMouseY)
@@ -44,7 +47,9 @@ export class Game {
     const lighting = new LightingController(this._context, time)
     const flashlight = new FlashlightController(this._context, player)
     const inventory = new InventorySystem(createCoreBackpack(flashlight))
-    const debug = new DebugOverlay(player, time)
+    const debug = new DebugOverlay(player, time, {
+      resetWorld: () => this._resetWorld(chunkRepository),
+    })
 
     this._systems.push(time, player, terrain, lighting, flashlight, inventory, debug)
 
@@ -86,6 +91,13 @@ export class Game {
     this._player = null
     this._context?.engine.dispose()
     this._context = null
+  }
+
+  private async _resetWorld(chunkRepository: LocalForageChunkRepository): Promise<void> {
+    const keys = await chunkRepository.listChunkKeys()
+
+    await Promise.all(keys.map((key) => chunkRepository.deleteChunk(key)))
+    this._reloadWindow()
   }
 
   private readonly _handleResize = (): void => {

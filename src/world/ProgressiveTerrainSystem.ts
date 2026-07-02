@@ -1,6 +1,6 @@
 import type { EngineContext } from "../app/EngineContext"
 import type { GameSystem } from "../app/GameSystem"
-import { LocalForageChunkRepository } from "../data/LocalForageChunkRepository"
+import type { ChunkRepository } from "../data/ChunkRepository"
 import type { PlayerController } from "../player/PlayerController"
 import { ChunkCoord } from "./ChunkCoord"
 import { ChunkManager } from "./ChunkManager"
@@ -16,6 +16,7 @@ export class ProgressiveTerrainSystem implements GameSystem {
   public constructor(
     private readonly _context: EngineContext,
     private readonly _player: PlayerController,
+    chunkRepository: ChunkRepository,
   ) {
     this._generator = new TerrainGenerator({
       seed: this._context.config.worldSeed,
@@ -26,7 +27,7 @@ export class ProgressiveTerrainSystem implements GameSystem {
     this._chunkManager = new ChunkManager(
       this._context,
       this._generator,
-      new LocalForageChunkRepository(),
+      chunkRepository,
       {
         loadRadiusChunks: 3,
         unloadRadiusChunks: 4,
