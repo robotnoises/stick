@@ -29,6 +29,31 @@ for each vertex world position:
 
 This keeps terrain deterministic and continuous while still allowing chunks to stream independently.
 
+## Finite World Bounds
+
+Stick should use a finite playable world/map extent rather than unbounded infinite terrain. Streaming should still load chunks lazily around the player, but landform generation should know the maximum world rectangle so it can create complete river, lake, ridge, valley, and biome systems within that area.
+
+Benefits:
+
+- world feature generation has a bounded problem space
+- persistence has a known maximum set of terrain chunks
+- player-made cartography can use a meaningful maximum paper/map scale
+- extraction points and natural navigation barriers can be placed intentionally
+- debug tools can visualize the whole world feature layout when needed
+
+Boundary treatment should prefer believable natural limits over visible invisible walls. Good edge-enforcement landforms include:
+
+- steep mountain ridges, cliffs, talus fields, or avalanche slopes
+- a wide/deep river, canyon, or gorge with unsafe banks
+- a large lake or reservoir that continues to the horizon
+- dense deadfall, burned forest, thick brush, or impassable timber
+- roads, closure signs, washed-out bridges, private land, or ranger barriers
+- extraction-adjacent edges where the world naturally ends at safety
+
+Use a layered approach: the visible/navigational barrier should appear before the technical world edge, and an invisible or hard collision boundary should sit behind the believable barrier as a safety net. Short term, chunk streaming may simply refuse to load outside-bounds chunks while player clamping/collision is implemented. Long term, each world edge should have one or more deterministic boundary features so the edge is readable from a distance and feels like part of the landscape.
+
+World features may use a small generation margin outside the playable bounds so rivers, lakes, ranges, and valleys can enter or leave the map naturally. For example, a boundary lake should render beyond the playable shoreline far enough to avoid looking like a rectangular cut-off, and a mountain range should continue beyond the traversable slope.
+
 ## Architecture Direction
 
 Current terrain generation is world-coordinate based, which is the right foundation:

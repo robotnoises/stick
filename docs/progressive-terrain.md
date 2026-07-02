@@ -26,6 +26,14 @@ unloadRadiusChunks = 3
 memoryRadiusChunks = 4 // keep raw chunk data briefly after mesh disposal
 ```
 
+## Finite World Bounds
+
+Progressive terrain should stream lazily inside a finite playable world extent. The bounds should live in world/game config initially and later in save data. `ChunkManager` should filter desired chunk coordinates against those bounds, while `TerrainGenerator` and future `WorldFeatureGenerator` use the same bounds to create finite landform and biome systems.
+
+Do not pre-generate every chunk inside the bounds. The bounds limit the possible coordinate space and feature registry, while chunks are still generated, loaded, persisted, and unloaded on demand. Short-term prototypes may clamp/refuse outside-bounds chunks; long term, world edges should be hidden or justified by natural barriers and extraction/world-design constraints.
+
+Edge enforcement should be two-layered: render deterministic boundary landforms just inside/along the bounds, then keep a simple hard collision/clamp behind them as a fallback. Boundary chunks may need special generation rules for mountains, cliffs, rivers, canyon walls, horizon lakes, dense deadfall, or other impassable terrain.
+
 ## Runtime Flow
 
 ```text

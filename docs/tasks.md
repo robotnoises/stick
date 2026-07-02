@@ -7,7 +7,7 @@
   - [ ] Keep pause/menu UI interactive while paused.
   - [ ] Decide whether inventory/backpack and paper map pause the world or leave time running.
 - [ ] Add a save game option to the menu.
-- [ ] Rename “Options” to “Menu”.
+- [X] Rename “Options” to “Menu”.
 - [ ] Persist last player position to the database when saving.
 - [ ] Prevent accidental refresh/close. Short term: use a browser alert/confirmation.
 
@@ -32,7 +32,7 @@
   - [ ] flint & steel
   - [ ] knife
   - [ ] canteen
-  - [ ] solar flashlight
+  - [X] solar flashlight
   - [ ] blank paper map
 - [ ] Add backpack UI for viewing items.
 - [ ] Add one-selected-item behavior.
@@ -73,6 +73,9 @@
 
 ## Terrain and Environment Variety
 
+- [ ] Define finite playable world/map bounds before adding large landforms, so generated features and streamed chunks have a maximum extent.
+  - [ ] Add deterministic boundary landforms for world-edge enforcement: mountains/cliffs, wide rivers/canyons, horizon lakes, dense deadfall/forest, or road/closure barriers.
+  - [ ] Add a hard collision/clamp fallback behind natural boundary features.
 - [ ] Add more terrain generation variety:
   - [ ] grass
   - [ ] dirt
