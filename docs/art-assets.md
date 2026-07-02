@@ -109,14 +109,18 @@ Starting inventory:
 - Hunting knife
 - Lensatic compass
 - Trench shovel
+- Flint and steel
+- Blank paper map and writing tool
 
 For MVP, these can be simple first-person view models or even 2D/flat UI representations.
 
 Recommended order:
 
 1. Compass, because navigation is core.
-2. Knife, because it is simple and useful for interaction tests.
-3. Shovel, once terrain mutation/digging is real.
+2. Paper map and writing tool, because cartography is core.
+3. Flint and steel, because fire-making supports camping, warmth, and night survival.
+4. Knife, because it is simple and useful for interaction tests.
+5. Shovel, once terrain mutation/digging is real.
 
 ### 5. Environmental Props
 
@@ -125,6 +129,7 @@ Minimum useful set:
 - Stick/branch
 - Small log
 - Campfire ring placeholder
+- Fire-starting/tinder/fuel placeholders
 - Trail marker or cairn
 - Animal track decal/mesh placeholder
 - Water source markers: creek edge rocks, reeds, wet mud

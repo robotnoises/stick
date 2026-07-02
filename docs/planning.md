@@ -2,7 +2,7 @@
 
 ## Product Direction
 
-Stick is a web-based, first-person survival simulator set in a stylized but grounded Idaho forest. The design target is slow, tense, methodical wilderness survival rather than fast crafting-loop survival.
+Stick is a web-based, first-person survival simulator set in a stylized but grounded Idaho forest. The design target is slow, tense, methodical wilderness survival rather than fast crafting-loop survival. See [Story and Game Objective](story.md) for the current narrative and objective direction.
 
 ## Core Pillars
 
@@ -13,9 +13,10 @@ Stick is a web-based, first-person survival simulator set in a stylized but grou
 2. **Landmark-based navigation**
    - No minimap or GPS-style HUD.
    - The player uses terrain silhouettes, compass bearings, trails, rivers, slopes, sun position, and memorable landmarks.
+   - The player builds knowledge through a blank paper map/cartography system rather than automatic map reveal. See [Cartography and Paper Map Design](cartography.md).
 
 3. **Resource scarcity and consequence**
-   - The starting kit is minimal: hunting knife, lensatic compass, trench shovel.
+   - The starting kit is minimal: hunting knife, lensatic compass, trench shovel, flint and steel, and blank paper map.
    - Survival actions should be deliberate and somewhat costly.
 
 4. **Stylized realism**
@@ -35,6 +36,7 @@ Build a playable vertical slice proving scale, navigation, terrain streaming, an
 - Stylized terrain material.
 - Tree/rock/grass prop instancing.
 - Compass item with accurate heading.
+- Blank paper map/cartography prototype for player-made landmarks, route notes, grid scale, and distance-from-last-marker navigation.
 - Day/night lighting cycle.
 - Basic survival state:
   - hydration
@@ -91,6 +93,7 @@ See [Progressive Terrain Plan](progressive-terrain.md) and [Large Landforms and 
 - Stamina interaction with movement.
 - Time scale configuration.
 - Rest/wait prototype.
+- Fire-making prototype using flint and steel.
 
 ### Milestone 5: Persistence
 

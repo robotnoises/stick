@@ -30,14 +30,27 @@
   - [ ] thirst
   - [ ] body temperature / exposure
   - [ ] injury status
+- [ ] Add fire-making with flint and steel:
+  - [ ] collect or use tinder/fuel
+  - [ ] start a campfire
+  - [ ] maintain/let fire burn down over time
+  - [ ] connect fire warmth to exposure/body temperature later
 
 ## Story and Progression
 
+- [ ] Use [Story and Game Objective](story.md) as the current narrative/design source for player goals.
 - [ ] Add a state machine for tracking player progress.
 - [ ] Add story/progression content coupled to the state machine:
   - [ ] player goals/objectives
   - [ ] tutorial mission to start
   - [ ] follow-up missions or survival prompts
+  - [ ] objective to locate a safe pickup/extraction point
+- [ ] Add rare exploration discoveries:
+  - [ ] abandoned campsites
+  - [ ] supply caches or lost backpacks
+  - [ ] caves/overhangs
+  - [ ] trail markers/signs
+  - [ ] map scraps or notes
 
 ## Terrain and Environment Variety
 
@@ -57,3 +70,69 @@
   - [ ] lakes
   - [ ] ponds
   - [ ] rivers
+
+## World Streaming and Terrain Generation
+
+- [ ] Add a terrain generation worker and keep Babylon mesh creation on the main thread unless benchmarks prove otherwise.
+- [ ] Add a per-frame terrain streaming budget so loading chunks does not hitch gameplay.
+- [ ] Add regional elevation, rolling hills, and ridge/mountain noise layers.
+- [ ] Add terrain material masks for grass, dirt, sand, pine needles / forest floor, rock, shore, and water-adjacent areas.
+- [ ] Add deterministic world-space feature generation for large landforms that cross chunk boundaries.
+- [ ] Add deterministic lake and pond basin features with simple water planes.
+- [ ] Add deterministic river path features with carved channels, bank smoothing, and water strip meshes.
+- [ ] Add a world feature registry/save shape for rivers, lakes, hills, and mountain ranges.
+- [ ] Add debug visualization for chunk boundaries, feature paths, water basins, and biome/material masks.
+- [ ] Remove or fully retire `TestTerrainSystem` once progressive terrain is the only terrain path.
+
+## Persistence and Save Data
+
+- [ ] Add a `SaveGameRepository` for high-level save state.
+- [ ] Persist and restore time of day and elapsed world time.
+- [ ] Persist and restore survival state once vitals exist.
+- [ ] Add save slots or world IDs and prefix chunk keys to avoid collisions between worlds.
+- [ ] Add chunk dirty-state tracking, mutation saves, and debounced autosave/safety saves.
+- [ ] Add schema version migration handling for save games, world features, and persisted chunks.
+- [ ] Add reset/delete-world cleanup for save state, world features, and terrain chunks.
+
+## Navigation and Environment Systems
+
+- [ ] Add an in-game compass item or inspection overlay instead of relying only on debug heading text.
+- [ ] Use [Cartography and Paper Map Design](cartography.md) as the mechanics source for the paper map.
+- [ ] Add a blank paper map/cartography system for player-made landmarks, routes, notes, and approximate area mapping.
+- [ ] Add starting map details:
+  - [ ] center `X` marking the starting point
+  - [ ] gridlines
+  - [ ] configurable map scale
+  - [ ] scale bar / legend placeholder
+- [ ] Add distance-from-last-marker tracking for dead reckoning.
+- [ ] Add manual marker placement; do not auto-place exact player position.
+- [ ] Add freehand drawing tools for rivers, trails, routes, and terrain notes.
+- [ ] Add colored pencil/pen support for player-defined map meaning.
+- [ ] Keep navigation free of minimap/GPS-style HUD elements; use landmarks, compass bearings, trails, rivers, slopes, sun position, and player-made maps.
+- [ ] Add trail/path generation and trail material masks.
+- [ ] Add weather placeholder systems and connect weather to exposure/body temperature later.
+- [ ] Expand day/night lighting with moonlight and night readability tuning.
+
+## Assets and Art Pipeline
+
+- [ ] Create the proposed asset folder structure under `assets/` for source and exported content.
+- [ ] Pick a temporary Idaho summer forest color palette.
+- [ ] Build or import `Pack 001: Forest Blockout`:
+  - [ ] pine small / medium / large
+  - [ ] dead tree
+  - [ ] fallen log
+  - [ ] small / medium / large rock
+  - [ ] grass clump
+  - [ ] bush
+  - [ ] compass placeholder
+  - [ ] flint and steel placeholder
+- [ ] Validate imported assets for meter scale, ground-contact origin, clean naming, and instancing performance.
+- [ ] Add placeholder paper map and mapping tool assets.
+
+## Testing and Quality Gates
+
+- [ ] Add or maintain unit coverage for terrain generation, chunk coordinate math, repository serialization, save data, and survival logic.
+- [ ] Run required checks before completing TypeScript work:
+  - [ ] `npm run typecheck`
+  - [ ] `npm run test:coverage`
+  - [ ] `npm run build`
