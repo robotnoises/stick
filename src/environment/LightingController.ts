@@ -14,6 +14,7 @@ export class LightingController implements GameSystem {
   private static readonly _celestialDistance = 320
 
   private readonly _sun: DirectionalLight
+  private readonly _moon: DirectionalLight
   private readonly _ambient: HemisphericLight
   private readonly _sunDisc: Mesh
   private readonly _moonDisc: Mesh
@@ -25,9 +26,21 @@ export class LightingController implements GameSystem {
     private readonly _time: TimeOfDaySystem,
   ) {
     this._sun = new DirectionalLight("sun", new Vector3(-0.35, -0.8, 0.25), this._context.scene)
-    this._sun.intensity = 1.6
-
+    this._moon = new DirectionalLight(
+      "moonlight",
+      new Vector3(0.35, -0.45, -0.25),
+      this._context.scene,
+    )
     this._ambient = new HemisphericLight("ambient", new Vector3(0, 1, 0), this._context.scene)
+
+    this._sun.diffuse = new Color3(1, 0.88, 0.62)
+    this._sun.specular = new Color3(1, 0.9, 0.7)
+    this._sun.intensity = 1.6
+    this._moon.diffuse = new Color3(0.5, 0.62, 0.9)
+    this._moon.specular = new Color3(0.35, 0.45, 0.7)
+    this._moon.intensity = 0
+    this._ambient.diffuse = new Color3(0.55, 0.63, 0.82)
+    this._ambient.groundColor = new Color3(0.04, 0.045, 0.06)
     this._ambient.intensity = 0.45
 
     this._sunMaterial = new StandardMaterial("sun-disc-material", this._context.scene)
@@ -67,9 +80,14 @@ export class LightingController implements GameSystem {
     const sunSkyDirection = new Vector3(Math.cos(angle), elevation, 0.25).normalize()
     const moonSkyDirection = sunSkyDirection.scale(-1)
 
+    const daylight = this._smoothStep(-0.04, 0.22, elevation)
+    const moonlight = this._smoothStep(0.05, 0.45, -elevation)
+
     this._sun.direction = sunSkyDirection.scale(-1)
-    this._sun.intensity = Math.max(0.03, elevation) * 1.6
-    this._ambient.intensity = 0.12 + Math.max(0, elevation) * 0.43
+    this._sun.intensity = daylight * 1.6
+    this._moon.direction = moonSkyDirection.scale(-1)
+    this._moon.intensity = moonlight * 0.28
+    this._ambient.intensity = 0.08 + daylight * 0.47 + moonlight * 0.1
 
     this._updateSky(elevation)
     this._updateCelestialBody(this._sunDisc, sunSkyDirection, elevation)
@@ -82,6 +100,7 @@ export class LightingController implements GameSystem {
     this._sunMaterial.dispose()
     this._moonMaterial.dispose()
     this._sun.dispose()
+    this._moon.dispose()
     this._ambient.dispose()
   }
 

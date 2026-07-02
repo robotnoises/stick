@@ -200,6 +200,21 @@ describe("lighting", () => {
 
     lighting.dispose()
   })
+
+  it("uses faint moonlight at night instead of direct sun lighting", () => {
+    const context = createContext()
+    const time = new TimeOfDaySystem(0, 1)
+    const lighting = new LightingController(context, time)
+
+    lighting.update(0.016)
+
+    expect((lighting as any)._sun.intensity).toBe(0)
+    expect((lighting as any)._moon.intensity).toBeGreaterThan(0)
+    expect((lighting as any)._moon.intensity).toBeLessThan(0.3)
+    expect((lighting as any)._ambient.intensity).toBeGreaterThan(0.08)
+
+    lighting.dispose()
+  })
 })
 
 describe("chunk coordinates and generation", () => {
