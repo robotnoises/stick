@@ -110,12 +110,23 @@ describe("app settings and engine primitives", () => {
 })
 
 describe("player, compass, debug overlay, and time", () => {
-  it("advances time and wraps after 24 hours", () => {
+  it("advances time, wraps after 24 hours, and allows debug overrides", () => {
     const time = new TimeOfDaySystem(23.5, 3600)
 
     time.update(1)
+    expect(time.day).toBe(2)
     expect(time.elapsedWorldSeconds).toBe(3600)
     expect(time.timeOfDayHours).toBeCloseTo(0.5)
+
+    time.setTimeOfDayHours(25.25)
+    expect(time.timeOfDayHours).toBeCloseTo(1.25)
+
+    time.setDay(4.8)
+    expect(time.day).toBe(4)
+
+    time.setWorldTime(0, -1)
+    expect(time.day).toBe(1)
+    expect(time.timeOfDayHours).toBeCloseTo(23)
   })
 
   it("computes compass heading from camera forward direction", () => {
@@ -149,6 +160,12 @@ describe("player, compass, debug overlay, and time", () => {
     player.update(0.016)
     expect(player.position.y).toBe(1.7)
 
+    player.setPosition(2, 3, 4)
+    expect(player.position).toEqual(new FakeVector3(2, 3, 4))
+
+    player.setHeadingDegrees(-90)
+    expect((context.scene.activeCamera as any).rotation.y).toBeCloseTo((270 * Math.PI) / 180)
+
     player.setInvertMouseY(true)
     player.setGroundHeightProvider((x, z) => x + z)
     player.update(0.016)
@@ -162,17 +179,56 @@ describe("player, compass, debug overlay, and time", () => {
     expect(requestPointerLock).toHaveBeenCalledOnce()
   })
 
-  it("renders and removes debug overlay", () => {
+  it("renders, edits, and removes debug overlay", () => {
     const player = {
       position: new FakeVector3(1.23, 4.56, 7.89),
       headingDegrees: 123,
+      setPosition: vi.fn((x: number, y: number, z: number) => {
+        player.position = new FakeVector3(x, y, z)
+      }),
+      setHeadingDegrees: vi.fn((heading: number) => {
+        player.headingDegrees = heading
+      }),
     }
-    const time = { timeOfDayHours: 8.5 }
-    const overlay = new DebugOverlay(player as any, time as any)
+    const time = new TimeOfDaySystem(8.5, 1)
+    const overlay = new DebugOverlay(player as any, time)
 
     overlay.update(0.016)
     expect(document.querySelector("#debug-overlay")?.textContent).toContain("elevation: 2.9m")
     expect(document.querySelector("#debug-overlay")?.textContent).toContain("heading: 123°")
+    expect(document.querySelector("#debug-overlay")?.textContent).toContain("day: 1")
+
+    document.querySelector<HTMLElement>("#debug-overlay")?.click()
+    document.querySelector<HTMLElement>("#debug-overlay")?.click()
+    overlay.update(0.016)
+    expect(document.querySelector("#debug-overlay-editor")).toBeTruthy()
+    expect(document.querySelector<HTMLFormElement>("#debug-overlay-editor")?.noValidate).toBe(true)
+    expect(document.querySelector<HTMLInputElement>("input[name='positionX']")?.step).toBe("any")
+
+    document.querySelector<HTMLButtonElement>("#debug-overlay-editor button[type='button']")?.click()
+    expect(document.querySelector("#debug-overlay-editor")).toBeNull()
+
+    document.querySelector<HTMLElement>("#debug-overlay")?.click()
+    ;(document.querySelector<HTMLInputElement>("input[name='positionX']")!.value = "10")
+    ;(document.querySelector<HTMLInputElement>("input[name='positionY']")!.value = "11")
+    ;(document.querySelector<HTMLInputElement>("input[name='positionZ']")!.value = "12")
+    ;(document.querySelector<HTMLInputElement>("input[name='heading']")!.value = "270")
+    ;(document.querySelector<HTMLInputElement>("input[name='day']")!.value = "3")
+    ;(document.querySelector<HTMLInputElement>("input[name='timeOfDay']")!.value = "21.5")
+    ;(overlay as any)._readNumber(
+      { elements: { namedItem: () => ({ value: "not-a-number" }) } },
+      "missing",
+      42,
+    )
+    document
+      .querySelector<HTMLFormElement>("#debug-overlay-editor")
+      ?.dispatchEvent(new SubmitEvent("submit", { bubbles: true, cancelable: true }))
+
+    expect(player.setPosition).toHaveBeenCalledWith(10, 11, 12)
+    expect(player.setHeadingDegrees).toHaveBeenCalledWith(270)
+    expect(time.day).toBe(3)
+    expect(time.timeOfDayHours).toBe(21.5)
+    expect(document.querySelector("#debug-overlay")?.textContent).toContain("time: 21.50h")
 
     overlay.dispose()
     expect(document.querySelector("#debug-overlay")).toBeNull()

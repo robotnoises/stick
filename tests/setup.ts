@@ -38,6 +38,12 @@ class FakeVector3 {
     return new FakeVector3(this.x, this.y, this.z)
   }
 
+  public set(x: number, y: number, z: number): void {
+    this.x = x
+    this.y = y
+    this.z = z
+  }
+
   public add(other: FakeVector3): FakeVector3 {
     return new FakeVector3(this.x + other.x, this.y + other.y, this.z + other.z)
   }
@@ -149,6 +155,7 @@ class FakeUniversalCamera {
   public keysLeft: number[] = []
   public keysRight: number[] = []
   public position: FakeVector3
+  public rotation = new FakeVector3()
   public attachedCanvas: HTMLCanvasElement | null = null
   public movement = {
     input: {

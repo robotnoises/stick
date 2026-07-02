@@ -100,6 +100,53 @@ body {
     Monaco,
     Consolas,
     monospace;
-  pointer-events: none;
+  pointer-events: auto;
   white-space: pre;
+  cursor: pointer;
+}
+
+#debug-overlay form {
+  display: grid;
+  gap: 6px;
+  min-width: 190px;
+  white-space: normal;
+  cursor: default;
+}
+
+.debug-overlay-heading {
+  margin-bottom: 2px;
+  font-weight: 700;
+}
+
+#debug-overlay label {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  gap: 8px;
+  align-items: center;
+}
+
+#debug-overlay input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid rgb(243 234 216 / 25%);
+  border-radius: 3px;
+  color: #f3ead8;
+  background: rgb(20 24 18 / 90%);
+  font: inherit;
+}
+
+.debug-overlay-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.debug-overlay-actions button {
+  flex: 1;
+  border: 1px solid rgb(243 234 216 / 25%);
+  border-radius: 3px;
+  color: #f3ead8;
+  background: rgb(38 45 32 / 85%);
+  font: inherit;
+  cursor: pointer;
 }

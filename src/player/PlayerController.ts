@@ -55,6 +55,14 @@ export class PlayerController implements GameSystem {
     this._groundHeightProvider = provider
   }
 
+  public setPosition(x: number, y: number, z: number): void {
+    this._camera.position.set(x, y, z)
+  }
+
+  public setHeadingDegrees(headingDegrees: number): void {
+    this._camera.rotation.y = this._normalizeDegrees(headingDegrees) * (Math.PI / 180)
+  }
+
   public update(_deltaSeconds: number): void {
     const groundHeight =
       this._groundHeightProvider?.(this._camera.position.x, this._camera.position.z) ?? 0
@@ -65,6 +73,10 @@ export class PlayerController implements GameSystem {
   public dispose(): void {
     this._context.canvas.removeEventListener("click", this._handlePointerLockRequest)
     this._camera.detachControl()
+  }
+
+  private _normalizeDegrees(degrees: number): number {
+    return ((degrees % 360) + 360) % 360
   }
 
   private readonly _handlePointerLockRequest = (): void => {
