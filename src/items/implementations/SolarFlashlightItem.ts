@@ -1,4 +1,5 @@
-import type { Item, ItemUseResult, ItemSource } from "../Item"
+import type { FlashlightUseAction } from "../FlashlightController"
+import type { Item, ItemSource, ItemUseResult } from "../Item"
 
 export class SolarFlashlightItem implements Item {
   public readonly id = "core_solar_flashlight"
@@ -7,7 +8,11 @@ export class SolarFlashlightItem implements Item {
   public readonly source: ItemSource = "core"
   public readonly discardable = true
 
+  public constructor(private readonly _flashlightUseAction: FlashlightUseAction) {}
+
   public use(): ItemUseResult {
-    return { success: true, message: "You test the solar flashlight." }
+    const result = this._flashlightUseAction.toggle()
+
+    return { success: true, message: result.message }
   }
 }

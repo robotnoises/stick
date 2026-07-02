@@ -146,6 +146,41 @@ class FakeDirectionalLight {
 
 class FakeHemisphericLight extends FakeDirectionalLight {}
 
+class FakePointLight {
+  public diffuse = new FakeColor3()
+  public specular = new FakeColor3()
+  public range = 0
+  public intensity = 0
+  public disposed = false
+
+  public constructor(
+    public readonly name: string,
+    public position: FakeVector3,
+    public readonly scene: unknown,
+  ) {}
+
+  public dispose(): void {
+    this.disposed = true
+  }
+}
+
+class FakeSpotLight extends FakeDirectionalLight {
+  public diffuse = new FakeColor3()
+  public specular = new FakeColor3()
+  public range = 0
+
+  public constructor(
+    name: string,
+    public position: FakeVector3,
+    direction: FakeVector3,
+    public readonly angle: number,
+    public readonly exponent: number,
+    scene: unknown,
+  ) {
+    super(name, direction, scene)
+  }
+}
+
 class FakeUniversalCamera {
   public minZ = 0
   public speed = 0
@@ -262,6 +297,12 @@ vi.mock("@babylonjs/core/Lights/directionalLight", () => ({
 vi.mock("@babylonjs/core/Lights/hemisphericLight", () => ({
   HemisphericLight: FakeHemisphericLight,
 }))
+vi.mock("@babylonjs/core/Lights/pointLight", () => ({
+  PointLight: FakePointLight,
+}))
+vi.mock("@babylonjs/core/Lights/spotLight", () => ({
+  SpotLight: FakeSpotLight,
+}))
 vi.mock("@babylonjs/core/Cameras/universalCamera", () => ({ UniversalCamera: FakeUniversalCamera }))
 vi.mock("@babylonjs/core/Engines/engine", () => ({ Engine: FakeEngine }))
 vi.mock("@babylonjs/core/Engines/webgpuEngine", () => ({ WebGPUEngine: FakeWebGPUEngine }))
@@ -301,6 +342,8 @@ Object.assign(globalThis, {
   FakeVertexData,
   FakeDirectionalLight,
   FakeHemisphericLight,
+  FakePointLight,
+  FakeSpotLight,
   FakeUniversalCamera,
   FakeEngine,
   FakeWebGPUEngine,

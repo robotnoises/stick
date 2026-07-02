@@ -7,8 +7,10 @@ import { BabylonBootstrap } from "../src/engine/BabylonBootstrap"
 import { LightingController } from "../src/environment/LightingController"
 import { TimeOfDaySystem } from "../src/environment/TimeOfDaySystem"
 import { createCoreBackpack } from "../src/items/CoreItems"
+import { FlashlightController } from "../src/items/FlashlightController"
 import { InventorySystem } from "../src/items/InventorySystem"
 import type { Item, ItemUseResult } from "../src/items/Item"
+import { SolarFlashlightItem } from "../src/items/implementations/SolarFlashlightItem"
 import { Compass } from "../src/player/Compass"
 import { PlayerController } from "../src/player/PlayerController"
 import { ChunkCoord } from "../src/world/ChunkCoord"
@@ -23,6 +25,8 @@ import { TestTerrainSystem } from "../src/world/TestTerrainSystem"
 
 const FakeColor3 = (globalThis as any).FakeColor3
 const FakeColor4 = (globalThis as any).FakeColor4
+const FakePointLight = (globalThis as any).FakePointLight
+const FakeSpotLight = (globalThis as any).FakeSpotLight
 const FakeVector3 = (globalThis as any).FakeVector3
 const FakeEngine = (globalThis as any).FakeEngine
 const FakeScene = (globalThis as any).FakeScene
@@ -175,6 +179,7 @@ describe("player, compass, debug overlay, and time", () => {
 
     expect(player.position.y).toBeCloseTo(player.position.x + player.position.z + 1.7)
     expect(player.headingDegrees).toBe(0)
+    expect(player.forwardDirection).toEqual(new FakeVector3(0, 0, 1))
     expect(context.scene.activeCamera).toBeTruthy()
 
     player.dispose()
@@ -240,7 +245,8 @@ describe("player, compass, debug overlay, and time", () => {
 
 describe("backpack and inventory", () => {
   it("creates core items, selects, uses, and discards items", () => {
-    const backpack = createCoreBackpack()
+    const flashlightUseAction = createTestFlashlightUseAction("Test flashlight toggled.")
+    const backpack = createCoreBackpack(flashlightUseAction)
     const copiedItems = backpack.items
 
     copiedItems.pop()
@@ -261,6 +267,10 @@ describe("backpack and inventory", () => {
       expect(item.use().success).toBe(true)
     }
 
+    expect(backpack.selectItem("core_solar_flashlight")).toBe(true)
+    expect(backpack.useSelectedItem().message).toBe("Test flashlight toggled.")
+    expect(flashlightUseAction.toggle).toHaveBeenCalledTimes(2)
+
     expect(backpack.selectItem("core_canteen")).toBe(true)
     expect(backpack.selectedItem?.name).toBe("Canteen")
     expect(backpack.useSelectedItem().message).toBe("You check the canteen.")
@@ -276,8 +286,70 @@ describe("backpack and inventory", () => {
     expect(backpack.selectedItem).toBeNull()
   })
 
+  it("uses an injected flashlight action in isolation", () => {
+    const flashlightUseAction = {
+      toggle: vi.fn(() => ({ enabled: true, message: "Injected flashlight enabled." })),
+    }
+    const item = new SolarFlashlightItem(flashlightUseAction)
+
+    expect(item.use()).toEqual({ success: true, message: "Injected flashlight enabled." })
+    expect(flashlightUseAction.toggle).toHaveBeenCalledOnce()
+  })
+
+  it("lights the space in front of the player with a flashlight controller", () => {
+    const context = createContext()
+    const player = {
+      position: new FakeVector3(5, 6, 7),
+      forwardDirection: new FakeVector3(0, 0, 2),
+    }
+    const flashlight = new FlashlightController(context, player as any)
+
+    expect((flashlight as any)._light).toBeInstanceOf(FakeSpotLight)
+    expect((flashlight as any)._spillLight).toBeInstanceOf(FakeSpotLight)
+    expect((flashlight as any)._fillLight).toBeInstanceOf(FakePointLight)
+    expect((flashlight as any)._spillLight.angle).toBeGreaterThan((flashlight as any)._light.angle)
+    expect(flashlight.enabled).toBe(false)
+    expect((flashlight as any)._light.intensity).toBe(0)
+    expect((flashlight as any)._spillLight.intensity).toBe(0)
+    expect((flashlight as any)._fillLight.intensity).toBe(0)
+
+    expect(flashlight.toggle()).toEqual({ enabled: true, message: "Solar flashlight on." })
+    expect(flashlight.enabled).toBe(true)
+    expect((flashlight as any)._light.intensity).toBeGreaterThan(0)
+    expect((flashlight as any)._spillLight.intensity).toBeGreaterThan(0)
+    expect((flashlight as any)._spillLight.intensity).toBeLessThan(
+      (flashlight as any)._light.intensity,
+    )
+    expect((flashlight as any)._fillLight.intensity).toBeGreaterThan(0)
+    expect((flashlight as any)._light.position).toEqual(new FakeVector3(5, 6, 7.35))
+    expect((flashlight as any)._spillLight.position).toEqual(new FakeVector3(5, 6, 7.35))
+    expect((flashlight as any)._fillLight.position).toEqual(new FakeVector3(5, 6, 12.35))
+    expect((flashlight as any)._light.direction).toEqual(new FakeVector3(0, 0, 1))
+    expect((flashlight as any)._spillLight.direction).toEqual(new FakeVector3(0, 0, 1))
+
+    player.position = new FakeVector3(1, 2, 3)
+    player.forwardDirection = new FakeVector3(2, 0, 0)
+    flashlight.update(0.016)
+    expect((flashlight as any)._light.position).toEqual(new FakeVector3(1.35, 2, 3))
+    expect((flashlight as any)._spillLight.position).toEqual(new FakeVector3(1.35, 2, 3))
+    expect((flashlight as any)._fillLight.position).toEqual(new FakeVector3(6.35, 2, 3))
+    expect((flashlight as any)._light.direction).toEqual(new FakeVector3(1, 0, 0))
+    expect((flashlight as any)._spillLight.direction).toEqual(new FakeVector3(1, 0, 0))
+
+    flashlight.setEnabled(false)
+    expect((flashlight as any)._spillLight.intensity).toBe(0)
+    expect((flashlight as any)._fillLight.intensity).toBe(0)
+    expect(flashlight.toggle()).toEqual({ enabled: true, message: "Solar flashlight on." })
+    expect(flashlight.toggle()).toEqual({ enabled: false, message: "Solar flashlight off." })
+
+    flashlight.dispose()
+    expect((flashlight as any)._light.disposed).toBe(true)
+    expect((flashlight as any)._spillLight.disposed).toBe(true)
+    expect((flashlight as any)._fillLight.disposed).toBe(true)
+  })
+
   it("opens inventory, selects one item, and uses the selected item", () => {
-    const backpack = createCoreBackpack()
+    const backpack = createCoreBackpack(createTestFlashlightUseAction())
     const inventory = new InventorySystem(backpack)
 
     inventory.update(0.016)
@@ -628,6 +700,14 @@ function createPersistedChunk(
     generatedAt: 1,
     lastVisitedAt: 1,
     ...overrides,
+  }
+}
+
+function createTestFlashlightUseAction(message = "Test flashlight action."): {
+  readonly toggle: ReturnType<typeof vi.fn<() => { readonly enabled: boolean; readonly message: string }>>
+} {
+  return {
+    toggle: vi.fn(() => ({ enabled: true, message })),
   }
 }
 

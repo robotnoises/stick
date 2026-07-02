@@ -3,6 +3,7 @@ import { DebugOverlay } from "../debug/DebugOverlay"
 import { LightingController } from "../environment/LightingController"
 import { TimeOfDaySystem } from "../environment/TimeOfDaySystem"
 import { createCoreBackpack } from "../items/CoreItems"
+import { FlashlightController } from "../items/FlashlightController"
 import { InventorySystem } from "../items/InventorySystem"
 import { PlayerController } from "../player/PlayerController"
 import { ProgressiveTerrainSystem } from "../world/ProgressiveTerrainSystem"
@@ -38,10 +39,11 @@ export class Game {
     this._player = player
 
     const lighting = new LightingController(this._context, time)
-    const inventory = new InventorySystem(createCoreBackpack())
+    const flashlight = new FlashlightController(this._context, player)
+    const inventory = new InventorySystem(createCoreBackpack(flashlight))
     const debug = new DebugOverlay(player, time)
 
-    this._systems.push(time, player, terrain, lighting, inventory, debug)
+    this._systems.push(time, player, terrain, lighting, flashlight, inventory, debug)
 
     for (const system of this._systems) {
       await system.initialize?.()

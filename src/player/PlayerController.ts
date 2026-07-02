@@ -42,6 +42,10 @@ export class PlayerController implements GameSystem {
     return this._compass.getHeadingDegrees()
   }
 
+  public get forwardDirection(): Vector3 {
+    return this._camera.getForwardRay().direction.clone().normalize()
+  }
+
   public setInvertMouseY(invertMouseY: boolean): void {
     const pointerRotateEntries = this._camera.movement.input.getEntries("pointer", "rotate")
 
