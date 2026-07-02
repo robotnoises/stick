@@ -203,3 +203,96 @@ body {
   font: inherit;
   cursor: pointer;
 }
+
+#debug-world-map-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: start center;
+  box-sizing: border-box;
+  padding: 24px;
+  overflow: auto;
+  background: rgb(0 0 0 / 62%);
+}
+
+#debug-world-map-panel {
+  width: min(760px, calc(100vw - 48px));
+  max-height: none;
+  overflow: visible;
+  padding: 16px;
+  border: 1px solid rgb(243 234 216 / 28%);
+  border-radius: 8px;
+  color: #f3ead8;
+  background: rgb(14 18 13 / 95%);
+  box-shadow: 0 12px 34px rgb(0 0 0 / 45%);
+}
+
+#debug-world-map-panel h2 {
+  margin: 0 0 6px;
+  font-size: 18px;
+}
+
+#debug-world-map-panel p {
+  margin: 0 0 12px;
+  color: rgb(243 234 216 / 78%);
+  font-size: 13px;
+}
+
+#debug-world-map-panel svg {
+  display: block;
+  width: 100%;
+  max-height: 70vh;
+  aspect-ratio: 1;
+  margin-bottom: 12px;
+  border-radius: 4px;
+  background: #1b2118;
+}
+
+.debug-world-map-actions {
+  display: flex;
+  gap: 8px;
+}
+
+#debug-world-map-panel button {
+  padding: 7px 10px;
+  border: 1px solid rgb(243 234 216 / 25%);
+  border-radius: 4px;
+  color: #f3ead8;
+  background: rgb(38 45 32 / 85%);
+  font: inherit;
+  cursor: pointer;
+}
+
+.debug-map-placing-player {
+  cursor: crosshair;
+}
+
+.debug-map-world-bounds {
+  fill: #263420;
+  stroke: rgb(243 234 216 / 70%);
+  stroke-width: 2;
+}
+
+.debug-map-grid {
+  stroke: rgb(243 234 216 / 13%);
+  stroke-width: 1;
+}
+
+.debug-map-lake {
+  fill: rgb(51 128 164 / 70%);
+  stroke: rgb(130 196 219 / 90%);
+  stroke-width: 1.5;
+}
+
+.debug-map-origin {
+  fill: #f0d36b;
+  stroke: #141812;
+  stroke-width: 2;
+}
+
+.debug-map-player {
+  fill: #ff6b4a;
+  stroke: #f3ead8;
+  stroke-width: 2;
+}

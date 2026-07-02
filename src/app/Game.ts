@@ -53,6 +53,20 @@ export class Game {
     const flashlight = new FlashlightController(this._context, player)
     const inventory = new InventorySystem(createCoreBackpack(flashlight))
     const debug = new DebugOverlay(player, time, {
+      getDebugMapData: () => ({
+        worldBounds: this._context!.config.worldBounds,
+        playerPosition: {
+          x: player.position.x,
+          z: player.position.z,
+        },
+        lakes: worldFeatures.lakes.map((lake) => ({
+          id: lake.id,
+          centerX: lake.centerX,
+          centerZ: lake.centerZ,
+          radiusX: lake.radiusX,
+          radiusZ: lake.radiusZ,
+        })),
+      }),
       resetWorld: () => this._resetWorld(chunkRepository),
     })
 

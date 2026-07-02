@@ -224,7 +224,22 @@ describe("player, compass, debug overlay, and time", () => {
     }
     const time = new TimeOfDaySystem(8.5, 1)
     const resetWorld = vi.fn()
-    const overlay = new DebugOverlay(player as any, time, { resetWorld })
+    const overlay = new DebugOverlay(player as any, time, {
+      getDebugMapData: () => ({
+        worldBounds: { minX: -1000, maxX: 1000, minZ: -1000, maxZ: 1000 },
+        playerPosition: { x: 100, z: -200 },
+        lakes: [
+          {
+            id: "debug_lake",
+            centerX: 200,
+            centerZ: 100,
+            radiusX: 150,
+            radiusZ: 90,
+          },
+        ],
+      }),
+      resetWorld,
+    })
 
     overlay.update(0.016)
     expect(document.querySelector("#debug-overlay")?.textContent).toContain("elevation: 2.9m")
@@ -242,12 +257,44 @@ describe("player, compass, debug overlay, and time", () => {
     expect(document.querySelector("#debug-overlay-editor")).toBeNull()
 
     document.querySelector<HTMLElement>("#debug-overlay")?.click()
-    vi.spyOn(window, "confirm").mockReturnValueOnce(false)
     document.querySelectorAll<HTMLButtonElement>("#debug-overlay-editor button[type='button']")[1]?.click()
+    let debugMapSvg = document.querySelector<SVGSVGElement>("#debug-world-map-modal svg")!
+
+    expect(debugMapSvg.getAttribute("role")).toBe("img")
+    expect(document.querySelectorAll("#debug-world-map-modal .debug-map-lake").length).toBe(1)
+    document.querySelectorAll<HTMLButtonElement>("#debug-world-map-panel button")[1]?.click()
+    expect(document.querySelector("#debug-world-map-modal")).toBeNull()
+    document.querySelectorAll<HTMLButtonElement>("#debug-overlay-editor button[type='button']")[1]?.click()
+    debugMapSvg = document.querySelector<SVGSVGElement>("#debug-world-map-modal svg")!
+    Object.defineProperty(debugMapSvg, "getBoundingClientRect", {
+      configurable: true,
+      value: () => ({ left: 0, top: 0, width: 640, height: 640 }),
+    })
+    debugMapSvg.dispatchEvent(
+      new MouseEvent("click", { bubbles: true, clientX: 320, clientY: 320 }),
+    )
+    document.querySelectorAll<HTMLButtonElement>("#debug-world-map-panel button")[0]?.click()
+    document.querySelectorAll<HTMLButtonElement>("#debug-world-map-panel button")[0]?.click()
+    document.querySelectorAll<HTMLButtonElement>("#debug-world-map-panel button")[0]?.click()
+    vi.spyOn(window, "confirm").mockReturnValueOnce(false)
+    debugMapSvg.dispatchEvent(
+      new MouseEvent("click", { bubbles: true, clientX: 320, clientY: 320 }),
+    )
+    expect(document.querySelector("#debug-world-map-modal")).toBeTruthy()
+    vi.spyOn(window, "confirm").mockReturnValueOnce(true)
+    debugMapSvg.dispatchEvent(
+      new MouseEvent("click", { bubbles: true, clientX: 320, clientY: 320 }),
+    )
+    expect(player.setPosition).toHaveBeenCalledWith(0, 4.56, 0)
+    expect(document.querySelector("#debug-world-map-modal")).toBeNull()
+
+    document.querySelector<HTMLElement>("#debug-overlay")?.click()
+    vi.spyOn(window, "confirm").mockReturnValueOnce(false)
+    document.querySelectorAll<HTMLButtonElement>("#debug-overlay-editor button[type='button']")[2]?.click()
     expect(resetWorld).not.toHaveBeenCalled()
 
     vi.spyOn(window, "confirm").mockReturnValueOnce(true)
-    document.querySelectorAll<HTMLButtonElement>("#debug-overlay-editor button[type='button']")[1]?.click()
+    document.querySelectorAll<HTMLButtonElement>("#debug-overlay-editor button[type='button']")[2]?.click()
     expect(resetWorld).toHaveBeenCalledOnce()
 
     ;(document.querySelector<HTMLInputElement>("input[name='positionX']")!.value = "10")
@@ -278,6 +325,7 @@ describe("player, compass, debug overlay, and time", () => {
 
     document.querySelector<HTMLElement>("#debug-overlay")?.click()
     document.querySelectorAll<HTMLButtonElement>("#debug-overlay-editor button[type='button']")[1]?.click()
+    document.querySelectorAll<HTMLButtonElement>("#debug-overlay-editor button[type='button']")[2]?.click()
     overlayWithoutActions.dispose()
   })
 })
@@ -870,8 +918,11 @@ describe("game runtime", () => {
     game.updateSettings({ invertMouseY: true })
 
     document.querySelector<HTMLElement>("#debug-overlay")?.click()
-    vi.spyOn(window, "confirm").mockReturnValueOnce(true)
     document.querySelectorAll<HTMLButtonElement>("#debug-overlay-editor button[type='button']")[1]?.click()
+    expect(document.querySelector("#debug-world-map-modal")).toBeTruthy()
+    document.querySelector("#debug-world-map-modal")?.dispatchEvent(new MouseEvent("click", { bubbles: true }))
+    vi.spyOn(window, "confirm").mockReturnValueOnce(true)
+    document.querySelectorAll<HTMLButtonElement>("#debug-overlay-editor button[type='button']")[2]?.click()
     await new Promise((resolve) => window.setTimeout(resolve, 0))
     expect(reloadWindow).toHaveBeenCalledOnce()
 
