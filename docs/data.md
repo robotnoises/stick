@@ -50,6 +50,7 @@ Likely responsibilities:
 - Save/load player position and orientation.
 - Save/load time of day and elapsed world time.
 - Save/load survival state.
+- Save/load backpack contents and selected item.
 - Manage save slots/world IDs.
 
 ## Persistence Shape
@@ -62,6 +63,7 @@ export interface SaveGame {
     position: [number, number, number]
     yaw: number
     survival: PlayerSurvivalSnapshot
+    backpack: PlayerBackpackSnapshot
   }
   world: {
     timeOfDayHours: number

@@ -106,21 +106,21 @@ Later additions:
 
 Starting inventory:
 
-- Hunting knife
-- Lensatic compass
-- Trench shovel
 - Flint and steel
+- Hunting knife
+- Canteen
+- Solar flashlight
 - Blank paper map and writing tool
 
 For MVP, these can be simple first-person view models or even 2D/flat UI representations.
 
 Recommended order:
 
-1. Compass, because navigation is core.
-2. Paper map and writing tool, because cartography is core.
-3. Flint and steel, because fire-making supports camping, warmth, and night survival.
-4. Knife, because it is simple and useful for interaction tests.
-5. Shovel, once terrain mutation/digging is real.
+1. Paper map and writing tool, because cartography is core.
+2. Flint and steel, because fire-making supports camping, warmth, and night survival.
+3. Solar flashlight, because night readability and risk are important.
+4. Canteen, because water management is a core survival loop.
+5. Knife, because it is simple and useful for interaction tests.
 
 ### 5. Environmental Props
 

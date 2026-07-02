@@ -51,6 +51,12 @@ src/
     PlayerController.ts
     PlayerSurvivalState.ts
     Compass.ts
+  items/
+    Item.ts
+    Backpack.ts
+    InventorySystem.ts
+    CoreItems.ts
+    implementations/
   world/
     ChunkCoord.ts
     Chunk.ts

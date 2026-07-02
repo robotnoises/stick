@@ -82,11 +82,11 @@ The player should not begin with a clear route. They must discover useful terrai
 
 Initial baseline:
 
-- hunting knife
-- lensatic compass
-- trench shovel
-- blank paper map w/grid lines
 - flint and steel for making fire
+- hunting knife
+- canteen
+- solar flashlight
+- blank paper map w/grid lines
 
 Possible later additions depending on difficulty and story framing:
 
@@ -193,6 +193,7 @@ App
     │   ├── PlayerController
     │   ├── Compass
     │   ├── PlayerSurvivalState
+    │   ├── Backpack / InventorySystem
     │   └── Cartography / PaperMap
     ├── WorldSystem
     │   ├── ProgressiveTerrainSystem
@@ -228,6 +229,7 @@ Persistence should support:
 - player position and orientation
 - time of day and elapsed world time
 - survival state
+- backpack contents and selected item
 - player-created map data
 - discovered/mapped locations
 - created camps/stashes/markers
@@ -258,6 +260,7 @@ See [`docs/data.md`](docs/data.md) and [`docs/progressive-terrain.md`](docs/prog
 
 - [`docs/story.md`](docs/story.md) — story, objective, player fantasy, discoveries
 - [`docs/cartography.md`](docs/cartography.md) — homemade paper map, grid scale, dead reckoning, and drawing mechanics
+- [`docs/inventory.md`](docs/inventory.md) — backpack, core items, found items, selection, and use mechanics
 - [`docs/planning.md`](docs/planning.md) — product direction, pillars, MVP, milestones
 - [`docs/architecture.md`](docs/architecture.md) — current architecture plan and source layout
 - [`docs/progressive-terrain.md`](docs/progressive-terrain.md) — streaming terrain plan

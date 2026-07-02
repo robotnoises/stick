@@ -16,7 +16,7 @@ Stick is a web-based, first-person survival simulator set in a stylized but grou
    - The player builds knowledge through a blank paper map/cartography system rather than automatic map reveal. See [Cartography and Paper Map Design](cartography.md).
 
 3. **Resource scarcity and consequence**
-   - The starting kit is minimal: hunting knife, lensatic compass, trench shovel, flint and steel, and blank paper map.
+   - The starting kit is minimal: flint and steel, hunting knife, canteen, solar flashlight, and blank paper map. See [Backpack and Item System](inventory.md).
    - Survival actions should be deliberate and somewhat costly.
 
 4. **Stylized realism**
@@ -35,6 +35,7 @@ Build a playable vertical slice proving scale, navigation, terrain streaming, an
 - World-space landform generation for rivers, lakes, hills, mountains, and other multi-chunk terrain features.
 - Stylized terrain material.
 - Tree/rock/grass prop instancing.
+- Backpack/inventory prototype with selectable core items.
 - Compass item with accurate heading.
 - Blank paper map/cartography prototype for player-made landmarks, route notes, grid scale, and distance-from-last-marker navigation.
 - Day/night lighting cycle.
@@ -91,6 +92,7 @@ See [Progressive Terrain Plan](progressive-terrain.md) and [Large Landforms and 
 
 - Hunger/hydration/fatigue model.
 - Stamina interaction with movement.
+- Basic item use hooks from the backpack system.
 - Time scale configuration.
 - Rest/wait prototype.
 - Fire-making prototype using flint and steel.

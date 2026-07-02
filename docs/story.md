@@ -70,11 +70,11 @@ The player should feel that moving across the world is meaningful. Every trip aw
 
 The player starts with minimal gear:
 
-- hunting knife
-- lensatic compass
-- trench shovel
-- blank sheet of paper for mapmaking
 - flint and steel for making fire
+- hunting knife
+- canteen
+- solar flashlight
+- blank sheet of paper for mapmaking
 - very limited food and water, or possibly none depending on difficulty
 - basic clothing suitable for summer but not extreme exposure
 
@@ -82,7 +82,7 @@ Possible later additions:
 
 - small tent or tarp
 - matches/lighter/backup firestarter
-- water bottle or canteen
+- spare water bottle
 - simple backpack inventory
 - pencil/charcoal for mapmaking
 

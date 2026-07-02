@@ -21,6 +21,21 @@
 - [ ] Add jumping.
 - [ ] Add general collision detection.
 
+## Backpack and Items
+
+- [ ] Use [Backpack and Item System](inventory.md) as the mechanics source for inventory.
+- [ ] Add item implementations for core items:
+  - [ ] flint & steel
+  - [ ] knife
+  - [ ] canteen
+  - [ ] solar flashlight
+  - [ ] blank paper map
+- [ ] Add backpack UI for viewing items.
+- [ ] Add one-selected-item behavior.
+- [ ] Add item use key behavior.
+- [ ] Add item discard behavior and confirmation design for important items.
+- [ ] Add found-item pickup flow for rare loot.
+
 ## Survival and Player State
 
 - [ ] Add player vitals:
@@ -126,6 +141,9 @@
   - [ ] bush
   - [ ] compass placeholder
   - [ ] flint and steel placeholder
+  - [ ] knife placeholder
+  - [ ] canteen placeholder
+  - [ ] solar flashlight placeholder
 - [ ] Validate imported assets for meter scale, ground-contact origin, clean naming, and instancing performance.
 - [ ] Add placeholder paper map and mapping tool assets.
 

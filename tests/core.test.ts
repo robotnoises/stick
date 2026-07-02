@@ -6,6 +6,9 @@ import { DebugOverlay } from "../src/debug/DebugOverlay"
 import { BabylonBootstrap } from "../src/engine/BabylonBootstrap"
 import { LightingController } from "../src/environment/LightingController"
 import { TimeOfDaySystem } from "../src/environment/TimeOfDaySystem"
+import { createCoreBackpack } from "../src/items/CoreItems"
+import { InventorySystem } from "../src/items/InventorySystem"
+import type { Item, ItemUseResult } from "../src/items/Item"
 import { Compass } from "../src/player/Compass"
 import { PlayerController } from "../src/player/PlayerController"
 import { ChunkCoord } from "../src/world/ChunkCoord"
@@ -232,6 +235,83 @@ describe("player, compass, debug overlay, and time", () => {
 
     overlay.dispose()
     expect(document.querySelector("#debug-overlay")).toBeNull()
+  })
+})
+
+describe("backpack and inventory", () => {
+  it("creates core items, selects, uses, and discards items", () => {
+    const backpack = createCoreBackpack()
+    const copiedItems = backpack.items
+
+    copiedItems.pop()
+    expect(backpack.items.map((item) => item.name)).toEqual([
+      "Flint & steel",
+      "Knife",
+      "Canteen",
+      "Solar flashlight",
+      "Blank map",
+    ])
+    expect(backpack.selectedItem).toBeNull()
+    expect(backpack.useSelectedItem()).toEqual({ success: false, message: "No item selected." })
+    expect(backpack.selectItem("missing")).toBe(false)
+
+    for (const item of backpack.items) {
+      expect(item.source).toBe("core")
+      expect(item.discardable).toBe(true)
+      expect(item.use().success).toBe(true)
+    }
+
+    expect(backpack.selectItem("core_canteen")).toBe(true)
+    expect(backpack.selectedItem?.name).toBe("Canteen")
+    expect(backpack.useSelectedItem().message).toBe("You check the canteen.")
+
+    expect(backpack.discardItem("core_canteen")).toBe(true)
+    expect(backpack.selectedItem).toBeNull()
+    expect(backpack.getItem("core_canteen")).toBeNull()
+    expect(backpack.discardItem("missing")).toBe(false)
+
+    backpack.addItem(new TestFoundItem())
+    expect(backpack.selectItem("found_test_item")).toBe(true)
+    backpack.clearSelection()
+    expect(backpack.selectedItem).toBeNull()
+  })
+
+  it("opens inventory, selects one item, and uses the selected item", () => {
+    const backpack = createCoreBackpack()
+    const inventory = new InventorySystem(backpack)
+
+    inventory.update(0.016)
+    expect(document.querySelector<HTMLElement>("#inventory-panel")?.hidden).toBe(true)
+    expect(inventory.selectedItemName).toBeNull()
+
+    window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyA" }))
+    window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyU" }))
+    expect(document.querySelector("#inventory-panel")?.textContent).toContain("No item selected.")
+
+    window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyI" }))
+    expect(document.querySelector<HTMLElement>("#inventory-panel")?.hidden).toBe(false)
+
+    document.querySelector<HTMLElement>("#inventory-panel")?.click()
+    document.querySelector<HTMLButtonElement>("button[data-item-id='core_flint_and_steel']")?.click()
+    expect(inventory.selectedItemName).toBe("Flint & steel")
+    expect(document.querySelector("#inventory-panel")?.textContent).toContain(
+      "Flint & steel selected.",
+    )
+
+    window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyU" }))
+    expect(document.querySelector("#inventory-panel")?.textContent).toContain(
+      "You ready the flint and steel.",
+    )
+
+    window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyI" }))
+    expect(document.querySelector<HTMLElement>("#inventory-panel")?.hidden).toBe(true)
+
+    window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyI" }))
+    window.dispatchEvent(new KeyboardEvent("keydown", { code: "Escape" }))
+    expect(document.querySelector<HTMLElement>("#inventory-panel")?.hidden).toBe(true)
+
+    inventory.dispose()
+    expect(document.querySelector("#inventory-panel")).toBeNull()
   })
 })
 
@@ -548,6 +628,18 @@ function createPersistedChunk(
     generatedAt: 1,
     lastVisitedAt: 1,
     ...overrides,
+  }
+}
+
+class TestFoundItem implements Item {
+  public readonly id = "found_test_item"
+  public readonly name = "Found test item"
+  public readonly description = "A test item found in the world."
+  public readonly source = "found"
+  public readonly discardable = true
+
+  public use(): ItemUseResult {
+    return { success: true, message: "You use the found test item." }
   }
 }
 

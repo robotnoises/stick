@@ -2,6 +2,8 @@ import { BabylonBootstrap } from "../engine/BabylonBootstrap"
 import { DebugOverlay } from "../debug/DebugOverlay"
 import { LightingController } from "../environment/LightingController"
 import { TimeOfDaySystem } from "../environment/TimeOfDaySystem"
+import { createCoreBackpack } from "../items/CoreItems"
+import { InventorySystem } from "../items/InventorySystem"
 import { PlayerController } from "../player/PlayerController"
 import { ProgressiveTerrainSystem } from "../world/ProgressiveTerrainSystem"
 import { EngineContext } from "./EngineContext"
@@ -36,9 +38,10 @@ export class Game {
     this._player = player
 
     const lighting = new LightingController(this._context, time)
+    const inventory = new InventorySystem(createCoreBackpack())
     const debug = new DebugOverlay(player, time)
 
-    this._systems.push(time, player, terrain, lighting, debug)
+    this._systems.push(time, player, terrain, lighting, inventory, debug)
 
     for (const system of this._systems) {
       await system.initialize?.()

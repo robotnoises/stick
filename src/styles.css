@@ -85,6 +85,59 @@ body {
   cursor: pointer;
 }
 
+#inventory-panel {
+  position: fixed;
+  right: 12px;
+  bottom: 12px;
+  z-index: 12;
+  width: min(320px, calc(100vw - 24px));
+  padding: 14px;
+  border: 1px solid rgb(243 234 216 / 25%);
+  border-radius: 6px;
+  color: #f3ead8;
+  background: rgb(0 0 0 / 72%);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 30%);
+  font:
+    14px/1.4 system-ui,
+    sans-serif;
+}
+
+#inventory-panel h2 {
+  margin: 0 0 6px;
+  font-size: 17px;
+}
+
+#inventory-panel p {
+  margin: 0 0 10px;
+}
+
+.inventory-item-list {
+  display: grid;
+  gap: 6px;
+}
+
+.inventory-item {
+  padding: 8px 10px;
+  border: 1px solid rgb(243 234 216 / 24%);
+  border-radius: 4px;
+  color: #f3ead8;
+  background: rgb(20 24 18 / 90%);
+  text-align: left;
+  cursor: pointer;
+}
+
+.inventory-item:hover,
+.inventory-item:focus-visible,
+.inventory-item.selected {
+  border-color: rgb(243 234 216 / 65%);
+  background: rgb(58 68 48 / 94%);
+}
+
+.inventory-status {
+  margin-top: 10px !important;
+  color: rgb(243 234 216 / 82%);
+}
+
 #debug-overlay {
   position: fixed;
   left: 12px;
