@@ -66,10 +66,11 @@ src/
     TimeOfDaySystem.ts
     LightingController.ts
     WeatherSystem.ts
-  persistence/
+  data/
     SaveGame.ts
     SaveRepository.ts
-    ChunkSaveData.ts
+    ChunkRepository.ts
+    LocalForageChunkRepository.ts
   assets/
     MaterialRegistry.ts
     MeshRegistry.ts

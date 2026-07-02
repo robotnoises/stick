@@ -1,0 +1,283 @@
+import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial"
+import { Color3 } from "@babylonjs/core/Maths/math.color"
+import type { EngineContext } from "../app/EngineContext"
+import type { ChunkRepository, ChunkMutation, PersistedChunkData } from "../data/ChunkRepository"
+import { ChunkCoord } from "./ChunkCoord"
+import { TerrainChunk, type TerrainChunkMaterials } from "./TerrainChunk"
+import type { ChunkTerrainData } from "./TerrainTypes"
+import { TerrainGenerator } from "./generation/TerrainGenerator"
+
+export interface ChunkManagerOptions {
+  readonly loadRadiusChunks: number
+  readonly unloadRadiusChunks: number
+  readonly memoryRadiusChunks: number
+}
+
+interface CachedChunkData {
+  readonly data: ChunkTerrainData
+  lastUsed: number
+}
+
+export class ChunkManager {
+  private static readonly _persistedVersion = 1
+
+  private readonly _activeChunks = new Map<string, TerrainChunk>()
+  private readonly _activeCoords = new Map<string, ChunkCoord>()
+  private readonly _dataCache = new Map<string, CachedChunkData>()
+  private readonly _inFlightLoads = new Set<string>()
+  private readonly _materials: TerrainChunkMaterials
+
+  public constructor(
+    private readonly _context: EngineContext,
+    private readonly _generator: TerrainGenerator,
+    private readonly _repository: ChunkRepository,
+    private readonly _options: ChunkManagerOptions,
+  ) {
+    this._materials = this._createMaterials()
+  }
+
+  public async updateAround(center: ChunkCoord): Promise<void> {
+    this._disposeDistantChunks(center)
+
+    const desiredCoords = this._getDesiredCoords(center)
+
+    for (const coord of desiredCoords) {
+      await this._ensureChunk(coord)
+    }
+
+    this._evictDistantCachedData(center)
+  }
+
+  public getHeightAt(worldX: number, worldZ: number): number {
+    const coord = ChunkCoord.fromWorldPosition(worldX, worldZ, this._generator.chunkSizeMeters)
+    const cached = this._dataCache.get(coord.key)
+
+    if (!cached) {
+      return this._generator.getHeight(worldX, worldZ)
+    }
+
+    cached.lastUsed = Date.now()
+    return this._sampleChunkHeight(cached.data, worldX, worldZ)
+  }
+
+  public dispose(): void {
+    for (const chunk of this._activeChunks.values()) {
+      chunk.dispose()
+    }
+
+    this._activeChunks.clear()
+    this._activeCoords.clear()
+    this._dataCache.clear()
+    this._inFlightLoads.clear()
+    this._materials.terrain.dispose()
+    this._materials.trunk.dispose()
+    this._materials.needles.dispose()
+  }
+
+  private async _ensureChunk(coord: ChunkCoord): Promise<void> {
+    if (this._activeChunks.has(coord.key) || this._inFlightLoads.has(coord.key)) {
+      return
+    }
+
+    this._inFlightLoads.add(coord.key)
+
+    try {
+      const data = await this._loadChunkData(coord)
+      const chunk = new TerrainChunk(this._context, data, this._materials)
+
+      this._activeChunks.set(coord.key, chunk)
+      this._activeCoords.set(coord.key, coord)
+    } finally {
+      this._inFlightLoads.delete(coord.key)
+    }
+  }
+
+  private async _loadChunkData(coord: ChunkCoord): Promise<ChunkTerrainData> {
+    const cached = this._dataCache.get(coord.key)
+
+    if (cached) {
+      cached.lastUsed = Date.now()
+      return cached.data
+    }
+
+    const persisted = await this._loadPersistedChunk(coord.key)
+
+    if (persisted && this._isCompatiblePersistedChunk(persisted)) {
+      const data = this._fromPersistedChunk(persisted)
+      const now = Date.now()
+
+      this._dataCache.set(coord.key, { data, lastUsed: now })
+      await this._savePersistedChunk({ ...persisted, lastVisitedAt: now })
+
+      return data
+    }
+
+    const generated = this._generator.generateChunk(coord)
+    const now = Date.now()
+
+    this._dataCache.set(coord.key, { data: generated, lastUsed: now })
+    await this._savePersistedChunk(this._toPersistedChunk(generated, [], now, now))
+
+    return generated
+  }
+
+  private async _loadPersistedChunk(key: string): Promise<PersistedChunkData | null> {
+    try {
+      return await this._repository.getChunk(key)
+    } catch (error) {
+      console.warn(`Failed to load terrain chunk ${key}. Regenerating from seed.`, error)
+      return null
+    }
+  }
+
+  private async _savePersistedChunk(chunk: PersistedChunkData): Promise<void> {
+    try {
+      await this._repository.saveChunk(chunk)
+    } catch (error) {
+      console.warn(`Failed to persist terrain chunk ${chunk.key}.`, error)
+    }
+  }
+
+  private _disposeDistantChunks(center: ChunkCoord): void {
+    for (const [key, chunk] of this._activeChunks) {
+      const coord = this._activeCoords.get(key)
+
+      if (!coord || coord.distanceTo(center) <= this._options.unloadRadiusChunks) {
+        continue
+      }
+
+      chunk.dispose()
+      this._activeChunks.delete(key)
+      this._activeCoords.delete(key)
+    }
+  }
+
+  private _evictDistantCachedData(center: ChunkCoord): void {
+    for (const [key, cached] of this._dataCache) {
+      if (this._activeChunks.has(key)) {
+        continue
+      }
+
+      if (cached.data.coord.distanceTo(center) > this._options.memoryRadiusChunks) {
+        this._dataCache.delete(key)
+      }
+    }
+  }
+
+  private _getDesiredCoords(center: ChunkCoord): ChunkCoord[] {
+    const coords: ChunkCoord[] = []
+
+    for (let z = -this._options.loadRadiusChunks; z <= this._options.loadRadiusChunks; z += 1) {
+      for (let x = -this._options.loadRadiusChunks; x <= this._options.loadRadiusChunks; x += 1) {
+        coords.push(new ChunkCoord(center.x + x, center.z + z))
+      }
+    }
+
+    coords.sort((a, b) => a.distanceTo(center) - b.distanceTo(center))
+    return coords
+  }
+
+  private _sampleChunkHeight(data: ChunkTerrainData, worldX: number, worldZ: number): number {
+    const localX = worldX - data.coord.x * data.chunkSizeMeters
+    const localZ = worldZ - data.coord.z * data.chunkSizeMeters
+    const gridSize = data.resolution + 1
+    const step = data.chunkSizeMeters / data.resolution
+    const sampleX = Math.min(Math.max(localX / step, 0), data.resolution)
+    const sampleZ = Math.min(Math.max(localZ / step, 0), data.resolution)
+    const x0 = Math.floor(sampleX)
+    const z0 = Math.floor(sampleZ)
+    const x1 = Math.min(x0 + 1, data.resolution)
+    const z1 = Math.min(z0 + 1, data.resolution)
+    const tx = sampleX - x0
+    const tz = sampleZ - z0
+    const a = data.heights[z0 * gridSize + x0] ?? 0
+    const b = data.heights[z0 * gridSize + x1] ?? a
+    const c = data.heights[z1 * gridSize + x0] ?? a
+    const d = data.heights[z1 * gridSize + x1] ?? c
+    const xMix0 = this._lerp(a, b, tx)
+    const xMix1 = this._lerp(c, d, tx)
+
+    return this._lerp(xMix0, xMix1, tz)
+  }
+
+  private _isCompatiblePersistedChunk(chunk: PersistedChunkData): boolean {
+    return (
+      chunk.worldSeed === this._generator.seed &&
+      chunk.chunkSizeMeters === this._generator.chunkSizeMeters &&
+      chunk.resolution === this._generator.resolution
+    )
+  }
+
+  private _fromPersistedChunk(chunk: PersistedChunkData): ChunkTerrainData {
+    const mutations = chunk.mutations
+    const heights = new Float32Array(chunk.heights)
+    const removedPropIds = new Set(
+      mutations
+        .filter((mutation) => mutation.type === "propRemoved")
+        .map((mutation) => mutation.propId),
+    )
+    const props = chunk.props.filter((prop) => !removedPropIds.has(prop.id))
+
+    for (const mutation of mutations) {
+      if (mutation.type === "terrainDelta") {
+        heights[mutation.vertexIndex] = (heights[mutation.vertexIndex] ?? 0) + mutation.deltaY
+      }
+    }
+
+    return {
+      key: chunk.key,
+      coord: new ChunkCoord(chunk.coordX, chunk.coordZ),
+      chunkSizeMeters: chunk.chunkSizeMeters,
+      resolution: chunk.resolution,
+      generatorVersion: chunk.generatorVersion,
+      seed: chunk.worldSeed,
+      heights,
+      props,
+    }
+  }
+
+  private _toPersistedChunk(
+    data: ChunkTerrainData,
+    mutations: ChunkMutation[],
+    generatedAt: number,
+    lastVisitedAt: number,
+  ): PersistedChunkData {
+    return {
+      version: ChunkManager._persistedVersion,
+      key: data.key,
+      coordX: data.coord.x,
+      coordZ: data.coord.z,
+      worldSeed: data.seed,
+      generatorVersion: data.generatorVersion,
+      chunkSizeMeters: data.chunkSizeMeters,
+      resolution: data.resolution,
+      heights: Array.from(data.heights),
+      props: data.props,
+      mutations,
+      generatedAt,
+      lastVisitedAt,
+    }
+  }
+
+  private _createMaterials(): TerrainChunkMaterials {
+    const terrain = new StandardMaterial("progressive-terrain-material", this._context.scene)
+    const trunk = new StandardMaterial("progressive-pine-trunk-material", this._context.scene)
+    const needles = new StandardMaterial("progressive-pine-needles-material", this._context.scene)
+
+    terrain.diffuseColor = new Color3(0.33, 0.42, 0.21)
+    terrain.ambientColor = new Color3(0.18, 0.24, 0.12)
+    terrain.specularColor = Color3.Black()
+    terrain.backFaceCulling = false
+    terrain.twoSidedLighting = true
+    trunk.diffuseColor = new Color3(0.34, 0.21, 0.12)
+    trunk.specularColor = Color3.Black()
+    needles.diffuseColor = new Color3(0.11, 0.27, 0.14)
+    needles.specularColor = Color3.Black()
+
+    return { terrain, trunk, needles }
+  }
+
+  private _lerp(from: number, to: number, amount: number): number {
+    return from + (to - from) * amount
+  }
+}

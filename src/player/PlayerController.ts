@@ -9,6 +9,7 @@ export class PlayerController implements GameSystem {
 
   private readonly _camera: UniversalCamera
   private readonly _compass: Compass
+  private _groundHeightProvider: ((worldX: number, worldZ: number) => number) | null = null
 
   public constructor(private readonly _context: EngineContext) {
     this._camera = new UniversalCamera(
@@ -47,8 +48,13 @@ export class PlayerController implements GameSystem {
     }
   }
 
+  public setGroundHeightProvider(provider: (worldX: number, worldZ: number) => number): void {
+    this._groundHeightProvider = provider
+  }
+
   public update(_deltaSeconds: number): void {
-    // Keep prototype player at eye height until terrain collision is implemented.
-    this._camera.position.y = 1.7
+    const groundHeight = this._groundHeightProvider?.(this._camera.position.x, this._camera.position.z) ?? 0
+
+    this._camera.position.y = groundHeight + 1.7
   }
 }

@@ -3,7 +3,7 @@ import { DebugOverlay } from "../debug/DebugOverlay"
 import { LightingController } from "../environment/LightingController"
 import { TimeOfDaySystem } from "../environment/TimeOfDaySystem"
 import { PlayerController } from "../player/PlayerController"
-import { TestTerrainSystem } from "../world/TestTerrainSystem"
+import { ProgressiveTerrainSystem } from "../world/ProgressiveTerrainSystem"
 import { EngineContext } from "./EngineContext"
 import { defaultGameConfig, type GameConfig } from "./GameConfig"
 import { defaultGameSettings, type GameSettings } from "./GameSettings"
@@ -28,15 +28,17 @@ export class Game {
     this._context = new EngineContext(this._canvas, engine, scene, this._config)
 
     const time = new TimeOfDaySystem(this._config.startTimeOfDayHours, this._config.timeScale)
-    const terrain = new TestTerrainSystem(this._context)
     const player = new PlayerController(this._context)
+    const terrain = new ProgressiveTerrainSystem(this._context, player)
+
     player.setInvertMouseY(this._settings.invertMouseY)
+    player.setGroundHeightProvider((worldX, worldZ) => terrain.getHeightAt(worldX, worldZ))
     this._player = player
 
     const lighting = new LightingController(this._context, time)
     const debug = new DebugOverlay(player, time)
 
-    this._systems.push(time, terrain, player, lighting, debug)
+    this._systems.push(time, player, terrain, lighting, debug)
 
     for (const system of this._systems) {
       await system.initialize?.()
