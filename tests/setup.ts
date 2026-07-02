@@ -211,7 +211,13 @@ class FakeWebGPUEngine extends FakeEngine {
 }
 
 class FakeScene {
+  public static readonly FOGMODE_LINEAR = 3
+
   public clearColor = new FakeColor4()
+  public fogColor = new FakeColor3()
+  public fogMode = 0
+  public fogStart = 0
+  public fogEnd = 0
   public activeCamera: unknown = null
   public rendered = false
 

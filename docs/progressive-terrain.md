@@ -224,6 +224,8 @@ Example:
 
 ## Terrain Generation Notes
 
+For large landforms that span multiple chunks, see [Large Landforms and World Features](landforms.md).
+
 Chunk edge heights must be sampled from absolute world positions:
 
 ```ts

@@ -5,6 +5,7 @@ import { Vector3 } from "@babylonjs/core/Maths/math.vector"
 import type { Mesh } from "@babylonjs/core/Meshes/mesh"
 import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder"
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial"
+import { Scene } from "@babylonjs/core/scene"
 import type { EngineContext } from "../app/EngineContext"
 import type { GameSystem } from "../app/GameSystem"
 import type { TimeOfDaySystem } from "./TimeOfDaySystem"
@@ -53,6 +54,10 @@ export class LightingController implements GameSystem {
 
     this._sunDisc.material = this._sunMaterial
     this._moonDisc.material = this._moonMaterial
+
+    this._context.scene.fogMode = Scene.FOGMODE_LINEAR
+    this._context.scene.fogStart = 90
+    this._context.scene.fogEnd = 260
   }
 
   public update(_deltaSeconds: number): void {
@@ -89,7 +94,10 @@ export class LightingController implements GameSystem {
     const twilightAmount = Math.max(0, 1 - Math.abs(elevation) / 0.35) * 0.65
     const base = this._mixColor4(night, day, daylight)
 
-    this._context.scene.clearColor = this._mixColor4(base, twilight, twilightAmount)
+    const skyColor = this._mixColor4(base, twilight, twilightAmount)
+
+    this._context.scene.clearColor = skyColor
+    this._context.scene.fogColor = new Color3(skyColor.r, skyColor.g, skyColor.b)
   }
 
   private _updateCelestialBody(mesh: Mesh, direction: Vector3, elevation: number): void {

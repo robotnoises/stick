@@ -31,6 +31,7 @@ Build a playable vertical slice proving scale, navigation, terrain streaming, an
 - First-person controller with walking, sprinting, crouching, jumping disabled or limited.
 - WebGPU Babylon.js render loop with fallback decision documented later.
 - Procedural terrain chunks around player.
+- World-space landform generation for rivers, lakes, hills, mountains, and other multi-chunk terrain features.
 - Stylized terrain material.
 - Tree/rock/grass prop instancing.
 - Compass item with accurate heading.
@@ -66,7 +67,7 @@ Build a playable vertical slice proving scale, navigation, terrain streaming, an
 
 ### Milestone 2: Terrain Prototype
 
-See [Progressive Terrain Plan](progressive-terrain.md).
+See [Progressive Terrain Plan](progressive-terrain.md) and [Large Landforms and World Features](landforms.md).
 
 - Deterministic seed-based chunk coordinates.
 - First-generate terrain into memory, then persist visited chunk snapshots to IndexedDB.

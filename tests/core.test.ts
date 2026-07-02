@@ -190,6 +190,10 @@ describe("lighting", () => {
     } as typeof context.scene.activeCamera
     lighting.update(0.016)
     expect(context.scene.clearColor.r).toBeGreaterThan(0)
+    expect(context.scene.fogColor.r).toBe(context.scene.clearColor.r)
+    expect(context.scene.fogMode).toBe(FakeScene.FOGMODE_LINEAR)
+    expect(context.scene.fogStart).toBe(90)
+    expect(context.scene.fogEnd).toBe(260)
 
     context.scene.activeCamera = null
     lighting.update(0.016)

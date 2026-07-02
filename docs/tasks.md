@@ -19,6 +19,25 @@
 - [ ] Add walking head-bob: camera should bounce up/down subtly based on movement speed.
 - [ ] Add running.
 - [ ] Add jumping.
+- [ ] Add general collision detection.
+
+## Survival and Player State
+
+- [ ] Add player vitals:
+  - [ ] health
+  - [ ] fatigue
+  - [ ] hunger
+  - [ ] thirst
+  - [ ] body temperature / exposure
+  - [ ] injury status
+
+## Story and Progression
+
+- [ ] Add a state machine for tracking player progress.
+- [ ] Add story/progression content coupled to the state machine:
+  - [ ] player goals/objectives
+  - [ ] tutorial mission to start
+  - [ ] follow-up missions or survival prompts
 
 ## Terrain and Environment Variety
 
@@ -28,6 +47,8 @@
   - [ ] sand
   - [ ] pine needles / forest floor
 - [ ] Add more tree types.
+- [ ] Add animals.
+- [ ] Add more flora; this should be a major investment area.
 - [ ] Add tree states:
   - [ ] alive
   - [ ] dead

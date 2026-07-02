@@ -28,9 +28,9 @@ export class ProgressiveTerrainSystem implements GameSystem {
       this._generator,
       new LocalForageChunkRepository(),
       {
-        loadRadiusChunks: 2,
-        unloadRadiusChunks: 3,
-        memoryRadiusChunks: 4,
+        loadRadiusChunks: 3,
+        unloadRadiusChunks: 4,
+        memoryRadiusChunks: 5,
       },
     )
   }
