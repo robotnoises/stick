@@ -52,8 +52,13 @@ export class WorldFeatureGenerator {
     for (const lake of this._lakes) {
       const normalizedDistance = this._getLakeNormalizedDistance(lake, worldX, worldZ)
       const distanceToShore = this._getApproximateDistanceToLakeShoreMeters(lake, normalizedDistance)
+      const isInsideLake = normalizedDistance < 1
+      const currentIsInsideLake = nearestNormalizedDistance < 1
 
-      if (Math.abs(distanceToShore) < Math.abs(nearestDistanceToShore)) {
+      if (
+        (isInsideLake && (!currentIsInsideLake || normalizedDistance < nearestNormalizedDistance)) ||
+        (!isInsideLake && !currentIsInsideLake && Math.abs(distanceToShore) < Math.abs(nearestDistanceToShore))
+      ) {
         nearestLake = lake
         nearestNormalizedDistance = normalizedDistance
         nearestDistanceToShore = distanceToShore

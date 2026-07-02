@@ -4,13 +4,16 @@ import { Mesh } from "@babylonjs/core/Meshes/mesh"
 import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder"
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData"
 import type { EngineContext } from "../app/EngineContext"
+import type { WorldBounds } from "../app/GameConfig"
 import { TerrainMaterial, type ChunkTerrainData, type GeneratedPropData } from "./TerrainTypes"
+import type { WorldFeatureGenerator } from "./generation/WorldFeatureGenerator"
 
 export interface TerrainChunkMaterials {
   readonly terrain: StandardMaterial
   readonly trunk: StandardMaterial
   readonly needles: StandardMaterial
   readonly rock: StandardMaterial
+  readonly water: StandardMaterial
 }
 
 export class TerrainChunk {
@@ -21,8 +24,10 @@ export class TerrainChunk {
     private readonly _context: EngineContext,
     private readonly _data: ChunkTerrainData,
     private readonly _materials: TerrainChunkMaterials,
+    private readonly _worldFeatures: WorldFeatureGenerator | null = null,
   ) {
     this._terrainMesh = this._createTerrainMesh()
+    this._createWaterMeshes()
 
     for (const prop of this._data.props) {
       this._createProp(prop)
@@ -88,6 +93,49 @@ export class TerrainChunk {
 
     mesh.material = this._materials.terrain
     return mesh
+  }
+
+  private _createWaterMeshes(): void {
+    if (!this._worldFeatures) {
+      return
+    }
+
+    const bounds = this._getChunkBounds()
+    const lakes = this._worldFeatures.getLakesIntersectingBounds(bounds)
+
+    for (const lake of lakes) {
+      const water = MeshBuilder.CreateGround(
+        `water_${this._data.key}_${lake.id}`,
+        {
+          width: this._data.chunkSizeMeters,
+          height: this._data.chunkSizeMeters,
+          subdivisions: 1,
+        },
+        this._context.scene,
+      )
+
+      water.position = new Vector3(
+        bounds.minX + this._data.chunkSizeMeters / 2,
+        lake.waterLevelMeters,
+        bounds.minZ + this._data.chunkSizeMeters / 2,
+      )
+      water.material = this._materials.water
+      water.isPickable = false
+
+      this._props.push(water)
+    }
+  }
+
+  private _getChunkBounds(): WorldBounds {
+    const minX = this._data.coord.x * this._data.chunkSizeMeters
+    const minZ = this._data.coord.z * this._data.chunkSizeMeters
+
+    return {
+      minX,
+      maxX: minX + this._data.chunkSizeMeters,
+      minZ,
+      maxZ: minZ + this._data.chunkSizeMeters,
+    }
   }
 
   private _getTerrainColor(material: number): [number, number, number, number] {

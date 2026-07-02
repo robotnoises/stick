@@ -52,6 +52,13 @@ function createContext(): EngineContext {
   return new EngineContext(canvas, engine, scene, defaultGameConfig)
 }
 
+function createWorldFeatures(): WorldFeatureGenerator {
+  return new WorldFeatureGenerator({
+    seed: defaultGameConfig.worldSeed,
+    worldBounds: defaultGameConfig.worldBounds,
+  })
+}
+
 function createSmallChunkData(): ChunkTerrainData {
   return {
     key: "chunk_0_0",
@@ -504,6 +511,16 @@ describe("chunk coordinates and generation", () => {
     expect(
       a.getLakesIntersectingBounds({ minX: 100_000, maxX: 101_000, minZ: 100_000, maxZ: 101_000 }),
     ).toEqual([])
+    ;(a as any)._lakes = [
+      { ...lake, id: "wide", centerX: 0, centerZ: 0, radiusX: 100, radiusZ: 100 },
+      { ...lake, id: "equal", centerX: 0, centerZ: 0, radiusX: 100, radiusZ: 100 },
+    ]
+    expect(a.sample(0, 0).water?.feature.id).toBe("wide")
+    ;(a as any)._lakes = [
+      { ...lake, id: "near", centerX: 0, centerZ: 0, radiusX: 10, radiusZ: 10 },
+      { ...lake, id: "closer", centerX: 5, centerZ: 0, radiusX: 100, radiusZ: 100 },
+    ]
+    expect(a.sample(5, 0).water?.feature.id).toBe("closer")
     ;(a as any)._lakes.length = 0
     expect(a.lakes.length).toBe(0)
     expect(a.sample(0, 0)).toEqual({ water: null })
@@ -529,7 +546,32 @@ describe("chunk coordinates and generation", () => {
       }
     }
 
+    const waterFeatures = new WorldFeatureGenerator({
+      seed: 7,
+      worldBounds: { minX: -512, maxX: 512, minZ: -512, maxZ: 512 },
+    })
+    const lake = waterFeatures.lakes[0]!
+    const waterGenerator = new TerrainGenerator({
+      seed: 7,
+      chunkSizeMeters: 64,
+      resolution: 4,
+      worldFeatures: waterFeatures,
+    })
+    const lakeCenterHeight = waterGenerator.getHeight(lake.centerX, lake.centerZ)
+    const shoreMaterial = waterGenerator.getTerrainMaterial(
+      lake.centerX + lake.radiusX + lake.shoreFalloffMeters / 2,
+      lake.centerZ,
+    )
+    const lakeProps = waterGenerator.generateChunk(
+      ChunkCoord.fromWorldPosition(lake.centerX, lake.centerZ, 64),
+    ).props
+
     expect(foundDirt).toBe(true)
+    expect(lakeCenterHeight).toBeLessThanOrEqual(lake.waterLevelMeters)
+    expect(shoreMaterial).toBe(TerrainMaterial.Sand)
+    expect(lakeProps.every((prop) => prop.position[1] > lake.waterLevelMeters - lake.depthMeters)).toBe(
+      true,
+    )
     expect(generator.getHeight(1.5, 2.5)).toBe(generator.getHeight(1.5, 2.5))
     expect(generator.getTerrainMaterial(1.5, 2.5)).toBe(generator.getTerrainMaterial(1.5, 2.5))
   })
@@ -541,8 +583,23 @@ describe("chunk coordinates and generation", () => {
       trunk: { diffuseColor: new FakeColor3(), dispose: vi.fn() } as any,
       needles: { diffuseColor: new FakeColor3(), dispose: vi.fn() } as any,
       rock: { diffuseColor: new FakeColor3(), dispose: vi.fn() } as any,
+      water: { diffuseColor: new FakeColor3(), dispose: vi.fn() } as any,
     }
-    const chunk = new TerrainChunk(context, createSmallChunkData(), material)
+    const fakeWorldFeatures = {
+      getLakesIntersectingBounds: () => [
+        {
+          id: "test_lake",
+          centerX: 1,
+          centerZ: 1,
+          radiusX: 10,
+          radiusZ: 10,
+          waterLevelMeters: 0.5,
+          depthMeters: 2,
+          shoreFalloffMeters: 4,
+        },
+      ],
+    }
+    const chunk = new TerrainChunk(context, createSmallChunkData(), material, fakeWorldFeatures as any)
     const sparseChunk = new TerrainChunk(
       context,
       {
@@ -584,7 +641,7 @@ describe("chunk manager", () => {
     const context = createContext()
     const repository = new MemoryChunkRepository()
     const generator = new TerrainGenerator({ seed: 1337, chunkSizeMeters: 8, resolution: 2 })
-    const manager = new ChunkManager(context, generator, repository, {
+    const manager = new ChunkManager(context, generator, repository, createWorldFeatures(), {
       loadRadiusChunks: 0,
       unloadRadiusChunks: 0,
       memoryRadiusChunks: 0,
@@ -619,7 +676,7 @@ describe("chunk manager", () => {
     const context = createContext()
     const repository = new MemoryChunkRepository()
     const generator = new TerrainGenerator({ seed: 1337, chunkSizeMeters: 8, resolution: 2 })
-    const manager = new ChunkManager(context, generator, repository, {
+    const manager = new ChunkManager(context, generator, repository, createWorldFeatures(), {
       loadRadiusChunks: 0,
       unloadRadiusChunks: 1,
       memoryRadiusChunks: 1,
@@ -638,7 +695,7 @@ describe("chunk manager", () => {
     const context = createContext()
     const repository = new MemoryChunkRepository()
     const generator = new TerrainGenerator({ seed: 1337, chunkSizeMeters: 8, resolution: 2 })
-    const manager = new ChunkManager(context, generator, repository, {
+    const manager = new ChunkManager(context, generator, repository, createWorldFeatures(), {
       loadRadiusChunks: 1,
       unloadRadiusChunks: 1,
       memoryRadiusChunks: 1,
@@ -674,7 +731,7 @@ describe("chunk manager", () => {
       }),
     )
     const generator = new TerrainGenerator({ seed: 1337, chunkSizeMeters: 8, resolution: 2 })
-    const manager = new ChunkManager(context, generator, repository, {
+    const manager = new ChunkManager(context, generator, repository, createWorldFeatures(), {
       loadRadiusChunks: 0,
       unloadRadiusChunks: 1,
       memoryRadiusChunks: 1,
@@ -704,7 +761,7 @@ describe("chunk manager", () => {
     repository.failSave = true
 
     const generator = new TerrainGenerator({ seed: 1337, chunkSizeMeters: 8, resolution: 2 })
-    const manager = new ChunkManager(context, generator, repository, {
+    const manager = new ChunkManager(context, generator, repository, createWorldFeatures(), {
       loadRadiusChunks: 0,
       unloadRadiusChunks: 1,
       memoryRadiusChunks: 1,
@@ -732,7 +789,12 @@ describe("terrain systems", () => {
   it("initializes, updates, samples, and disposes progressive terrain", async () => {
     const context = createContext()
     const player = new PlayerController(context)
-    const terrain = new ProgressiveTerrainSystem(context, player, new MemoryChunkRepository())
+    const terrain = new ProgressiveTerrainSystem(
+      context,
+      player,
+      new MemoryChunkRepository(),
+      createWorldFeatures(),
+    )
 
     await terrain.initialize()
     expect(terrain.getHeightAt(0, 0)).toBeTypeOf("number")

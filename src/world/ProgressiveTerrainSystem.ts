@@ -5,6 +5,7 @@ import type { PlayerController } from "../player/PlayerController"
 import { ChunkCoord } from "./ChunkCoord"
 import { ChunkManager } from "./ChunkManager"
 import { TerrainGenerator } from "./generation/TerrainGenerator"
+import type { WorldFeatureGenerator } from "./generation/WorldFeatureGenerator"
 
 export class ProgressiveTerrainSystem implements GameSystem {
   private readonly _generator: TerrainGenerator
@@ -17,17 +18,20 @@ export class ProgressiveTerrainSystem implements GameSystem {
     private readonly _context: EngineContext,
     private readonly _player: PlayerController,
     chunkRepository: ChunkRepository,
+    worldFeatures: WorldFeatureGenerator,
   ) {
     this._generator = new TerrainGenerator({
       seed: this._context.config.worldSeed,
       chunkSizeMeters: 64,
       resolution: 32,
+      worldFeatures,
     })
 
     this._chunkManager = new ChunkManager(
       this._context,
       this._generator,
       chunkRepository,
+      worldFeatures,
       {
         loadRadiusChunks: 3,
         unloadRadiusChunks: 4,

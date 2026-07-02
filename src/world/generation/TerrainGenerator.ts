@@ -1,10 +1,12 @@
 import { ChunkCoord } from "../ChunkCoord"
 import { TerrainMaterial, type ChunkTerrainData, type GeneratedPropData, type TerrainMaterialId } from "../TerrainTypes"
+import type { WorldFeatureGenerator, WaterFeatureSample } from "./WorldFeatureGenerator"
 
 export interface TerrainGeneratorOptions {
   readonly seed: number
   readonly chunkSizeMeters: number
   readonly resolution: number
+  readonly worldFeatures?: WorldFeatureGenerator
 }
 
 export class TerrainGenerator {
@@ -59,11 +61,18 @@ export class TerrainGenerator {
     const broad = this._valueNoise(worldX * 0.006, worldZ * 0.006, 11)
     const medium = this._valueNoise(worldX * 0.022, worldZ * 0.022, 23)
     const small = this._valueNoise(worldX * 0.08, worldZ * 0.08, 41)
+    const baseHeight = broad * 8 + medium * 2.5 + small * 0.7
 
-    return broad * 8 + medium * 2.5 + small * 0.7
+    return this._applyWaterFeatures(baseHeight, worldX, worldZ)
   }
 
   public getTerrainMaterial(worldX: number, worldZ: number, height = this.getHeight(worldX, worldZ)): TerrainMaterialId {
+    const water = this._options.worldFeatures?.sample(worldX, worldZ).water
+
+    if (water?.isUnderWater || water?.isShore) {
+      return TerrainMaterial.Sand
+    }
+
     const lowland = this._valueNoise(worldX * 0.012, worldZ * 0.012, 53)
     const forestFloor = this._valueNoise(worldX * 0.018, worldZ * 0.018, 67)
     const exposedSoil = this._valueNoise(worldX * 0.045, worldZ * 0.045, 79)
@@ -94,6 +103,12 @@ export class TerrainGenerator {
       const worldX = coord.x * this._options.chunkSizeMeters + localX
       const worldZ = coord.z * this._options.chunkSizeMeters + localZ
       const height = this.getHeight(worldX, worldZ)
+      const water = this._options.worldFeatures?.sample(worldX, worldZ).water
+
+      if (water?.isUnderWater || water?.isShore) {
+        continue
+      }
+
       const material = this.getTerrainMaterial(worldX, worldZ, height)
       const propType = this._choosePropType(material, random())
 
@@ -111,6 +126,40 @@ export class TerrainGenerator {
     }
 
     return props
+  }
+
+  private _applyWaterFeatures(baseHeight: number, worldX: number, worldZ: number): number {
+    const water = this._options.worldFeatures?.sample(worldX, worldZ).water
+
+    if (!water) {
+      return baseHeight
+    }
+
+    if (water.isUnderWater) {
+      return this._getLakeBedHeight(baseHeight, water)
+    }
+
+    if (water.isShore) {
+      return this._getShoreHeight(baseHeight, water)
+    }
+
+    return baseHeight
+  }
+
+  private _getLakeBedHeight(baseHeight: number, water: WaterFeatureSample): number {
+    const lake = water.feature
+    const depthFactor = 1 - Math.min(Math.max(water.normalizedDistance, 0), 1)
+    const bedHeight = lake.waterLevelMeters - lake.depthMeters * (0.35 + depthFactor * 0.65)
+
+    return Math.min(baseHeight, bedHeight)
+  }
+
+  private _getShoreHeight(baseHeight: number, water: WaterFeatureSample): number {
+    const lake = water.feature
+    const shoreT = Math.min(Math.max(water.distanceToShoreMeters / lake.shoreFalloffMeters, 0), 1)
+    const shoreHeight = this._lerp(lake.waterLevelMeters + 0.2, baseHeight, shoreT)
+
+    return Math.min(baseHeight, shoreHeight)
   }
 
   private _choosePropType(

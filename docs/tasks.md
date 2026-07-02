@@ -89,8 +89,8 @@
   - [ ] dead
   - [X] fallen/log variants
 - [ ] Add water features:
-  - [ ] lakes
-  - [ ] ponds
+  - [X] lakes
+  - [X] ponds
   - [ ] rivers
 
 ## World Streaming and Terrain Generation

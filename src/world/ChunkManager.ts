@@ -8,6 +8,7 @@ import { TerrainChunk, type TerrainChunkMaterials } from "./TerrainChunk"
 import type { ChunkTerrainData } from "./TerrainTypes"
 import { WorldBoundsHelper } from "./WorldBounds"
 import { TerrainGenerator } from "./generation/TerrainGenerator"
+import type { WorldFeatureGenerator } from "./generation/WorldFeatureGenerator"
 
 export interface ChunkManagerOptions {
   readonly loadRadiusChunks: number
@@ -36,6 +37,7 @@ export class ChunkManager {
     private readonly _context: EngineContext,
     private readonly _generator: TerrainGenerator,
     private readonly _repository: ChunkRepository,
+    private readonly _worldFeatures: WorldFeatureGenerator,
     private readonly _options: ChunkManagerOptions,
   ) {
     this._bounds = this._options.worldBounds ? new WorldBoundsHelper(this._options.worldBounds) : null
@@ -79,6 +81,7 @@ export class ChunkManager {
     this._materials.trunk.dispose()
     this._materials.needles.dispose()
     this._materials.rock.dispose()
+    this._materials.water.dispose()
   }
 
   private async _ensureChunk(coord: ChunkCoord): Promise<void> {
@@ -90,7 +93,7 @@ export class ChunkManager {
 
     try {
       const data = await this._loadChunkData(coord)
-      const chunk = new TerrainChunk(this._context, data, this._materials)
+      const chunk = new TerrainChunk(this._context, data, this._materials, this._worldFeatures)
 
       this._activeChunks.set(coord.key, chunk)
       this._activeCoords.set(coord.key, coord)
@@ -316,6 +319,7 @@ export class ChunkManager {
     const trunk = new StandardMaterial("progressive-pine-trunk-material", this._context.scene)
     const needles = new StandardMaterial("progressive-pine-needles-material", this._context.scene)
     const rock = new StandardMaterial("progressive-rock-material", this._context.scene)
+    const water = new StandardMaterial("progressive-water-material", this._context.scene)
 
     terrain.diffuseColor = new Color3(1, 1, 1)
     terrain.ambientColor = new Color3(0.22, 0.22, 0.22)
@@ -328,8 +332,12 @@ export class ChunkManager {
     needles.specularColor = Color3.Black()
     rock.diffuseColor = new Color3(0.36, 0.35, 0.31)
     rock.specularColor = Color3.Black()
+    water.diffuseColor = new Color3(0.12, 0.32, 0.44)
+    water.emissiveColor = new Color3(0.02, 0.08, 0.1)
+    water.specularColor = new Color3(0.25, 0.35, 0.38)
+    water.alpha = 0.72
 
-    return { terrain, trunk, needles, rock }
+    return { terrain, trunk, needles, rock, water }
   }
 
   private _lerp(from: number, to: number, amount: number): number {

@@ -9,6 +9,7 @@ import { InventorySystem } from "../items/InventorySystem"
 import { PlayerController } from "../player/PlayerController"
 import { ProgressiveTerrainSystem } from "../world/ProgressiveTerrainSystem"
 import { WorldBoundsHelper } from "../world/WorldBounds"
+import { WorldFeatureGenerator } from "../world/generation/WorldFeatureGenerator"
 import { EngineContext } from "./EngineContext"
 import { defaultGameConfig, type GameConfig } from "./GameConfig"
 import { defaultGameSettings, type GameSettings } from "./GameSettings"
@@ -36,7 +37,11 @@ export class Game {
     const time = new TimeOfDaySystem(this._config.startTimeOfDayHours, this._config.timeScale)
     const player = new PlayerController(this._context)
     const chunkRepository = new LocalForageChunkRepository()
-    const terrain = new ProgressiveTerrainSystem(this._context, player, chunkRepository)
+    const worldFeatures = new WorldFeatureGenerator({
+      seed: this._context.config.worldSeed,
+      worldBounds: this._context.config.worldBounds,
+    })
+    const terrain = new ProgressiveTerrainSystem(this._context, player, chunkRepository, worldFeatures)
     const worldBounds = new WorldBoundsHelper(this._context.config.worldBounds)
 
     player.setInvertMouseY(this._settings.invertMouseY)
