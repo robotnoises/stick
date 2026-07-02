@@ -84,10 +84,6 @@ export class ProgressiveTerrainSystem implements GameSystem {
   private _getPlayerChunkCoord(): ChunkCoord {
     const position = this._player.position
 
-    return ChunkCoord.fromWorldPosition(
-      position.x,
-      position.z,
-      this._generator.chunkSizeMeters,
-    )
+    return ChunkCoord.fromWorldPosition(position.x, position.z, this._generator.chunkSizeMeters)
   }
 }

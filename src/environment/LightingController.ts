@@ -40,8 +40,16 @@ export class LightingController implements GameSystem {
     this._moonMaterial.diffuseColor = Color3.Black()
     this._moonMaterial.emissiveColor = new Color3(0.72, 0.78, 0.86)
 
-    this._sunDisc = MeshBuilder.CreateSphere("sun-disc", { diameter: 10, segments: 16 }, this._context.scene)
-    this._moonDisc = MeshBuilder.CreateSphere("moon-disc", { diameter: 7, segments: 16 }, this._context.scene)
+    this._sunDisc = MeshBuilder.CreateSphere(
+      "sun-disc",
+      { diameter: 10, segments: 16 },
+      this._context.scene,
+    )
+    this._moonDisc = MeshBuilder.CreateSphere(
+      "moon-disc",
+      { diameter: 7, segments: 16 },
+      this._context.scene,
+    )
 
     this._sunDisc.material = this._sunMaterial
     this._moonDisc.material = this._moonMaterial

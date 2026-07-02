@@ -1,5 +1,7 @@
 # Stick Code Style Guide
 
+For required test coverage and completion checks, see [Coding Standards](coding-standards.md).
+
 ## Formatter Baseline
 
 Prettier is the baseline formatter.

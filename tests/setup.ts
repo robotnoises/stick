@@ -1,0 +1,291 @@
+import { vi } from "vitest"
+
+class FakeColor3 {
+  public constructor(
+    public r = 0,
+    public g = 0,
+    public b = 0,
+  ) {}
+
+  public set(r: number, g: number, b: number): void {
+    this.r = r
+    this.g = g
+    this.b = b
+  }
+
+  public static Black(): FakeColor3 {
+    return new FakeColor3(0, 0, 0)
+  }
+}
+
+class FakeColor4 {
+  public constructor(
+    public r = 0,
+    public g = 0,
+    public b = 0,
+    public a = 1,
+  ) {}
+}
+
+class FakeVector3 {
+  public constructor(
+    public x = 0,
+    public y = 0,
+    public z = 0,
+  ) {}
+
+  public clone(): FakeVector3 {
+    return new FakeVector3(this.x, this.y, this.z)
+  }
+
+  public add(other: FakeVector3): FakeVector3 {
+    return new FakeVector3(this.x + other.x, this.y + other.y, this.z + other.z)
+  }
+
+  public scale(amount: number): FakeVector3 {
+    return new FakeVector3(this.x * amount, this.y * amount, this.z * amount)
+  }
+
+  public normalize(): FakeVector3 {
+    const length = Math.hypot(this.x, this.y, this.z)
+
+    if (length === 0) {
+      return new FakeVector3(0, 0, 0)
+    }
+
+    return new FakeVector3(this.x / length, this.y / length, this.z / length)
+  }
+
+  public static Zero(): FakeVector3 {
+    return new FakeVector3(0, 0, 0)
+  }
+}
+
+class FakeStandardMaterial {
+  public diffuseColor = new FakeColor3()
+  public specularColor = new FakeColor3()
+  public ambientColor = new FakeColor3()
+  public emissiveColor = new FakeColor3()
+  public disableLighting = false
+  public backFaceCulling = true
+  public twoSidedLighting = false
+  public disposed = false
+
+  public constructor(
+    public readonly name: string,
+    public readonly scene: unknown,
+  ) {}
+
+  public dispose(): void {
+    this.disposed = true
+  }
+}
+
+class FakeMesh {
+  public material: unknown = null
+  public position = new FakeVector3()
+  public rotation = { y: 0 }
+  public visibility = 1
+  public enabled = true
+  public disposed = false
+  public vertexData: unknown = null
+
+  public constructor(
+    public readonly name: string,
+    public readonly scene: unknown,
+  ) {}
+
+  public setEnabled(enabled: boolean): void {
+    this.enabled = enabled
+  }
+
+  public dispose(): void {
+    this.disposed = true
+  }
+}
+
+class FakeVertexData {
+  public positions: number[] = []
+  public indices: number[] = []
+  public normals: number[] = []
+  public uvs: number[] = []
+
+  public applyToMesh(mesh: FakeMesh): void {
+    mesh.vertexData = this
+  }
+
+  public static ComputeNormals(positions: number[], _indices: number[], normals: number[]): void {
+    normals.length = 0
+
+    for (let index = 0; index < positions.length; index += 1) {
+      normals.push(index % 3 === 1 ? 1 : 0)
+    }
+  }
+}
+
+class FakeDirectionalLight {
+  public intensity = 0
+  public disposed = false
+
+  public constructor(
+    public readonly name: string,
+    public direction: FakeVector3,
+    public readonly scene: unknown,
+  ) {}
+
+  public dispose(): void {
+    this.disposed = true
+  }
+}
+
+class FakeHemisphericLight extends FakeDirectionalLight {}
+
+class FakeUniversalCamera {
+  public minZ = 0
+  public speed = 0
+  public angularSensibility = 0
+  public keysUp: number[] = []
+  public keysDown: number[] = []
+  public keysLeft: number[] = []
+  public keysRight: number[] = []
+  public position: FakeVector3
+  public attachedCanvas: HTMLCanvasElement | null = null
+  public movement = {
+    input: {
+      getEntries: vi.fn(() => [{ sensitivityX: 0, sensitivityY: 0 }]),
+    },
+  }
+
+  public constructor(
+    public readonly name: string,
+    position: FakeVector3,
+    public readonly scene: FakeScene,
+  ) {
+    this.position = position
+  }
+
+  public attachControl(canvas: HTMLCanvasElement): void {
+    this.attachedCanvas = canvas
+  }
+
+  public getForwardRay(): { direction: FakeVector3 } {
+    return { direction: new FakeVector3(0, 0, 1) }
+  }
+}
+
+class FakeEngine {
+  public disposed = false
+  public resized = false
+  public renderLoop: (() => void) | null = null
+
+  public constructor(
+    public readonly canvas: HTMLCanvasElement,
+    public readonly antialiasOrOptions?: unknown,
+    public readonly options?: unknown,
+  ) {}
+
+  public runRenderLoop(callback: () => void): void {
+    this.renderLoop = callback
+  }
+
+  public resize(): void {
+    this.resized = true
+  }
+
+  public dispose(): void {
+    this.disposed = true
+  }
+}
+
+class FakeWebGPUEngine extends FakeEngine {
+  public static IsSupportedAsync: Promise<boolean> = Promise.resolve(false)
+  public initialized = false
+
+  public async initAsync(): Promise<void> {
+    this.initialized = true
+  }
+}
+
+class FakeScene {
+  public clearColor = new FakeColor4()
+  public activeCamera: unknown = null
+  public rendered = false
+
+  public constructor(public readonly engine: unknown) {}
+
+  public render(): void {
+    this.rendered = true
+  }
+}
+
+const createMesh = (name: string, _options: unknown, scene: unknown): FakeMesh =>
+  new FakeMesh(name, scene)
+
+vi.mock("@babylonjs/core/Maths/math.color", () => ({
+  Color3: FakeColor3,
+  Color4: FakeColor4,
+}))
+
+vi.mock("@babylonjs/core/Maths/math.vector", () => ({ Vector3: FakeVector3 }))
+vi.mock("@babylonjs/core/Materials/standardMaterial", () => ({
+  StandardMaterial: FakeStandardMaterial,
+}))
+vi.mock("@babylonjs/core/Meshes/mesh", () => ({ Mesh: FakeMesh }))
+vi.mock("@babylonjs/core/Meshes/meshBuilder", () => ({
+  MeshBuilder: {
+    CreateCylinder: createMesh,
+    CreateGround: createMesh,
+    CreateSphere: createMesh,
+  },
+}))
+vi.mock("@babylonjs/core/Meshes/mesh.vertexData", () => ({ VertexData: FakeVertexData }))
+vi.mock("@babylonjs/core/Lights/directionalLight", () => ({
+  DirectionalLight: FakeDirectionalLight,
+}))
+vi.mock("@babylonjs/core/Lights/hemisphericLight", () => ({
+  HemisphericLight: FakeHemisphericLight,
+}))
+vi.mock("@babylonjs/core/Cameras/universalCamera", () => ({ UniversalCamera: FakeUniversalCamera }))
+vi.mock("@babylonjs/core/Engines/engine", () => ({ Engine: FakeEngine }))
+vi.mock("@babylonjs/core/Engines/webgpuEngine", () => ({ WebGPUEngine: FakeWebGPUEngine }))
+vi.mock("@babylonjs/core/scene", () => ({ Scene: FakeScene }))
+vi.mock("@babylonjs/core/Culling/ray", () => ({}))
+
+const stores = new Map<string, Map<string, unknown>>()
+
+vi.mock("localforage", () => ({
+  default: {
+    createInstance: vi.fn((options: { storeName: string }) => {
+      const store = stores.get(options.storeName) ?? new Map<string, unknown>()
+
+      stores.set(options.storeName, store)
+
+      return {
+        getItem: vi.fn(async (key: string) => store.get(key) ?? null),
+        setItem: vi.fn(async (key: string, value: unknown) => {
+          store.set(key, value)
+          return value
+        }),
+        removeItem: vi.fn(async (key: string) => {
+          store.delete(key)
+        }),
+        keys: vi.fn(async () => [...store.keys()]),
+      }
+    }),
+  },
+}))
+
+Object.assign(globalThis, {
+  FakeColor3,
+  FakeColor4,
+  FakeVector3,
+  FakeStandardMaterial,
+  FakeMesh,
+  FakeVertexData,
+  FakeDirectionalLight,
+  FakeHemisphericLight,
+  FakeUniversalCamera,
+  FakeEngine,
+  FakeWebGPUEngine,
+  FakeScene,
+})

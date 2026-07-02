@@ -53,7 +53,8 @@ export class PlayerController implements GameSystem {
   }
 
   public update(_deltaSeconds: number): void {
-    const groundHeight = this._groundHeightProvider?.(this._camera.position.x, this._camera.position.z) ?? 0
+    const groundHeight =
+      this._groundHeightProvider?.(this._camera.position.x, this._camera.position.z) ?? 0
 
     this._camera.position.y = groundHeight + 1.7
   }
