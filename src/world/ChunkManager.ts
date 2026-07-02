@@ -224,6 +224,7 @@ export class ChunkManager {
   private _fromPersistedChunk(chunk: PersistedChunkData): ChunkTerrainData {
     const mutations = chunk.mutations
     const heights = new Float32Array(chunk.heights)
+    const terrainMaterials = this._getPersistedTerrainMaterials(chunk, heights)
     const removedPropIds = new Set(
       mutations
         .filter((mutation) => mutation.type === "propRemoved")
@@ -245,6 +246,7 @@ export class ChunkManager {
       generatorVersion: chunk.generatorVersion,
       seed: chunk.worldSeed,
       heights,
+      terrainMaterials,
       props,
     }
   }
@@ -266,11 +268,38 @@ export class ChunkManager {
       chunkSizeMeters: data.chunkSizeMeters,
       resolution: data.resolution,
       heights: Array.from(data.heights),
+      terrainMaterials: Array.from(data.terrainMaterials),
       props: data.props,
       mutations,
       generatedAt,
       lastVisitedAt,
     }
+  }
+
+  private _getPersistedTerrainMaterials(
+    chunk: PersistedChunkData,
+    heights: Float32Array,
+  ): Uint8Array {
+    const expectedLength = (chunk.resolution + 1) * (chunk.resolution + 1)
+
+    if (chunk.terrainMaterials && chunk.terrainMaterials.length === expectedLength) {
+      return new Uint8Array(chunk.terrainMaterials)
+    }
+
+    const terrainMaterials = new Uint8Array(expectedLength)
+    const step = chunk.chunkSizeMeters / chunk.resolution
+
+    for (let z = 0; z <= chunk.resolution; z += 1) {
+      for (let x = 0; x <= chunk.resolution; x += 1) {
+        const index = z * (chunk.resolution + 1) + x
+        const worldX = chunk.coordX * chunk.chunkSizeMeters + x * step
+        const worldZ = chunk.coordZ * chunk.chunkSizeMeters + z * step
+
+        terrainMaterials[index] = this._generator.getTerrainMaterial(worldX, worldZ, heights[index] ?? 0)
+      }
+    }
+
+    return terrainMaterials
   }
 
   private _getStorageKey(coord: ChunkCoord): string {
@@ -286,8 +315,8 @@ export class ChunkManager {
     const trunk = new StandardMaterial("progressive-pine-trunk-material", this._context.scene)
     const needles = new StandardMaterial("progressive-pine-needles-material", this._context.scene)
 
-    terrain.diffuseColor = new Color3(0.33, 0.42, 0.21)
-    terrain.ambientColor = new Color3(0.18, 0.24, 0.12)
+    terrain.diffuseColor = new Color3(1, 1, 1)
+    terrain.ambientColor = new Color3(0.22, 0.22, 0.22)
     terrain.specularColor = Color3.Black()
     terrain.backFaceCulling = false
     terrain.twoSidedLighting = true

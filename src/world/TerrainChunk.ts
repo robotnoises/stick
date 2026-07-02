@@ -4,7 +4,7 @@ import { Mesh } from "@babylonjs/core/Meshes/mesh"
 import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder"
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData"
 import type { EngineContext } from "../app/EngineContext"
-import type { ChunkTerrainData, GeneratedPropData } from "./TerrainTypes"
+import { TerrainMaterial, type ChunkTerrainData, type GeneratedPropData } from "./TerrainTypes"
 
 export interface TerrainChunkMaterials {
   readonly terrain: StandardMaterial
@@ -48,6 +48,7 @@ export class TerrainChunk {
     const indices: number[] = []
     const normals: number[] = []
     const uvs: number[] = []
+    const colors: number[] = []
     const gridSize = this._data.resolution + 1
     const step = this._data.chunkSizeMeters / this._data.resolution
     const baseX = this._data.coord.x * this._data.chunkSizeMeters
@@ -59,6 +60,7 @@ export class TerrainChunk {
 
         positions.push(baseX + x * step, this._data.heights[index] ?? 0, baseZ + z * step)
         uvs.push(x / this._data.resolution, z / this._data.resolution)
+        colors.push(...this._getTerrainColor(this._data.terrainMaterials[index] ?? TerrainMaterial.Grass))
       }
     }
 
@@ -80,10 +82,25 @@ export class TerrainChunk {
     vertexData.indices = indices
     vertexData.normals = normals
     vertexData.uvs = uvs
+    vertexData.colors = colors
     vertexData.applyToMesh(mesh)
 
     mesh.material = this._materials.terrain
     return mesh
+  }
+
+  private _getTerrainColor(material: number): [number, number, number, number] {
+    switch (material) {
+      case TerrainMaterial.Dirt:
+        return [0.42, 0.31, 0.2, 1]
+      case TerrainMaterial.Sand:
+        return [0.63, 0.56, 0.39, 1]
+      case TerrainMaterial.PineNeedles:
+        return [0.24, 0.21, 0.12, 1]
+      case TerrainMaterial.Grass:
+      default:
+        return [0.33, 0.44, 0.2, 1]
+    }
   }
 
   private _createProp(prop: GeneratedPropData): void {

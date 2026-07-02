@@ -1,5 +1,14 @@
 import type { ChunkCoord } from "./ChunkCoord"
 
+export const TerrainMaterial = {
+  Grass: 0,
+  Dirt: 1,
+  Sand: 2,
+  PineNeedles: 3,
+} as const
+
+export type TerrainMaterialId = (typeof TerrainMaterial)[keyof typeof TerrainMaterial]
+
 export type GeneratedPropType = "pine" | "rock" | "log"
 
 export interface GeneratedPropData {
@@ -18,5 +27,6 @@ export interface ChunkTerrainData {
   readonly generatorVersion: number
   readonly seed: number
   readonly heights: Float32Array
+  readonly terrainMaterials: Uint8Array
   readonly props: GeneratedPropData[]
 }

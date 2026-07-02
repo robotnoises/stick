@@ -1,5 +1,5 @@
 import { ChunkCoord } from "../ChunkCoord"
-import type { ChunkTerrainData, GeneratedPropData } from "../TerrainTypes"
+import { TerrainMaterial, type ChunkTerrainData, type GeneratedPropData, type TerrainMaterialId } from "../TerrainTypes"
 
 export interface TerrainGeneratorOptions {
   readonly seed: number
@@ -27,6 +27,7 @@ export class TerrainGenerator {
   public generateChunk(coord: ChunkCoord): ChunkTerrainData {
     const gridSize = this._options.resolution + 1
     const heights = new Float32Array(gridSize * gridSize)
+    const terrainMaterials = new Uint8Array(gridSize * gridSize)
 
     for (let z = 0; z < gridSize; z += 1) {
       for (let x = 0; x < gridSize; x += 1) {
@@ -34,7 +35,10 @@ export class TerrainGenerator {
         const worldZ = this._toWorldCoordinate(coord.z, z)
         const index = z * gridSize + x
 
-        heights[index] = this.getHeight(worldX, worldZ)
+        const height = this.getHeight(worldX, worldZ)
+
+        heights[index] = height
+        terrainMaterials[index] = this.getTerrainMaterial(worldX, worldZ, height)
       }
     }
 
@@ -46,6 +50,7 @@ export class TerrainGenerator {
       generatorVersion: TerrainGenerator.version,
       seed: this._options.seed,
       heights,
+      terrainMaterials,
       props: this._generateProps(coord),
     }
   }
@@ -56,6 +61,26 @@ export class TerrainGenerator {
     const small = this._valueNoise(worldX * 0.08, worldZ * 0.08, 41)
 
     return broad * 8 + medium * 2.5 + small * 0.7
+  }
+
+  public getTerrainMaterial(worldX: number, worldZ: number, height = this.getHeight(worldX, worldZ)): TerrainMaterialId {
+    const lowland = this._valueNoise(worldX * 0.012, worldZ * 0.012, 53)
+    const forestFloor = this._valueNoise(worldX * 0.018, worldZ * 0.018, 67)
+    const exposedSoil = this._valueNoise(worldX * 0.045, worldZ * 0.045, 79)
+
+    if (height < -5.5 || (height < -3 && lowland > 0.15)) {
+      return TerrainMaterial.Sand
+    }
+
+    if (exposedSoil > 0.48) {
+      return TerrainMaterial.Dirt
+    }
+
+    if (forestFloor > -0.15) {
+      return TerrainMaterial.PineNeedles
+    }
+
+    return TerrainMaterial.Grass
   }
 
   private _generateProps(coord: ChunkCoord): GeneratedPropData[] {
@@ -110,10 +135,14 @@ export class TerrainGenerator {
   }
 
   private _hash(x: number, z: number, salt: number): number {
-    let value = x * 374761393 + z * 668265263 + salt * 2147483647 + this._options.seed * 31
+    let value =
+      Math.imul(x, 374761393) +
+      Math.imul(z, 668265263) +
+      Math.imul(salt, 2246822519) +
+      Math.imul(this._options.seed, 3266489917)
 
-    value = (value ^ (value >> 13)) * 1274126177
-    value = value ^ (value >> 16)
+    value = Math.imul(value ^ (value >>> 13), 1274126177)
+    value = value ^ (value >>> 16)
 
     return (value >>> 0) / 4294967295
   }

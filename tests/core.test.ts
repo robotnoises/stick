@@ -17,7 +17,7 @@ import { ChunkCoord } from "../src/world/ChunkCoord"
 import { ChunkManager } from "../src/world/ChunkManager"
 import { ProgressiveTerrainSystem } from "../src/world/ProgressiveTerrainSystem"
 import { TerrainChunk } from "../src/world/TerrainChunk"
-import type { ChunkTerrainData } from "../src/world/TerrainTypes"
+import { TerrainMaterial, type ChunkTerrainData } from "../src/world/TerrainTypes"
 import { WorldBoundsHelper } from "../src/world/WorldBounds"
 import { TerrainGenerator } from "../src/world/generation/TerrainGenerator"
 import { LocalForageChunkRepository } from "../src/data/LocalForageChunkRepository"
@@ -60,6 +60,7 @@ function createSmallChunkData(): ChunkTerrainData {
     generatorVersion: 1,
     seed: 1337,
     heights: new Float32Array([0, 1, 2, 3]),
+    terrainMaterials: new Uint8Array([0, 1, 2, 3]),
     props: [
       {
         id: "pine-1",
@@ -461,9 +462,21 @@ describe("chunk coordinates and generation", () => {
 
     expect(a.key).toBe("chunk_2_3")
     expect(a.heights.length).toBe(25)
+    expect(a.terrainMaterials.length).toBe(25)
     expect([...a.heights]).toEqual([...b.heights])
+    expect([...a.terrainMaterials]).toEqual([...b.terrainMaterials])
     expect(a.props.length).toBeGreaterThan(0)
+    let foundDirt = false
+
+    for (let z = 0; z < 20 && !foundDirt; z += 1) {
+      for (let x = 0; x < 20 && !foundDirt; x += 1) {
+        foundDirt = generator.getTerrainMaterial(x * 13, z * 13, 0) === TerrainMaterial.Dirt
+      }
+    }
+
+    expect(foundDirt).toBe(true)
     expect(generator.getHeight(1.5, 2.5)).toBe(generator.getHeight(1.5, 2.5))
+    expect(generator.getTerrainMaterial(1.5, 2.5)).toBe(generator.getTerrainMaterial(1.5, 2.5))
   })
 
   it("builds and disposes terrain chunk meshes and supported props", () => {
@@ -476,11 +489,17 @@ describe("chunk coordinates and generation", () => {
     const chunk = new TerrainChunk(context, createSmallChunkData(), material)
     const sparseChunk = new TerrainChunk(
       context,
-      { ...createSmallChunkData(), key: "chunk_sparse", heights: new Float32Array([0]) },
+      {
+        ...createSmallChunkData(),
+        key: "chunk_sparse",
+        heights: new Float32Array([0]),
+        terrainMaterials: new Uint8Array([]),
+      },
       material,
     )
 
     expect(chunk.key).toBe("chunk_0_0")
+    expect(((chunk as any)._terrainMesh.vertexData.colors as number[]).length).toBe(16)
     chunk.dispose()
     sparseChunk.dispose()
   })
@@ -607,13 +626,16 @@ describe("chunk manager", () => {
 
     await manager.updateAround(new ChunkCoord(0, 0))
     expect(repository.items.get("chunk_0_0")?.lastVisitedAt).toBeGreaterThan(0)
-    expect(
-      (manager as any)._fromPersistedChunk(
-        createPersistedChunk("chunk_sparse_mutation", {
-          mutations: [{ type: "terrainDelta", vertexIndex: 99, deltaY: 2 }],
-        }),
-      ).heights[99],
-    ).toBeUndefined()
+    const legacyChunk = (manager as any)._fromPersistedChunk(
+      createPersistedChunk("chunk_sparse_mutation", {
+        heights: [],
+        mutations: [{ type: "terrainDelta", vertexIndex: 99, deltaY: 2 }],
+        terrainMaterials: undefined,
+      }),
+    )
+
+    expect(legacyChunk.heights[99]).toBeUndefined()
+    expect(legacyChunk.terrainMaterials.length).toBe(9)
 
     manager.dispose()
   })
@@ -750,6 +772,7 @@ function createPersistedChunk(
     chunkSizeMeters: 8,
     resolution: 2,
     heights: [0, 1, 2, 3, 4, 5, 6, 7, 8],
+    terrainMaterials: [0, 1, 2, 3, 0, 1, 2, 3, 0],
     props: [],
     mutations: [],
     generatedAt: 1,

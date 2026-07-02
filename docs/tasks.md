@@ -77,10 +77,10 @@
   - [ ] Add deterministic boundary landforms for world-edge enforcement: mountains/cliffs, wide rivers/canyons, horizon lakes, dense deadfall/forest, or road/closure barriers.
   - [ ] Add a hard collision/clamp fallback behind natural boundary features.
 - [ ] Add more terrain generation variety:
-  - [ ] grass
-  - [ ] dirt
-  - [ ] sand
-  - [ ] pine needles / forest floor
+  - [X] grass
+  - [X] dirt
+  - [X] sand
+  - [X] pine needles / forest floor
 - [ ] Add more tree types.
 - [ ] Add animals.
 - [ ] Add more flora; this should be a major investment area.

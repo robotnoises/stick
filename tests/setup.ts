@@ -122,6 +122,7 @@ class FakeVertexData {
   public indices: number[] = []
   public normals: number[] = []
   public uvs: number[] = []
+  public colors: number[] = []
 
   public applyToMesh(mesh: FakeMesh): void {
     mesh.vertexData = this

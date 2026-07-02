@@ -139,6 +139,7 @@ export interface ChunkTerrainData {
   readonly generatorVersion: number
   readonly seed: number
   readonly heights: Float32Array
+  readonly terrainMaterials: Uint8Array
   readonly props: GeneratedPropData[]
 }
 
@@ -168,6 +169,7 @@ export interface PersistedChunkData {
   readonly chunkSizeMeters: number
   readonly resolution: number
   readonly heights: number[]
+  readonly terrainMaterials: number[]
   readonly props: GeneratedPropData[]
   readonly mutations: ChunkMutation[]
   readonly generatedAt: number

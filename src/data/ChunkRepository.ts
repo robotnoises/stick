@@ -17,6 +17,7 @@ export interface PersistedChunkData {
   readonly chunkSizeMeters: number
   readonly resolution: number
   readonly heights: number[]
+  readonly terrainMaterials?: number[]
   readonly props: GeneratedPropData[]
   readonly mutations: ChunkMutation[]
   readonly generatedAt: number
