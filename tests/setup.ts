@@ -72,7 +72,9 @@ class FakeStandardMaterial {
   public specularColor = new FakeColor3()
   public ambientColor = new FakeColor3()
   public emissiveColor = new FakeColor3()
+  public alpha = 1
   public disableLighting = false
+  public fogEnabled = true
   public backFaceCulling = true
   public twoSidedLighting = false
   public disposed = false
@@ -88,6 +90,8 @@ class FakeStandardMaterial {
 }
 
 class FakeMesh {
+  public static readonly BILLBOARDMODE_ALL = 7
+
   public material: unknown = null
   public position = new FakeVector3()
   public rotation = { y: 0 }
@@ -95,6 +99,9 @@ class FakeMesh {
   public enabled = true
   public disposed = false
   public vertexData: unknown = null
+  public isPickable = true
+  public alwaysSelectAsActiveMesh = false
+  public billboardMode = 0
 
   public constructor(
     public readonly name: string,
@@ -252,6 +259,25 @@ class FakeWebGPUEngine extends FakeEngine {
   }
 }
 
+class FakeGlowLayer {
+  public intensity = 0
+  public disposed = false
+  public readonly includedMeshes: FakeMesh[] = []
+
+  public constructor(
+    public readonly name: string,
+    public readonly scene: unknown,
+  ) {}
+
+  public addIncludedOnlyMesh(mesh: FakeMesh): void {
+    this.includedMeshes.push(mesh)
+  }
+
+  public dispose(): void {
+    this.disposed = true
+  }
+}
+
 class FakeScene {
   public static readonly FOGMODE_LINEAR = 3
 
@@ -286,6 +312,7 @@ vi.mock("@babylonjs/core/Meshes/mesh", () => ({ Mesh: FakeMesh }))
 vi.mock("@babylonjs/core/Meshes/meshBuilder", () => ({
   MeshBuilder: {
     CreateCylinder: createMesh,
+    CreateDisc: createMesh,
     CreateGround: createMesh,
     CreateSphere: createMesh,
   },
@@ -302,6 +329,9 @@ vi.mock("@babylonjs/core/Lights/pointLight", () => ({
 }))
 vi.mock("@babylonjs/core/Lights/spotLight", () => ({
   SpotLight: FakeSpotLight,
+}))
+vi.mock("@babylonjs/core/Layers/glowLayer", () => ({
+  GlowLayer: FakeGlowLayer,
 }))
 vi.mock("@babylonjs/core/Cameras/universalCamera", () => ({ UniversalCamera: FakeUniversalCamera }))
 vi.mock("@babylonjs/core/Engines/engine", () => ({ Engine: FakeEngine }))
@@ -344,6 +374,7 @@ Object.assign(globalThis, {
   FakeHemisphericLight,
   FakePointLight,
   FakeSpotLight,
+  FakeGlowLayer,
   FakeUniversalCamera,
   FakeEngine,
   FakeWebGPUEngine,

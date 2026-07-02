@@ -1,8 +1,9 @@
 import { DirectionalLight } from "@babylonjs/core/Lights/directionalLight"
 import { HemisphericLight } from "@babylonjs/core/Lights/hemisphericLight"
+import { GlowLayer } from "@babylonjs/core/Layers/glowLayer"
 import { Color3, Color4 } from "@babylonjs/core/Maths/math.color"
 import { Vector3 } from "@babylonjs/core/Maths/math.vector"
-import type { Mesh } from "@babylonjs/core/Meshes/mesh"
+import { Mesh } from "@babylonjs/core/Meshes/mesh"
 import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder"
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial"
 import { Scene } from "@babylonjs/core/scene"
@@ -18,8 +19,11 @@ export class LightingController implements GameSystem {
   private readonly _ambient: HemisphericLight
   private readonly _sunDisc: Mesh
   private readonly _moonDisc: Mesh
+  private readonly _moonHalo: Mesh
   private readonly _sunMaterial: StandardMaterial
   private readonly _moonMaterial: StandardMaterial
+  private readonly _moonHaloMaterial: StandardMaterial
+  private readonly _moonGlow: GlowLayer
 
   public constructor(
     private readonly _context: EngineContext,
@@ -45,28 +49,57 @@ export class LightingController implements GameSystem {
 
     this._sunMaterial = new StandardMaterial("sun-disc-material", this._context.scene)
     this._moonMaterial = new StandardMaterial("moon-disc-material", this._context.scene)
+    this._moonHaloMaterial = new StandardMaterial("moon-halo-material", this._context.scene)
 
     this._sunMaterial.disableLighting = true
+    this._sunMaterial.fogEnabled = false
     this._sunMaterial.diffuseColor = Color3.Black()
     this._sunMaterial.emissiveColor = new Color3(1, 0.82, 0.38)
 
     this._moonMaterial.disableLighting = true
+    this._moonMaterial.fogEnabled = false
     this._moonMaterial.diffuseColor = Color3.Black()
-    this._moonMaterial.emissiveColor = new Color3(0.72, 0.78, 0.86)
+    this._moonMaterial.emissiveColor = new Color3(0.72, 0.78, 0.9)
+    this._moonMaterial.backFaceCulling = false
+    this._moonHaloMaterial.disableLighting = true
+    this._moonHaloMaterial.fogEnabled = false
+    this._moonHaloMaterial.diffuseColor = Color3.Black()
+    this._moonHaloMaterial.emissiveColor = new Color3(0.18, 0.24, 0.36)
+    this._moonHaloMaterial.alpha = 0.16
+    this._moonHaloMaterial.backFaceCulling = false
 
     this._sunDisc = MeshBuilder.CreateSphere(
       "sun-disc",
       { diameter: 10, segments: 16 },
       this._context.scene,
     )
-    this._moonDisc = MeshBuilder.CreateSphere(
+    this._moonDisc = MeshBuilder.CreateDisc(
       "moon-disc",
-      { diameter: 7, segments: 16 },
+      { radius: 5.5, tessellation: 48 },
+      this._context.scene,
+    )
+    this._moonHalo = MeshBuilder.CreateDisc(
+      "moon-halo",
+      { radius: 17, tessellation: 48 },
       this._context.scene,
     )
 
     this._sunDisc.material = this._sunMaterial
     this._moonDisc.material = this._moonMaterial
+    this._moonHalo.material = this._moonHaloMaterial
+    this._sunDisc.isPickable = false
+    this._moonDisc.isPickable = false
+    this._moonHalo.isPickable = false
+    this._sunDisc.alwaysSelectAsActiveMesh = true
+    this._moonDisc.alwaysSelectAsActiveMesh = true
+    this._moonDisc.billboardMode = Mesh.BILLBOARDMODE_ALL
+    this._moonHalo.alwaysSelectAsActiveMesh = true
+    this._moonHalo.billboardMode = Mesh.BILLBOARDMODE_ALL
+
+    this._moonGlow = new GlowLayer("moon-glow", this._context.scene)
+    this._moonGlow.intensity = 0
+    this._moonGlow.addIncludedOnlyMesh(this._moonDisc)
+    this._moonGlow.addIncludedOnlyMesh(this._moonHalo)
 
     this._context.scene.fogMode = Scene.FOGMODE_LINEAR
     this._context.scene.fogStart = 90
@@ -89,16 +122,23 @@ export class LightingController implements GameSystem {
     this._moon.intensity = moonlight * 0.28
     this._ambient.intensity = 0.08 + daylight * 0.47 + moonlight * 0.1
 
+    const moonVisibility = this._smoothStep(-0.08, 0.12, -elevation)
+
+    this._moonGlow.intensity = moonVisibility * 0.16
     this._updateSky(elevation)
     this._updateCelestialBody(this._sunDisc, sunSkyDirection, elevation)
     this._updateCelestialBody(this._moonDisc, moonSkyDirection, -elevation)
+    this._updateCelestialBody(this._moonHalo, moonSkyDirection, -elevation)
   }
 
   public dispose(): void {
     this._sunDisc.dispose()
     this._moonDisc.dispose()
+    this._moonHalo.dispose()
     this._sunMaterial.dispose()
     this._moonMaterial.dispose()
+    this._moonHaloMaterial.dispose()
+    this._moonGlow.dispose()
     this._sun.dispose()
     this._moon.dispose()
     this._ambient.dispose()
