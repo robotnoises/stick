@@ -27,6 +27,10 @@ const FakeWebGPUEngine = (globalThis as any).FakeWebGPUEngine
 
 afterEach(() => {
   vi.restoreAllMocks()
+  Object.defineProperty(document, "pointerLockElement", {
+    configurable: true,
+    get: () => null,
+  })
   document.body.innerHTML = ""
   window.localStorage.clear()
 })
@@ -124,7 +128,23 @@ describe("player, compass, debug overlay, and time", () => {
 
   it("configures player controls and follows terrain height", () => {
     const context = createContext()
+    const requestPointerLock = vi.fn()
+
+    context.canvas.requestPointerLock = requestPointerLock
+
     const player = new PlayerController(context)
+
+    expect((context.scene.activeCamera as unknown as { speed: number }).speed).toBe(0.25)
+
+    context.canvas.click()
+    expect(requestPointerLock).toHaveBeenCalledOnce()
+
+    Object.defineProperty(document, "pointerLockElement", {
+      configurable: true,
+      get: () => context.canvas,
+    })
+    context.canvas.click()
+    expect(requestPointerLock).toHaveBeenCalledOnce()
 
     player.update(0.016)
     expect(player.position.y).toBe(1.7)
@@ -136,6 +156,10 @@ describe("player, compass, debug overlay, and time", () => {
     expect(player.position.y).toBeCloseTo(player.position.x + player.position.z + 1.7)
     expect(player.headingDegrees).toBe(0)
     expect(context.scene.activeCamera).toBeTruthy()
+
+    player.dispose()
+    context.canvas.click()
+    expect(requestPointerLock).toHaveBeenCalledOnce()
   })
 
   it("renders and removes debug overlay", () => {
@@ -147,6 +171,7 @@ describe("player, compass, debug overlay, and time", () => {
     const overlay = new DebugOverlay(player as any, time as any)
 
     overlay.update(0.016)
+    expect(document.querySelector("#debug-overlay")?.textContent).toContain("elevation: 2.9m")
     expect(document.querySelector("#debug-overlay")?.textContent).toContain("heading: 123°")
 
     overlay.dispose()

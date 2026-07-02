@@ -168,6 +168,10 @@ class FakeUniversalCamera {
     this.attachedCanvas = canvas
   }
 
+  public detachControl(): void {
+    this.attachedCanvas = null
+  }
+
   public getForwardRay(): { direction: FakeVector3 } {
     return { direction: new FakeVector3(0, 0, 1) }
   }

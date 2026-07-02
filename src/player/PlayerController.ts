@@ -6,6 +6,8 @@ import { Compass } from "./Compass"
 
 export class PlayerController implements GameSystem {
   private static readonly _mouseSensitivity = 1 / 2800
+  private static readonly _walkSpeed = 0.25
+  // TODO: private static readonly _runSpeed = 0.55
 
   private readonly _camera: UniversalCamera
   private readonly _compass: Compass
@@ -18,7 +20,7 @@ export class PlayerController implements GameSystem {
       this._context.scene,
     )
     this._camera.minZ = 0.05
-    this._camera.speed = 1.4
+    this._camera.speed = PlayerController._walkSpeed
     this._camera.angularSensibility = 2800
     this.setInvertMouseY(false)
     this._camera.keysUp = [87]
@@ -26,6 +28,7 @@ export class PlayerController implements GameSystem {
     this._camera.keysLeft = [65]
     this._camera.keysRight = [68]
     this._camera.attachControl(this._context.canvas, true)
+    this._context.canvas.addEventListener("click", this._handlePointerLockRequest)
     this._context.scene.activeCamera = this._camera
 
     this._compass = new Compass(this._camera)
@@ -57,5 +60,18 @@ export class PlayerController implements GameSystem {
       this._groundHeightProvider?.(this._camera.position.x, this._camera.position.z) ?? 0
 
     this._camera.position.y = groundHeight + 1.7
+  }
+
+  public dispose(): void {
+    this._context.canvas.removeEventListener("click", this._handlePointerLockRequest)
+    this._camera.detachControl()
+  }
+
+  private readonly _handlePointerLockRequest = (): void => {
+    if (document.pointerLockElement === this._context.canvas) {
+      return
+    }
+
+    this._context.canvas.requestPointerLock()
   }
 }
