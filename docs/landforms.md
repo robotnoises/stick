@@ -254,6 +254,7 @@ This keeps newly generated chunks aligned with old chunks, while chunk persisten
 
 ### Phase 2: Lakes and Ponds
 
+- [Started] Add `WorldFeatureGenerator` as the finite-world feature layer for deterministic lakes/ponds.
 - Generate deterministic lake/pond basin features.
 - Carve terrain around basins.
 - Add simple water planes.

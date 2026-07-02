@@ -20,6 +20,7 @@ import { TerrainChunk } from "../src/world/TerrainChunk"
 import { TerrainMaterial, type ChunkTerrainData } from "../src/world/TerrainTypes"
 import { WorldBoundsHelper } from "../src/world/WorldBounds"
 import { TerrainGenerator } from "../src/world/generation/TerrainGenerator"
+import { WorldFeatureGenerator } from "../src/world/generation/WorldFeatureGenerator"
 import { LocalForageChunkRepository } from "../src/data/LocalForageChunkRepository"
 import type { ChunkRepository, PersistedChunkData } from "../src/data/ChunkRepository"
 import { TestTerrainSystem } from "../src/world/TestTerrainSystem"
@@ -475,6 +476,37 @@ describe("chunk coordinates and generation", () => {
     expect(bounds.clampPosition(12, -12)).toEqual({ x: 8, z: -8 })
     expect(bounds.intersectsChunk(new ChunkCoord(0, 0), 8)).toBe(true)
     expect(bounds.intersectsChunk(new ChunkCoord(2, 0), 8)).toBe(false)
+  })
+
+  it("generates deterministic finite world lake features", () => {
+    const bounds = { minX: -4000, maxX: 4000, minZ: -4000, maxZ: 4000 }
+    const a = new WorldFeatureGenerator({ seed: 7, worldBounds: bounds })
+    const b = new WorldFeatureGenerator({ seed: 7, worldBounds: bounds })
+    const lake = a.lakes[0]!
+    const underwaterSample = a.sample(lake.centerX, lake.centerZ)
+    const shoreSample = a.sample(
+      lake.centerX + lake.radiusX + lake.shoreFalloffMeters / 2,
+      lake.centerZ,
+    )
+    const farSample = a.sample(bounds.maxX, bounds.maxZ)
+
+    expect(WorldFeatureGenerator.version).toBe(1)
+    expect(a.lakes.length).toBeGreaterThan(0)
+    expect(a.lakes).toEqual(b.lakes)
+    expect(underwaterSample.water?.feature.id).toBe(lake.id)
+    expect(underwaterSample.water?.type).toBe("lake")
+    expect(underwaterSample.water?.isUnderWater).toBe(true)
+    expect(underwaterSample.water?.isShore).toBe(false)
+    expect(shoreSample.water?.isUnderWater).toBe(false)
+    expect(shoreSample.water?.isShore).toBe(true)
+    expect(farSample.water?.distanceToShoreMeters).toBeTypeOf("number")
+    expect(a.getLakesIntersectingBounds(bounds).length).toBeGreaterThan(0)
+    expect(
+      a.getLakesIntersectingBounds({ minX: 100_000, maxX: 101_000, minZ: 100_000, maxZ: 101_000 }),
+    ).toEqual([])
+    ;(a as any)._lakes.length = 0
+    expect(a.lakes.length).toBe(0)
+    expect(a.sample(0, 0)).toEqual({ water: null })
   })
 
   it("generates deterministic terrain data and props", () => {
