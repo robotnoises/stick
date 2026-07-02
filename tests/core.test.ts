@@ -18,6 +18,7 @@ import { ChunkManager } from "../src/world/ChunkManager"
 import { ProgressiveTerrainSystem } from "../src/world/ProgressiveTerrainSystem"
 import { TerrainChunk } from "../src/world/TerrainChunk"
 import type { ChunkTerrainData } from "../src/world/TerrainTypes"
+import { WorldBoundsHelper } from "../src/world/WorldBounds"
 import { TerrainGenerator } from "../src/world/generation/TerrainGenerator"
 import { LocalForageChunkRepository } from "../src/data/LocalForageChunkRepository"
 import type { ChunkRepository, PersistedChunkData } from "../src/data/ChunkRepository"
@@ -436,6 +437,16 @@ describe("chunk coordinates and generation", () => {
     expect(ChunkCoord.toKey(2, -3)).toBe("chunk_2_-3")
   })
 
+  it("checks positions and chunks against finite world bounds", () => {
+    const bounds = new WorldBoundsHelper({ minX: -8, maxX: 8, minZ: -8, maxZ: 8 })
+
+    expect(bounds.containsPosition(0, 0)).toBe(true)
+    expect(bounds.containsPosition(9, 0)).toBe(false)
+    expect(bounds.clampPosition(12, -12)).toEqual({ x: 8, z: -8 })
+    expect(bounds.intersectsChunk(new ChunkCoord(0, 0), 8)).toBe(true)
+    expect(bounds.intersectsChunk(new ChunkCoord(2, 0), 8)).toBe(false)
+  })
+
   it("generates deterministic terrain data and props", () => {
     const generator = new TerrainGenerator({ seed: 7, chunkSizeMeters: 64, resolution: 4 })
     const a = generator.generateChunk(new ChunkCoord(2, 3))
@@ -518,6 +529,43 @@ describe("chunk manager", () => {
     await manager.updateAround(new ChunkCoord(1, 0))
     await manager.updateAround(new ChunkCoord(0, 0))
     expect(manager.getHeightAt(1000, 1000)).toBeTypeOf("number")
+
+    manager.dispose()
+  })
+
+  it("scopes persisted chunk keys by world id", async () => {
+    const context = createContext()
+    const repository = new MemoryChunkRepository()
+    const generator = new TerrainGenerator({ seed: 1337, chunkSizeMeters: 8, resolution: 2 })
+    const manager = new ChunkManager(context, generator, repository, {
+      loadRadiusChunks: 0,
+      unloadRadiusChunks: 1,
+      memoryRadiusChunks: 1,
+      worldId: "world_a",
+    })
+
+    await manager.updateAround(new ChunkCoord(0, 0))
+
+    expect(repository.savedKeys).toEqual(["world_a:chunk_0_0"])
+    expect(repository.items.get("world_a:chunk_0_0")?.worldSeed).toBe(1337)
+
+    manager.dispose()
+  })
+
+  it("filters desired chunks outside finite world bounds", async () => {
+    const context = createContext()
+    const repository = new MemoryChunkRepository()
+    const generator = new TerrainGenerator({ seed: 1337, chunkSizeMeters: 8, resolution: 2 })
+    const manager = new ChunkManager(context, generator, repository, {
+      loadRadiusChunks: 1,
+      unloadRadiusChunks: 1,
+      memoryRadiusChunks: 1,
+      worldBounds: { minX: 0, maxX: 7.9, minZ: 0, maxZ: 7.9 },
+    })
+
+    await manager.updateAround(new ChunkCoord(0, 0))
+
+    expect(repository.savedKeys).toEqual(["chunk_0_0"])
 
     manager.dispose()
   })

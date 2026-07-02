@@ -98,17 +98,19 @@ Typed arrays cannot be stored as JSON directly through all storage paths, so rep
 
 Chunk keys should include enough scope to avoid collisions between worlds/saves.
 
-Initial single-world key:
+Current scoped chunk key:
 
 ```text
-chunk_${chunkX}_${chunkZ}
+${worldId}:chunk_${chunkX}_${chunkZ}
 ```
 
-Future multi-save key:
+The default development world currently uses:
 
 ```text
-${saveId}:chunk_${chunkX}_${chunkZ}
+default:chunk_${chunkX}_${chunkZ}
 ```
+
+`worldId` scopes storage to avoid collisions between worlds/saves. `worldSeed` is stored inside the persisted chunk for compatibility checks, but the seed is not the storage key. Future save slots can use the save/world ID as this prefix.
 
 ## Implementation Rules
 

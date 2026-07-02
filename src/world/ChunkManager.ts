@@ -1,16 +1,20 @@
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial"
 import { Color3 } from "@babylonjs/core/Maths/math.color"
 import type { EngineContext } from "../app/EngineContext"
+import type { WorldBounds } from "../app/GameConfig"
 import type { ChunkRepository, ChunkMutation, PersistedChunkData } from "../data/ChunkRepository"
 import { ChunkCoord } from "./ChunkCoord"
 import { TerrainChunk, type TerrainChunkMaterials } from "./TerrainChunk"
 import type { ChunkTerrainData } from "./TerrainTypes"
+import { WorldBoundsHelper } from "./WorldBounds"
 import { TerrainGenerator } from "./generation/TerrainGenerator"
 
 export interface ChunkManagerOptions {
   readonly loadRadiusChunks: number
   readonly unloadRadiusChunks: number
   readonly memoryRadiusChunks: number
+  readonly worldBounds?: WorldBounds
+  readonly worldId?: string
 }
 
 interface CachedChunkData {
@@ -23,6 +27,7 @@ export class ChunkManager {
 
   private readonly _activeChunks = new Map<string, TerrainChunk>()
   private readonly _activeCoords = new Map<string, ChunkCoord>()
+  private readonly _bounds: WorldBoundsHelper | null
   private readonly _dataCache = new Map<string, CachedChunkData>()
   private readonly _inFlightLoads = new Set<string>()
   private readonly _materials: TerrainChunkMaterials
@@ -33,6 +38,7 @@ export class ChunkManager {
     private readonly _repository: ChunkRepository,
     private readonly _options: ChunkManagerOptions,
   ) {
+    this._bounds = this._options.worldBounds ? new WorldBoundsHelper(this._options.worldBounds) : null
     this._materials = this._createMaterials()
   }
 
@@ -100,7 +106,8 @@ export class ChunkManager {
       return cached.data
     }
 
-    const persisted = await this._loadPersistedChunk(coord.key)
+    const storageKey = this._getStorageKey(coord)
+    const persisted = await this._loadPersistedChunk(storageKey)
 
     if (persisted && this._isCompatiblePersistedChunk(persisted)) {
       const data = this._fromPersistedChunk(persisted)
@@ -116,7 +123,7 @@ export class ChunkManager {
     const now = Date.now()
 
     this._dataCache.set(coord.key, { data: generated, lastUsed: now })
-    await this._savePersistedChunk(this._toPersistedChunk(generated, [], now, now))
+    await this._savePersistedChunk(this._toPersistedChunk(generated, storageKey, [], now, now))
 
     return generated
   }
@@ -169,7 +176,13 @@ export class ChunkManager {
 
     for (let z = -this._options.loadRadiusChunks; z <= this._options.loadRadiusChunks; z += 1) {
       for (let x = -this._options.loadRadiusChunks; x <= this._options.loadRadiusChunks; x += 1) {
-        coords.push(new ChunkCoord(center.x + x, center.z + z))
+        const coord = new ChunkCoord(center.x + x, center.z + z)
+
+        if (this._bounds && !this._bounds.intersectsChunk(coord, this._generator.chunkSizeMeters)) {
+          continue
+        }
+
+        coords.push(coord)
       }
     }
 
@@ -225,7 +238,7 @@ export class ChunkManager {
     }
 
     return {
-      key: chunk.key,
+      key: ChunkCoord.toKey(chunk.coordX, chunk.coordZ),
       coord: new ChunkCoord(chunk.coordX, chunk.coordZ),
       chunkSizeMeters: chunk.chunkSizeMeters,
       resolution: chunk.resolution,
@@ -238,13 +251,14 @@ export class ChunkManager {
 
   private _toPersistedChunk(
     data: ChunkTerrainData,
+    storageKey: string,
     mutations: ChunkMutation[],
     generatedAt: number,
     lastVisitedAt: number,
   ): PersistedChunkData {
     return {
       version: ChunkManager._persistedVersion,
-      key: data.key,
+      key: storageKey,
       coordX: data.coord.x,
       coordZ: data.coord.z,
       worldSeed: data.seed,
@@ -257,6 +271,14 @@ export class ChunkManager {
       generatedAt,
       lastVisitedAt,
     }
+  }
+
+  private _getStorageKey(coord: ChunkCoord): string {
+    if (!this._options.worldId) {
+      return coord.key
+    }
+
+    return `${this._options.worldId}:${coord.key}`
   }
 
   private _createMaterials(): TerrainChunkMaterials {

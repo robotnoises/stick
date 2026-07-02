@@ -153,6 +153,8 @@ export interface GeneratedPropData {
 
 ### Persisted Chunk Data
 
+Persisted chunk keys should be scoped by world/save ID, for example `default:chunk_0_0`. The seed is stored as chunk metadata for compatibility checks, not used as the storage key.
+
 Typed arrays cannot be stored as JSON directly through all storage paths, so the repository should serialize them deliberately. See [Data and Persistence](data.md) for broader data-layer rules.
 
 ```ts

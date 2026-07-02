@@ -31,6 +31,8 @@ export class ProgressiveTerrainSystem implements GameSystem {
         loadRadiusChunks: 3,
         unloadRadiusChunks: 4,
         memoryRadiusChunks: 5,
+        worldBounds: this._context.config.worldBounds,
+        worldId: this._context.config.worldId,
       },
     )
   }
