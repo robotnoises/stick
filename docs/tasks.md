@@ -1,7 +1,11 @@
 # Tasks
 
-## Menu and Save Flow
+## Menu, Pause, and Save Flow
 
+- [ ] Add pause game behavior.
+  - [ ] Stop or gate gameplay simulation updates while paused.
+  - [ ] Keep pause/menu UI interactive while paused.
+  - [ ] Decide whether inventory/backpack and paper map pause the world or leave time running.
 - [ ] Add a save game option to the menu.
 - [ ] Rename “Options” to “Menu”.
 - [ ] Persist last player position to the database when saving.
