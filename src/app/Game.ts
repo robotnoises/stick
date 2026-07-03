@@ -62,6 +62,7 @@ export class Game {
           x: player.position.x,
           z: player.position.z,
         },
+        playerHeadingDegrees: player.headingDegrees,
         lakes: worldFeatures.lakes.map((lake) => ({
           id: lake.id,
           centerX: lake.centerX,

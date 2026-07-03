@@ -232,6 +232,7 @@ describe("player, compass, debug overlay, and time", () => {
       getDebugMapData: () => ({
         worldBounds: { minX: -1000, maxX: 1000, minZ: -1000, maxZ: 1000 },
         playerPosition: { x: 100, z: -200 },
+        playerHeadingDegrees: 90,
         lakes: [
           {
             id: "debug_lake",
@@ -268,6 +269,7 @@ describe("player, compass, debug overlay, and time", () => {
 
     expect(debugMapSvg.getAttribute("role")).toBe("img")
     expect(document.querySelectorAll("#debug-world-map-modal .debug-map-lake").length).toBe(1)
+    expect(document.querySelectorAll("#debug-world-map-modal .debug-map-player-heading").length).toBe(3)
     document.querySelectorAll<HTMLButtonElement>("#debug-world-map-panel button")[1]?.click()
     expect(document.querySelector("#debug-world-map-modal")).toBeNull()
     document.querySelectorAll<HTMLButtonElement>("#debug-overlay-editor button[type='button']")[1]?.click()

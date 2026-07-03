@@ -296,3 +296,9 @@ body {
   stroke: #f3ead8;
   stroke-width: 2;
 }
+
+.debug-map-player-heading {
+  stroke: #ff6b4a;
+  stroke-width: 3;
+  stroke-linecap: round;
+}

@@ -21,6 +21,7 @@ export interface DebugMapData {
     readonly x: number
     readonly z: number
   }
+  readonly playerHeadingDegrees: number
   readonly lakes: readonly DebugMapLakeData[]
 }
 
@@ -313,15 +314,33 @@ export class DebugOverlay implements GameSystem {
     }
 
     this._appendSvgCircle(svg, toSvgX(0), toSvgY(0), 5, "debug-map-origin")
-    this._appendSvgCircle(
-      svg,
-      toSvgX(data.playerPosition.x),
-      toSvgY(data.playerPosition.z),
-      6,
-      "debug-map-player",
-    )
+    const playerX = toSvgX(data.playerPosition.x)
+    const playerY = toSvgY(data.playerPosition.z)
+
+    this._appendSvgCircle(svg, playerX, playerY, 6, "debug-map-player")
+    this._appendDebugMapPlayerHeading(svg, playerX, playerY, data.playerHeadingDegrees)
 
     return svg
+  }
+
+  private _appendDebugMapPlayerHeading(
+    svg: SVGSVGElement,
+    playerX: number,
+    playerY: number,
+    headingDegrees: number,
+  ): void {
+    const radians = headingDegrees * (Math.PI / 180)
+    const length = 24
+    const endX = playerX + Math.sin(radians) * length
+    const endY = playerY - Math.cos(radians) * length
+    const arrowLeftX = endX - Math.sin(radians + Math.PI / 4) * 8
+    const arrowLeftY = endY + Math.cos(radians + Math.PI / 4) * 8
+    const arrowRightX = endX - Math.sin(radians - Math.PI / 4) * 8
+    const arrowRightY = endY + Math.cos(radians - Math.PI / 4) * 8
+
+    this._appendSvgLine(svg, playerX, playerY, endX, endY, "debug-map-player-heading")
+    this._appendSvgLine(svg, endX, endY, arrowLeftX, arrowLeftY, "debug-map-player-heading")
+    this._appendSvgLine(svg, endX, endY, arrowRightX, arrowRightY, "debug-map-player-heading")
   }
 
   private _appendDebugMapGrid(
