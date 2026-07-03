@@ -40,6 +40,8 @@ export interface DebugTerrainGenerationStats {
   readonly pendingRequestCount: number
   readonly completedWorkerRequestCount: number
   readonly fallbackGenerationCount: number
+  readonly workerErrorCount: number
+  readonly lastWorkerErrorMessage: string | null
   readonly lastGenerationMilliseconds: number | null
   readonly averageGenerationMilliseconds: number | null
 }
@@ -177,8 +179,16 @@ export class DebugOverlay implements GameSystem {
       ["terrain gen", `${mode}, pending ${stats.pendingRequestCount}`],
       ["worker done", String(stats.completedWorkerRequestCount)],
       ["fallback", String(stats.fallbackGenerationCount)],
+      ["worker errors", String(stats.workerErrorCount)],
+      ...this._getTerrainGenerationErrorRows(stats.lastWorkerErrorMessage),
       ["terrain gen ms", `last ${last}, avg ${average}`],
     ]
+  }
+
+  private _getTerrainGenerationErrorRows(
+    errorMessage: string | null,
+  ): Array<readonly [string, string]> {
+    return errorMessage ? [["worker error", errorMessage]] : []
   }
 
   private _formatOptionalMilliseconds(value: number | null): string {

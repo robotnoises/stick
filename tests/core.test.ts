@@ -290,6 +290,8 @@ describe("player, compass, debug overlay, and time", () => {
           pendingRequestCount: 1,
           completedWorkerRequestCount: 5,
           fallbackGenerationCount: 0,
+          workerErrorCount: 1,
+          lastWorkerErrorMessage: "test worker warning",
           lastGenerationMilliseconds: 2.25,
           averageGenerationMilliseconds: 3.5,
         },
@@ -315,6 +317,10 @@ describe("player, compass, debug overlay, and time", () => {
     )
     expect(document.querySelector("#debug-overlay")?.textContent).toContain("worker done: 5")
     expect(document.querySelector("#debug-overlay")?.textContent).toContain("fallback: 0")
+    expect(document.querySelector("#debug-overlay")?.textContent).toContain("worker errors: 1")
+    expect(document.querySelector("#debug-overlay")?.textContent).toContain(
+      "worker error: test worker warning",
+    )
     expect(document.querySelector("#debug-overlay")?.textContent).toContain(
       "terrain gen ms: last 2.3, avg 3.5",
     )
@@ -494,6 +500,8 @@ describe("player, compass, debug overlay, and time", () => {
           pendingRequestCount: 0,
           completedWorkerRequestCount: 0,
           fallbackGenerationCount: 1,
+          workerErrorCount: 0,
+          lastWorkerErrorMessage: null,
           lastGenerationMilliseconds: null,
           averageGenerationMilliseconds: null,
         },
@@ -928,6 +936,8 @@ describe("chunk coordinates and generation", () => {
       pendingRequestCount: 0,
       completedWorkerRequestCount: 0,
       fallbackGenerationCount: 0,
+      workerErrorCount: 0,
+      lastWorkerErrorMessage: null,
       lastGenerationMilliseconds: null,
       averageGenerationMilliseconds: null,
     })
@@ -983,6 +993,51 @@ describe("chunk coordinates and generation", () => {
     expect(fallbackChunk.key).toBe("chunk_2_0")
     expect(fallbackClient.getDebugStats().fallbackGenerationCount).toBe(1)
     fallbackClient.dispose()
+  })
+
+  it("falls back pending terrain worker requests after worker errors", async () => {
+    const worker = new FakeTerrainWorker(false)
+    const client = new TerrainGeneratorWorkerClient(
+      {
+        seed: 1337,
+        chunkSizeMeters: 8,
+        resolution: 2,
+        worldBounds: defaultGameConfig.worldBounds,
+      },
+      () => worker,
+    )
+    const pending = client.generateChunk(new ChunkCoord(0, 0))
+
+    worker.emitError("terrain worker failed")
+    const chunk = await pending
+
+    expect(chunk.key).toBe("chunk_0_0")
+    expect(worker.terminated).toBe(true)
+    expect(client.getDebugStats().workerErrorCount).toBe(1)
+    expect(client.getDebugStats().lastWorkerErrorMessage).toBe("terrain worker failed")
+    expect(client.getDebugStats().fallbackGenerationCount).toBe(1)
+
+    client.dispose()
+  })
+
+  it("falls back when posting terrain worker requests fails", async () => {
+    const client = new TerrainGeneratorWorkerClient(
+      {
+        seed: 1337,
+        chunkSizeMeters: 8,
+        resolution: 2,
+        worldBounds: defaultGameConfig.worldBounds,
+      },
+      () => new ThrowingTerrainWorker(),
+    )
+    const chunk = await client.generateChunk(new ChunkCoord(0, 0))
+
+    expect(chunk.key).toBe("chunk_0_0")
+    expect(client.getDebugStats().workerErrorCount).toBe(1)
+    expect(client.getDebugStats().lastWorkerErrorMessage).toBe("post failed")
+    expect(client.getDebugStats().fallbackGenerationCount).toBe(1)
+
+    client.dispose()
   })
 
   it("rejects pending terrain worker requests on dispose", async () => {
@@ -1593,6 +1648,7 @@ class TestFoundItem implements Item {
 class FakeTerrainWorker {
   public readonly postedRequests: TerrainGenerationRequest[] = []
   public terminated = false
+  private _errorListener: ((event: ErrorEvent) => void) | null = null
   private _listener: ((event: MessageEvent<TerrainGenerationResponse>) => void) | null = null
 
   public constructor(private readonly _autoRespond = true) {}
@@ -1606,18 +1662,30 @@ class FakeTerrainWorker {
   }
 
   public addEventListener(
-    _type: "message",
-    listener: (event: MessageEvent<TerrainGenerationResponse>) => void,
+    type: "message" | "error",
+    listener:
+      ((event: MessageEvent<TerrainGenerationResponse>) => void) | ((event: ErrorEvent) => void),
   ): void {
-    this._listener = listener
+    if (type === "message") {
+      this._listener = listener as (event: MessageEvent<TerrainGenerationResponse>) => void
+      return
+    }
+
+    this._errorListener = listener as (event: ErrorEvent) => void
   }
 
   public removeEventListener(
-    _type: "message",
-    listener: (event: MessageEvent<TerrainGenerationResponse>) => void,
+    type: "message" | "error",
+    listener:
+      ((event: MessageEvent<TerrainGenerationResponse>) => void) | ((event: ErrorEvent) => void),
   ): void {
-    if (this._listener === listener) {
+    if (type === "message" && this._listener === listener) {
       this._listener = null
+      return
+    }
+
+    if (type === "error" && this._errorListener === listener) {
+      this._errorListener = null
     }
   }
 
@@ -1627,6 +1695,16 @@ class FakeTerrainWorker {
 
   public emit(response: TerrainGenerationResponse): void {
     this._listener?.(new MessageEvent("message", { data: response }))
+  }
+
+  public emitError(message: string): void {
+    this._errorListener?.(new ErrorEvent("error", { message }))
+  }
+}
+
+class ThrowingTerrainWorker extends FakeTerrainWorker {
+  public override postMessage(_message: TerrainGenerationRequest): void {
+    throw new Error("post failed")
   }
 }
 

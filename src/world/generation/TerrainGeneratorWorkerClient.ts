@@ -19,16 +19,19 @@ interface WorkerLike {
     type: "message",
     listener: (event: MessageEvent<TerrainGenerationResponse>) => void,
   ): void
+  addEventListener(type: "error", listener: (event: ErrorEvent) => void): void
   removeEventListener(
     type: "message",
     listener: (event: MessageEvent<TerrainGenerationResponse>) => void,
   ): void
+  removeEventListener(type: "error", listener: (event: ErrorEvent) => void): void
   terminate(): void
 }
 
 type TerrainWorkerFactory = () => WorkerLike
 
 interface PendingRequest {
+  readonly coord: ChunkCoord
   readonly resolve: (data: ChunkTerrainData) => void
   readonly reject: (error: Error) => void
   readonly startedAtMilliseconds: number
@@ -39,6 +42,8 @@ export interface TerrainGenerationDebugStats {
   readonly pendingRequestCount: number
   readonly completedWorkerRequestCount: number
   readonly fallbackGenerationCount: number
+  readonly workerErrorCount: number
+  readonly lastWorkerErrorMessage: string | null
   readonly lastGenerationMilliseconds: number | null
   readonly averageGenerationMilliseconds: number | null
 }
@@ -52,8 +57,10 @@ export class TerrainGeneratorWorkerClient {
   private _completedWorkerRequestCount = 0
   private _fallbackGenerationCount = 0
   private _lastGenerationMilliseconds: number | null = null
+  private _lastWorkerErrorMessage: string | null = null
   private _totalGenerationMilliseconds = 0
   private _completedGenerationCount = 0
+  private _workerErrorCount = 0
 
   public constructor(
     private readonly _options: TerrainGeneratorWorkerClientOptions,
@@ -75,13 +82,7 @@ export class TerrainGeneratorWorkerClient {
     const worker = this._getWorker()
 
     if (!worker) {
-      const startedAtMilliseconds = performance.now()
-      const data = this._fallbackGenerator.generateChunk(coord)
-
-      this._fallbackGenerationCount += 1
-      this._recordGenerationDuration(performance.now() - startedAtMilliseconds)
-
-      return data
+      return this._generateFallbackChunk(coord, performance.now())
     }
 
     const requestId = this._nextRequestId
@@ -89,19 +90,27 @@ export class TerrainGeneratorWorkerClient {
 
     return new Promise((resolve, reject) => {
       this._pendingRequests.set(requestId, {
+        coord,
         resolve,
         reject,
         startedAtMilliseconds: performance.now(),
       })
-      worker.postMessage({
-        requestId,
-        seed: this._options.seed,
-        chunkX: coord.x,
-        chunkZ: coord.z,
-        chunkSizeMeters: this._options.chunkSizeMeters,
-        resolution: this._options.resolution,
-        worldBounds: this._options.worldBounds,
-      })
+
+      try {
+        worker.postMessage({
+          requestId,
+          seed: this._options.seed,
+          chunkX: coord.x,
+          chunkZ: coord.z,
+          chunkSizeMeters: this._options.chunkSizeMeters,
+          resolution: this._options.resolution,
+          worldBounds: this._options.worldBounds,
+        })
+      } catch (error) {
+        this._pendingRequests.delete(requestId)
+        this._recordWorkerError(error)
+        resolve(this._generateFallbackChunk(coord, performance.now()))
+      }
     })
   }
 
@@ -111,6 +120,8 @@ export class TerrainGeneratorWorkerClient {
       pendingRequestCount: this._pendingRequests.size,
       completedWorkerRequestCount: this._completedWorkerRequestCount,
       fallbackGenerationCount: this._fallbackGenerationCount,
+      workerErrorCount: this._workerErrorCount,
+      lastWorkerErrorMessage: this._lastWorkerErrorMessage,
       lastGenerationMilliseconds: this._lastGenerationMilliseconds,
       averageGenerationMilliseconds:
         this._completedGenerationCount === 0
@@ -126,6 +137,7 @@ export class TerrainGeneratorWorkerClient {
 
     this._pendingRequests.clear()
     this._worker?.removeEventListener("message", this._handleMessage)
+    this._worker?.removeEventListener("error", this._handleError)
     this._worker?.terminate()
     this._worker = null
   }
@@ -138,6 +150,7 @@ export class TerrainGeneratorWorkerClient {
     try {
       this._worker = this._workerFactory()
       this._worker.addEventListener("message", this._handleMessage)
+      this._worker.addEventListener("error", this._handleError)
       return this._worker
     } catch {
       this._worker = null
@@ -156,6 +169,39 @@ export class TerrainGeneratorWorkerClient {
     this._completedWorkerRequestCount += 1
     this._recordGenerationDuration(performance.now() - pending.startedAtMilliseconds)
     pending.resolve(this._toChunkTerrainData(event.data))
+  }
+
+  private readonly _handleError = (event: ErrorEvent): void => {
+    this._recordWorkerError(event.error ?? event.message)
+    this._fallbackPendingRequests()
+    this._worker?.removeEventListener("message", this._handleMessage)
+    this._worker?.removeEventListener("error", this._handleError)
+    this._worker?.terminate()
+    this._worker = null
+  }
+
+  private _fallbackPendingRequests(): void {
+    for (const [requestId, pending] of this._pendingRequests) {
+      this._pendingRequests.delete(requestId)
+      pending.resolve(this._generateFallbackChunk(pending.coord, pending.startedAtMilliseconds))
+    }
+  }
+
+  private _generateFallbackChunk(
+    coord: ChunkCoord,
+    startedAtMilliseconds: number,
+  ): ChunkTerrainData {
+    const data = this._fallbackGenerator.generateChunk(coord)
+
+    this._fallbackGenerationCount += 1
+    this._recordGenerationDuration(performance.now() - startedAtMilliseconds)
+
+    return data
+  }
+
+  private _recordWorkerError(error: unknown): void {
+    this._workerErrorCount += 1
+    this._lastWorkerErrorMessage = error instanceof Error ? error.message : String(error)
   }
 
   private _recordGenerationDuration(durationMilliseconds: number): void {
