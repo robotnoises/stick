@@ -35,12 +35,22 @@ export interface DebugMapData {
   readonly rivers: readonly DebugMapRiverData[]
 }
 
+export interface DebugTerrainGenerationStats {
+  readonly workerAvailable: boolean
+  readonly pendingRequestCount: number
+  readonly completedWorkerRequestCount: number
+  readonly fallbackGenerationCount: number
+  readonly lastGenerationMilliseconds: number | null
+  readonly averageGenerationMilliseconds: number | null
+}
+
 export interface DebugTerrainStreamingStats {
   readonly activeChunkCount: number
   readonly queuedChunkCount: number
   readonly inFlightChunkCount: number
   readonly cachedChunkDataCount: number
   readonly maxChunkLoadsPerFrame: number | null
+  readonly terrainGeneration: DebugTerrainGenerationStats | null
 }
 
 export interface DebugOverlayActions {
@@ -67,7 +77,8 @@ export class DebugOverlay implements GameSystem {
   ) {
     this._element = document.createElement("div")
     this._element.id = "debug-overlay"
-    this._element.addEventListener("click", this._handleClick)
+    this._element.addEventListener("pointerdown", this._handleOpenEditor)
+    this._element.addEventListener("click", this._handleOpenEditor)
 
     document.body.appendChild(this._element)
   }
@@ -81,26 +92,57 @@ export class DebugOverlay implements GameSystem {
   }
 
   public dispose(): void {
-    this._element.removeEventListener("click", this._handleClick)
+    this._element.removeEventListener("pointerdown", this._handleOpenEditor)
+    this._element.removeEventListener("click", this._handleOpenEditor)
     this._element.remove()
   }
 
   private _renderReadOnly(): void {
+    this._element.classList.remove("debug-overlay-editor-mode")
+    this._element.classList.add("debug-overlay-readonly-mode")
+
     const position = this._player.position
     const elevationMeters = position.y - DebugOverlay._playerEyeHeightMeters
+    const rows: Array<readonly [string, string]> = [
+      ["pos", `${position.x.toFixed(1)}, ${position.y.toFixed(1)}, ${position.z.toFixed(1)}`],
+      ["elevation", `${elevationMeters.toFixed(1)}m`],
+      ["heading", `${this._player.headingDegrees.toFixed(0)}°`],
+      ["day", String(this._time.day)],
+      ["time", `${this._time.timeOfDayHours.toFixed(2)}h`],
+      ...this._getTerrainStreamingDebugRows(),
+    ]
 
-    this._element.textContent = [
-      "Stick prototype",
-      `pos: ${position.x.toFixed(1)}, ${position.y.toFixed(1)}, ${position.z.toFixed(1)}`,
-      `elevation: ${elevationMeters.toFixed(1)}m`,
-      `heading: ${this._player.headingDegrees.toFixed(0)}°`,
-      `day: ${this._time.day}`,
-      `time: ${this._time.timeOfDayHours.toFixed(2)}h`,
-      ...this._getTerrainStreamingDebugLines(),
-    ].join("\n")
+    this._element.replaceChildren(
+      this._createReadOnlyTitle(),
+      ...rows.map((row) => this._createReadOnlyRow(row[0], row[1])),
+    )
   }
 
-  private _getTerrainStreamingDebugLines(): string[] {
+  private _createReadOnlyTitle(): HTMLDivElement {
+    const title = document.createElement("div")
+
+    title.className = "debug-overlay-readonly-title"
+    title.textContent = "Stick prototype"
+
+    return title
+  }
+
+  private _createReadOnlyRow(labelText: string, valueText: string): HTMLDivElement {
+    const row = document.createElement("div")
+    const label = document.createElement("span")
+    const value = document.createElement("span")
+
+    row.className = "debug-overlay-readonly-row"
+    label.className = "debug-overlay-readonly-label"
+    value.className = "debug-overlay-readonly-value"
+    label.textContent = `${labelText}: `
+    value.textContent = valueText
+    row.append(label, value)
+
+    return row
+  }
+
+  private _getTerrainStreamingDebugRows(): Array<readonly [string, string]> {
     const stats = this._actions.getTerrainStreamingStats?.()
 
     if (!stats) {
@@ -110,9 +152,37 @@ export class DebugOverlay implements GameSystem {
     const maxLoads = stats.maxChunkLoadsPerFrame ?? "unlimited"
 
     return [
-      `chunks: active ${stats.activeChunkCount}, queued ${stats.queuedChunkCount}, loading ${stats.inFlightChunkCount}`,
-      `chunk cache: ${stats.cachedChunkDataCount}, budget: ${maxLoads}/frame`,
+      [
+        "chunks",
+        `active ${stats.activeChunkCount}, queued ${stats.queuedChunkCount}, loading ${stats.inFlightChunkCount}`,
+      ],
+      ["chunk cache", String(stats.cachedChunkDataCount)],
+      ["budget", `${maxLoads}/frame`],
+      ...this._getTerrainGenerationDebugRows(stats.terrainGeneration),
     ]
+  }
+
+  private _getTerrainGenerationDebugRows(
+    stats: DebugTerrainGenerationStats | null,
+  ): Array<readonly [string, string]> {
+    if (!stats) {
+      return []
+    }
+
+    const last = this._formatOptionalMilliseconds(stats.lastGenerationMilliseconds)
+    const average = this._formatOptionalMilliseconds(stats.averageGenerationMilliseconds)
+    const mode = stats.workerAvailable ? "worker" : "fallback"
+
+    return [
+      ["terrain gen", `${mode}, pending ${stats.pendingRequestCount}`],
+      ["worker done", String(stats.completedWorkerRequestCount)],
+      ["fallback", String(stats.fallbackGenerationCount)],
+      ["terrain gen ms", `last ${last}, avg ${average}`],
+    ]
+  }
+
+  private _formatOptionalMilliseconds(value: number | null): string {
+    return value === null ? "n/a" : value.toFixed(1)
   }
 
   private _renderEditor(): void {
@@ -125,6 +195,8 @@ export class DebugOverlay implements GameSystem {
     const revealMapButton = document.createElement("button")
 
     this._isEditing = true
+    this._element.classList.remove("debug-overlay-readonly-mode")
+    this._element.classList.add("debug-overlay-editor-mode")
     form.id = "debug-overlay-editor"
     form.noValidate = true
     form.addEventListener("click", this._handleEditorClick)
@@ -226,23 +298,23 @@ export class DebugOverlay implements GameSystem {
     return label
   }
 
-  private _createButtonRow(
-    submitButton: HTMLButtonElement,
-    cancelButton: HTMLButtonElement,
-  ): HTMLDivElement {
+  private _createButtonRow(...buttons: HTMLButtonElement[]): HTMLDivElement {
     const row = document.createElement("div")
 
     row.className = "debug-overlay-actions"
-    row.append(submitButton, cancelButton)
+    row.append(...buttons)
 
     return row
   }
 
   private _createDebugToolRow(button: HTMLButtonElement): HTMLDivElement {
     const row = document.createElement("div")
+    const heading = document.createElement("div")
 
-    row.className = "debug-overlay-actions debug-overlay-tool-actions"
-    row.append(button)
+    row.className = "debug-overlay-command-section"
+    heading.className = "debug-overlay-command-heading"
+    heading.textContent = "Debug tools"
+    row.append(heading, this._createButtonRow(button))
 
     return row
   }
@@ -252,9 +324,12 @@ export class DebugOverlay implements GameSystem {
     newWorldButton: HTMLButtonElement,
   ): HTMLDivElement {
     const row = document.createElement("div")
+    const heading = document.createElement("div")
 
-    row.className = "debug-overlay-actions debug-overlay-danger-actions"
-    row.append(resetTerrainCacheButton, newWorldButton)
+    row.className = "debug-overlay-command-section debug-overlay-danger-section"
+    heading.className = "debug-overlay-command-heading"
+    heading.textContent = "Danger zone"
+    row.append(heading, this._createButtonRow(resetTerrainCacheButton, newWorldButton))
 
     return row
   }
@@ -632,7 +707,7 @@ export class DebugOverlay implements GameSystem {
     this._renderReadOnly()
   }
 
-  private readonly _handleClick = (event: MouseEvent): void => {
+  private readonly _handleOpenEditor = (event: Event): void => {
     event.stopPropagation()
 
     if (this._isEditing) {

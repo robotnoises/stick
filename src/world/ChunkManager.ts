@@ -18,6 +18,7 @@ import { TerrainChunk, type TerrainChunkMaterials } from "./TerrainChunk"
 import type { ChunkTerrainData } from "./TerrainTypes"
 import { WorldBoundsHelper } from "./WorldBounds"
 import { TerrainGenerator } from "./generation/TerrainGenerator"
+import type { TerrainGenerationDebugStats } from "./generation/TerrainGeneratorWorkerClient"
 import type { WorldFeatureGenerator } from "./generation/WorldFeatureGenerator"
 
 export interface ChunkManagerOptions {
@@ -36,6 +37,7 @@ interface CachedChunkData {
 
 export interface ChunkDataGenerator {
   generateChunk(coord: ChunkCoord): Promise<ChunkTerrainData> | ChunkTerrainData
+  getDebugStats?(): TerrainGenerationDebugStats
   dispose?(): void
 }
 
@@ -45,6 +47,7 @@ export interface TerrainStreamingDebugStats {
   readonly inFlightChunkCount: number
   readonly cachedChunkDataCount: number
   readonly maxChunkLoadsPerFrame: number | null
+  readonly terrainGeneration: TerrainGenerationDebugStats | null
 }
 
 export class ChunkManager {
@@ -102,6 +105,7 @@ export class ChunkManager {
       inFlightChunkCount: this._inFlightLoads.size,
       cachedChunkDataCount: this._dataCache.size,
       maxChunkLoadsPerFrame: this._options.maxChunkLoadsPerFrame ?? null,
+      terrainGeneration: this._chunkDataGenerator.getDebugStats?.() ?? null,
     }
   }
 

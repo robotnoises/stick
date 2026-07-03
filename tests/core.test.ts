@@ -285,6 +285,14 @@ describe("player, compass, debug overlay, and time", () => {
         inFlightChunkCount: 1,
         cachedChunkDataCount: 4,
         maxChunkLoadsPerFrame: 1,
+        terrainGeneration: {
+          workerAvailable: true,
+          pendingRequestCount: 1,
+          completedWorkerRequestCount: 5,
+          fallbackGenerationCount: 0,
+          lastGenerationMilliseconds: 2.25,
+          averageGenerationMilliseconds: 3.5,
+        },
       }),
       getChunkBoundariesDebugEnabled: () => false,
       getWorldSeed: () => 1337,
@@ -300,8 +308,15 @@ describe("player, compass, debug overlay, and time", () => {
     expect(document.querySelector("#debug-overlay")?.textContent).toContain(
       "chunks: active 3, queued 2, loading 1",
     )
+    expect(document.querySelector("#debug-overlay")?.textContent).toContain("chunk cache: 4")
+    expect(document.querySelector("#debug-overlay")?.textContent).toContain("budget: 1/frame")
     expect(document.querySelector("#debug-overlay")?.textContent).toContain(
-      "chunk cache: 4, budget: 1/frame",
+      "terrain gen: worker, pending 1",
+    )
+    expect(document.querySelector("#debug-overlay")?.textContent).toContain("worker done: 5")
+    expect(document.querySelector("#debug-overlay")?.textContent).toContain("fallback: 0")
+    expect(document.querySelector("#debug-overlay")?.textContent).toContain(
+      "terrain gen ms: last 2.3, avg 3.5",
     )
 
     document.querySelector<HTMLElement>("#debug-overlay")?.click()
@@ -452,6 +467,21 @@ describe("player, compass, debug overlay, and time", () => {
     expect(document.querySelector("#debug-overlay")?.textContent).not.toContain("chunks: active")
     overlayWithoutActions.dispose()
 
+    const overlayWithoutGenerationStats = new DebugOverlay(player as any, time, {
+      getTerrainStreamingStats: () => ({
+        activeChunkCount: 0,
+        queuedChunkCount: 0,
+        inFlightChunkCount: 0,
+        cachedChunkDataCount: 0,
+        maxChunkLoadsPerFrame: 1,
+        terrainGeneration: null,
+      }),
+    })
+
+    overlayWithoutGenerationStats.update(0.016)
+    expect(document.querySelector("#debug-overlay")?.textContent).not.toContain("terrain gen:")
+    overlayWithoutGenerationStats.dispose()
+
     const unlimitedBudgetOverlay = new DebugOverlay(player as any, time, {
       getTerrainStreamingStats: () => ({
         activeChunkCount: 0,
@@ -459,12 +489,24 @@ describe("player, compass, debug overlay, and time", () => {
         inFlightChunkCount: 0,
         cachedChunkDataCount: 0,
         maxChunkLoadsPerFrame: null,
+        terrainGeneration: {
+          workerAvailable: false,
+          pendingRequestCount: 0,
+          completedWorkerRequestCount: 0,
+          fallbackGenerationCount: 1,
+          lastGenerationMilliseconds: null,
+          averageGenerationMilliseconds: null,
+        },
       }),
     })
 
     unlimitedBudgetOverlay.update(0.016)
     expect(document.querySelector("#debug-overlay")?.textContent).toContain(
       "budget: unlimited/frame",
+    )
+    expect(document.querySelector("#debug-overlay")?.textContent).toContain("terrain gen: fallback")
+    expect(document.querySelector("#debug-overlay")?.textContent).toContain(
+      "terrain gen ms: last n/a, avg n/a",
     )
     unlimitedBudgetOverlay.dispose()
   })
@@ -881,6 +923,15 @@ describe("chunk coordinates and generation", () => {
       () => worker,
     )
 
+    expect(client.getDebugStats()).toEqual({
+      workerAvailable: false,
+      pendingRequestCount: 0,
+      completedWorkerRequestCount: 0,
+      fallbackGenerationCount: 0,
+      lastGenerationMilliseconds: null,
+      averageGenerationMilliseconds: null,
+    })
+
     const firstChunk = await client.generateChunk(new ChunkCoord(0, 0))
     worker.emit(
       generateTerrainChunkResponse({
@@ -898,6 +949,9 @@ describe("chunk coordinates and generation", () => {
     expect(firstChunk.key).toBe("chunk_0_0")
     expect(secondChunk.key).toBe("chunk_1_0")
     expect(worker.postedRequests).toHaveLength(2)
+    expect(client.getDebugStats().workerAvailable).toBe(true)
+    expect(client.getDebugStats().completedWorkerRequestCount).toBe(2)
+    expect(client.getDebugStats().averageGenerationMilliseconds).toBeTypeOf("number")
 
     client.dispose()
     expect(worker.terminated).toBe(true)
@@ -927,6 +981,7 @@ describe("chunk coordinates and generation", () => {
     const fallbackChunk = await fallbackClient.generateChunk(new ChunkCoord(2, 0))
 
     expect(fallbackChunk.key).toBe("chunk_2_0")
+    expect(fallbackClient.getDebugStats().fallbackGenerationCount).toBe(1)
     fallbackClient.dispose()
   })
 
@@ -1126,6 +1181,7 @@ describe("chunk manager", () => {
       inFlightChunkCount: 0,
       cachedChunkDataCount: 0,
       maxChunkLoadsPerFrame: 1,
+      terrainGeneration: null,
     })
 
     await manager.updateStreaming(new ChunkCoord(0, 0))

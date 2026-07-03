@@ -165,6 +165,8 @@ body {
   position: fixed;
   left: 12px;
   top: 12px;
+  box-sizing: border-box;
+  width: 380px;
   padding: 8px 10px;
   border-radius: 4px;
   color: #f3ead8;
@@ -177,8 +179,35 @@ body {
     Consolas,
     monospace;
   pointer-events: auto;
-  white-space: pre;
+  white-space: normal;
   cursor: pointer;
+}
+
+.debug-overlay-readonly-title {
+  margin-bottom: 6px;
+  color: #f0d36b;
+  font-weight: 700;
+}
+
+.debug-overlay-readonly-row {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 6px;
+  align-items: start;
+}
+
+.debug-overlay-readonly-label {
+  color: #f0d36b;
+  font-weight: 700;
+}
+
+.debug-overlay-readonly-value {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+#debug-overlay.debug-overlay-editor-mode {
+  width: 420px;
 }
 
 #debug-overlay form {
@@ -209,6 +238,19 @@ body {
   color: #f3ead8;
   background: rgb(20 24 18 / 90%);
   font: inherit;
+}
+
+.debug-overlay-command-section {
+  display: grid;
+  gap: 5px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgb(243 234 216 / 16%);
+}
+
+.debug-overlay-command-heading {
+  color: #f0d36b;
+  font-weight: 700;
 }
 
 .debug-overlay-actions {

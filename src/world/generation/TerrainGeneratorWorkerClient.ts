@@ -31,6 +31,16 @@ type TerrainWorkerFactory = () => WorkerLike
 interface PendingRequest {
   readonly resolve: (data: ChunkTerrainData) => void
   readonly reject: (error: Error) => void
+  readonly startedAtMilliseconds: number
+}
+
+export interface TerrainGenerationDebugStats {
+  readonly workerAvailable: boolean
+  readonly pendingRequestCount: number
+  readonly completedWorkerRequestCount: number
+  readonly fallbackGenerationCount: number
+  readonly lastGenerationMilliseconds: number | null
+  readonly averageGenerationMilliseconds: number | null
 }
 
 export class TerrainGeneratorWorkerClient {
@@ -39,6 +49,11 @@ export class TerrainGeneratorWorkerClient {
   private readonly _pendingRequests = new Map<number, PendingRequest>()
   private _worker: WorkerLike | null = null
   private _nextRequestId = 1
+  private _completedWorkerRequestCount = 0
+  private _fallbackGenerationCount = 0
+  private _lastGenerationMilliseconds: number | null = null
+  private _totalGenerationMilliseconds = 0
+  private _completedGenerationCount = 0
 
   public constructor(
     private readonly _options: TerrainGeneratorWorkerClientOptions,
@@ -60,14 +75,24 @@ export class TerrainGeneratorWorkerClient {
     const worker = this._getWorker()
 
     if (!worker) {
-      return this._fallbackGenerator.generateChunk(coord)
+      const startedAtMilliseconds = performance.now()
+      const data = this._fallbackGenerator.generateChunk(coord)
+
+      this._fallbackGenerationCount += 1
+      this._recordGenerationDuration(performance.now() - startedAtMilliseconds)
+
+      return data
     }
 
     const requestId = this._nextRequestId
     this._nextRequestId += 1
 
     return new Promise((resolve, reject) => {
-      this._pendingRequests.set(requestId, { resolve, reject })
+      this._pendingRequests.set(requestId, {
+        resolve,
+        reject,
+        startedAtMilliseconds: performance.now(),
+      })
       worker.postMessage({
         requestId,
         seed: this._options.seed,
@@ -78,6 +103,20 @@ export class TerrainGeneratorWorkerClient {
         worldBounds: this._options.worldBounds,
       })
     })
+  }
+
+  public getDebugStats(): TerrainGenerationDebugStats {
+    return {
+      workerAvailable: this._worker !== null,
+      pendingRequestCount: this._pendingRequests.size,
+      completedWorkerRequestCount: this._completedWorkerRequestCount,
+      fallbackGenerationCount: this._fallbackGenerationCount,
+      lastGenerationMilliseconds: this._lastGenerationMilliseconds,
+      averageGenerationMilliseconds:
+        this._completedGenerationCount === 0
+          ? null
+          : this._totalGenerationMilliseconds / this._completedGenerationCount,
+    }
   }
 
   public dispose(): void {
@@ -114,7 +153,15 @@ export class TerrainGeneratorWorkerClient {
     }
 
     this._pendingRequests.delete(event.data.requestId)
+    this._completedWorkerRequestCount += 1
+    this._recordGenerationDuration(performance.now() - pending.startedAtMilliseconds)
     pending.resolve(this._toChunkTerrainData(event.data))
+  }
+
+  private _recordGenerationDuration(durationMilliseconds: number): void {
+    this._lastGenerationMilliseconds = durationMilliseconds
+    this._totalGenerationMilliseconds += durationMilliseconds
+    this._completedGenerationCount += 1
   }
 
   private _toChunkTerrainData(response: TerrainGenerationResponse): ChunkTerrainData {
