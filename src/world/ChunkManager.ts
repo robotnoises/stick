@@ -1,10 +1,12 @@
 import { Texture } from "@babylonjs/core/Materials/Textures/texture"
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial"
 import { Color3 } from "@babylonjs/core/Maths/math.color"
+import bark006ColorUrl from "../../assets/exported/textures/terrain/bark006-color.png?url"
+import bark014ColorUrl from "../../assets/exported/textures/terrain/bark014-color.png?url"
 import fineClumpySandBaseColorUrl from "../../assets/exported/textures/terrain/fine-clumpy-sand-basecolor.png?url"
-import marsSmoothRockBaseColorUrl from "../../assets/exported/textures/terrain/mars-smooth-rock-basecolor.png?url"
-import mossSmallFernsBaseColorUrl from "../../assets/exported/textures/terrain/moss-small-ferns-basecolor.png?url"
-import orangePineTreeBarkBaseColorUrl from "../../assets/exported/textures/terrain/orange-pine-tree-bark-basecolor.png?url"
+import grass004ColorUrl from "../../assets/exported/textures/terrain/grass004-color.png?url"
+import ground048ColorUrl from "../../assets/exported/textures/terrain/ground048-color.png?url"
+import rock058ColorUrl from "../../assets/exported/textures/terrain/rock058-color.png?url"
 import type { EngineContext } from "../app/EngineContext"
 import type { WorldBounds } from "../app/GameConfig"
 import type { ChunkRepository, ChunkMutation, PersistedChunkData } from "../data/ChunkRepository"
@@ -353,13 +355,13 @@ export class ChunkManager {
 
     this._configureTerrainMaterial(
       grassTerrain,
-      mossSmallFernsBaseColorUrl,
-      new Color3(0.9, 1, 0.85),
+      grass004ColorUrl,
+      new Color3(0.92, 1, 0.86),
     )
     this._configureTerrainMaterial(
       dirtTerrain,
-      marsSmoothRockBaseColorUrl,
-      new Color3(0.55, 0.42, 0.3),
+      ground048ColorUrl,
+      new Color3(0.75, 0.58, 0.42),
     )
     this._configureTerrainMaterial(
       sandTerrain,
@@ -368,26 +370,26 @@ export class ChunkManager {
     )
     this._configureTerrainMaterial(
       pineNeedlesTerrain,
-      mossSmallFernsBaseColorUrl,
-      new Color3(0.55, 0.47, 0.3),
+      ground048ColorUrl,
+      new Color3(0.48, 0.38, 0.24),
     )
     this._configureTexturedMaterial(
       trunk,
-      orangePineTreeBarkBaseColorUrl,
+      bark014ColorUrl,
       1,
-      new Color3(0.72, 0.48, 0.3),
+      new Color3(0.8, 0.72, 0.62),
     )
     this._configureTexturedMaterial(
       deadWood,
-      orangePineTreeBarkBaseColorUrl,
+      bark006ColorUrl,
       1.5,
-      new Color3(0.62, 0.55, 0.45),
+      new Color3(0.6, 0.46, 0.32),
     )
     this._configureTexturedMaterial(
       rock,
-      marsSmoothRockBaseColorUrl,
+      rock058ColorUrl,
       2,
-      new Color3(0.8, 0.78, 0.72),
+      new Color3(0.82, 0.86, 0.86),
     )
 
     trunk.backFaceCulling = false
