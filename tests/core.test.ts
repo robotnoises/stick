@@ -295,6 +295,11 @@ describe("player, compass, debug overlay, and time", () => {
           lastGenerationMilliseconds: 2.25,
           averageGenerationMilliseconds: 3.5,
         },
+        terrainMeshBuild: {
+          builtChunkCount: 7,
+          lastBuildMilliseconds: 4.25,
+          averageBuildMilliseconds: 5.5,
+        },
       }),
       getChunkBoundariesDebugEnabled: () => false,
       getWorldSeed: () => 1337,
@@ -323,6 +328,10 @@ describe("player, compass, debug overlay, and time", () => {
     )
     expect(document.querySelector("#debug-overlay")?.textContent).toContain(
       "terrain gen ms: last 2.3, avg 3.5",
+    )
+    expect(document.querySelector("#debug-overlay")?.textContent).toContain("mesh builds: 7")
+    expect(document.querySelector("#debug-overlay")?.textContent).toContain(
+      "mesh build ms: last 4.3, avg 5.5",
     )
 
     document.querySelector<HTMLElement>("#debug-overlay")?.click()
@@ -481,6 +490,11 @@ describe("player, compass, debug overlay, and time", () => {
         cachedChunkDataCount: 0,
         maxChunkLoadsPerFrame: 1,
         terrainGeneration: null,
+        terrainMeshBuild: {
+          builtChunkCount: 0,
+          lastBuildMilliseconds: null,
+          averageBuildMilliseconds: null,
+        },
       }),
     })
 
@@ -504,6 +518,11 @@ describe("player, compass, debug overlay, and time", () => {
           lastWorkerErrorMessage: null,
           lastGenerationMilliseconds: null,
           averageGenerationMilliseconds: null,
+        },
+        terrainMeshBuild: {
+          builtChunkCount: 0,
+          lastBuildMilliseconds: null,
+          averageBuildMilliseconds: null,
         },
       }),
     })
@@ -1237,6 +1256,11 @@ describe("chunk manager", () => {
       cachedChunkDataCount: 0,
       maxChunkLoadsPerFrame: 1,
       terrainGeneration: null,
+      terrainMeshBuild: {
+        builtChunkCount: 0,
+        lastBuildMilliseconds: null,
+        averageBuildMilliseconds: null,
+      },
     })
 
     await manager.updateStreaming(new ChunkCoord(0, 0))

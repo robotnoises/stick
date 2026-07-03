@@ -41,6 +41,12 @@ export interface ChunkDataGenerator {
   dispose?(): void
 }
 
+export interface TerrainMeshBuildDebugStats {
+  readonly builtChunkCount: number
+  readonly lastBuildMilliseconds: number | null
+  readonly averageBuildMilliseconds: number | null
+}
+
 export interface TerrainStreamingDebugStats {
   readonly activeChunkCount: number
   readonly queuedChunkCount: number
@@ -48,6 +54,7 @@ export interface TerrainStreamingDebugStats {
   readonly cachedChunkDataCount: number
   readonly maxChunkLoadsPerFrame: number | null
   readonly terrainGeneration: TerrainGenerationDebugStats | null
+  readonly terrainMeshBuild: TerrainMeshBuildDebugStats
 }
 
 export class ChunkManager {
@@ -62,6 +69,9 @@ export class ChunkManager {
   private readonly _queuedCoords = new Map<string, ChunkCoord>()
   private readonly _chunkBoundaryMeshes = new Map<string, Mesh>()
   private _chunkBoundariesDebugEnabled = false
+  private _builtChunkCount = 0
+  private _lastMeshBuildMilliseconds: number | null = null
+  private _totalMeshBuildMilliseconds = 0
 
   public constructor(
     private readonly _context: EngineContext,
@@ -106,6 +116,14 @@ export class ChunkManager {
       cachedChunkDataCount: this._dataCache.size,
       maxChunkLoadsPerFrame: this._options.maxChunkLoadsPerFrame ?? null,
       terrainGeneration: this._chunkDataGenerator.getDebugStats?.() ?? null,
+      terrainMeshBuild: {
+        builtChunkCount: this._builtChunkCount,
+        lastBuildMilliseconds: this._lastMeshBuildMilliseconds,
+        averageBuildMilliseconds:
+          this._builtChunkCount === 0
+            ? null
+            : this._totalMeshBuildMilliseconds / this._builtChunkCount,
+      },
     }
   }
 
@@ -178,14 +196,22 @@ export class ChunkManager {
 
     try {
       const data = await this._loadChunkData(coord)
+      const meshBuildStartedAt = performance.now()
       const chunk = new TerrainChunk(this._context, data, this._materials, this._worldFeatures)
 
+      this._recordMeshBuildDuration(performance.now() - meshBuildStartedAt)
       this._activeChunks.set(coord.key, chunk)
       this._activeCoords.set(coord.key, coord)
       this._ensureChunkBoundaryMesh(coord)
     } finally {
       this._inFlightLoads.delete(coord.key)
     }
+  }
+
+  private _recordMeshBuildDuration(durationMilliseconds: number): void {
+    this._builtChunkCount += 1
+    this._lastMeshBuildMilliseconds = durationMilliseconds
+    this._totalMeshBuildMilliseconds += durationMilliseconds
   }
 
   private async _loadChunkData(coord: ChunkCoord): Promise<ChunkTerrainData> {

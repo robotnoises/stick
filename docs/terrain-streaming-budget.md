@@ -241,6 +241,7 @@ Status: initial terrain worker implemented.
 - [x] Use the same queue/budget system to schedule worker requests and main-thread mesh builds.
 - [x] Add worker timing/error stats to terrain debug metrics.
 - [x] Fall back to main-thread generation when worker requests fail.
+- [x] Add Babylon terrain mesh build timing stats to debug metrics.
 
 ## Open Questions
 

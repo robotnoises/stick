@@ -46,6 +46,12 @@ export interface DebugTerrainGenerationStats {
   readonly averageGenerationMilliseconds: number | null
 }
 
+export interface DebugTerrainMeshBuildStats {
+  readonly builtChunkCount: number
+  readonly lastBuildMilliseconds: number | null
+  readonly averageBuildMilliseconds: number | null
+}
+
 export interface DebugTerrainStreamingStats {
   readonly activeChunkCount: number
   readonly queuedChunkCount: number
@@ -53,6 +59,7 @@ export interface DebugTerrainStreamingStats {
   readonly cachedChunkDataCount: number
   readonly maxChunkLoadsPerFrame: number | null
   readonly terrainGeneration: DebugTerrainGenerationStats | null
+  readonly terrainMeshBuild: DebugTerrainMeshBuildStats
 }
 
 export interface DebugOverlayActions {
@@ -161,6 +168,7 @@ export class DebugOverlay implements GameSystem {
       ["chunk cache", String(stats.cachedChunkDataCount)],
       ["budget", `${maxLoads}/frame`],
       ...this._getTerrainGenerationDebugRows(stats.terrainGeneration),
+      ...this._getTerrainMeshBuildDebugRows(stats.terrainMeshBuild),
     ]
   }
 
@@ -189,6 +197,18 @@ export class DebugOverlay implements GameSystem {
     errorMessage: string | null,
   ): Array<readonly [string, string]> {
     return errorMessage ? [["worker error", errorMessage]] : []
+  }
+
+  private _getTerrainMeshBuildDebugRows(
+    stats: DebugTerrainMeshBuildStats,
+  ): Array<readonly [string, string]> {
+    const last = this._formatOptionalMilliseconds(stats.lastBuildMilliseconds)
+    const average = this._formatOptionalMilliseconds(stats.averageBuildMilliseconds)
+
+    return [
+      ["mesh builds", String(stats.builtChunkCount)],
+      ["mesh build ms", `last ${last}, avg ${average}`],
+    ]
   }
 
   private _formatOptionalMilliseconds(value: number | null): string {
