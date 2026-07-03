@@ -67,6 +67,16 @@ class FakeVector3 {
   }
 }
 
+class FakeTexture {
+  public uScale = 1
+  public vScale = 1
+
+  public constructor(
+    public readonly url: string,
+    public readonly scene: unknown,
+  ) {}
+}
+
 class FakeStandardMaterial {
   public diffuseColor = new FakeColor3()
   public specularColor = new FakeColor3()
@@ -77,6 +87,7 @@ class FakeStandardMaterial {
   public fogEnabled = true
   public backFaceCulling = true
   public twoSidedLighting = false
+  public diffuseTexture: unknown = null
   public disposed = false
 
   public constructor(
@@ -306,6 +317,7 @@ vi.mock("@babylonjs/core/Maths/math.color", () => ({
 }))
 
 vi.mock("@babylonjs/core/Maths/math.vector", () => ({ Vector3: FakeVector3 }))
+vi.mock("@babylonjs/core/Materials/Textures/texture", () => ({ Texture: FakeTexture }))
 vi.mock("@babylonjs/core/Materials/standardMaterial", () => ({
   StandardMaterial: FakeStandardMaterial,
 }))
@@ -368,6 +380,7 @@ Object.assign(globalThis, {
   FakeColor3,
   FakeColor4,
   FakeVector3,
+  FakeTexture,
   FakeStandardMaterial,
   FakeMesh,
   FakeVertexData,

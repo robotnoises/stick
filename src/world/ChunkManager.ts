@@ -1,5 +1,7 @@
+import { Texture } from "@babylonjs/core/Materials/Textures/texture"
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial"
 import { Color3 } from "@babylonjs/core/Maths/math.color"
+import mossSmallFernsBaseColorUrl from "../../assets/exported/textures/terrain/moss-small-ferns-basecolor.png?url"
 import type { EngineContext } from "../app/EngineContext"
 import type { WorldBounds } from "../app/GameConfig"
 import type { ChunkRepository, ChunkMutation, PersistedChunkData } from "../data/ChunkRepository"
@@ -321,6 +323,11 @@ export class ChunkManager {
     const rock = new StandardMaterial("progressive-rock-material", this._context.scene)
     const water = new StandardMaterial("progressive-water-material", this._context.scene)
 
+    const terrainTexture = new Texture(mossSmallFernsBaseColorUrl, this._context.scene)
+
+    terrainTexture.uScale = 10
+    terrainTexture.vScale = 10
+    terrain.diffuseTexture = terrainTexture
     terrain.diffuseColor = new Color3(1, 1, 1)
     terrain.ambientColor = new Color3(0.22, 0.22, 0.22)
     terrain.specularColor = Color3.Black()
