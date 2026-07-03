@@ -97,7 +97,7 @@
 
 - [ ] Add a terrain generation worker and keep Babylon mesh creation on the main thread unless benchmarks prove otherwise.
 - [ ] Add a per-frame terrain streaming budget so loading chunks does not hitch gameplay.
-- [ ] Add regional elevation, rolling hills, and ridge/mountain noise layers.
+- [X] Add regional elevation, rolling hills, and ridge/mountain noise layers.
 - [ ] Add terrain material masks for grass, dirt, sand, pine needles / forest floor, rock, shore, and water-adjacent areas.
 - [ ] Add deterministic world-space feature generation for large landforms that cross chunk boundaries.
 - [ ] Add deterministic lake and pond basin features with simple water planes.

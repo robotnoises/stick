@@ -632,6 +632,17 @@ describe("chunk coordinates and generation", () => {
     expect([...a.terrainMaterials]).toEqual([...b.terrainMaterials])
     expect(a.props.length).toBeGreaterThan(0)
     expect(new Set(a.props.map((prop) => prop.type)).size).toBeGreaterThan(1)
+
+    const regionalElevation = (generator as any)._getRegionalElevation(120, -80)
+    const rollingHills = (generator as any)._getRollingHillElevation(120, -80)
+    const ridgeElevation = (generator as any)._getRidgeElevation(120, -80)
+    const surfaceRoughness = (generator as any)._getSurfaceRoughness(120, -80)
+    const layeredHeight = regionalElevation + rollingHills + ridgeElevation + surfaceRoughness
+
+    expect(generator.getHeight(120, -80)).toBeCloseTo(layeredHeight)
+    expect(Math.abs(regionalElevation)).toBeGreaterThan(Math.abs(surfaceRoughness))
+    expect(ridgeElevation).toBeGreaterThanOrEqual(0)
+
     let foundDirt = false
 
     for (let z = 0; z < 20 && !foundDirt; z += 1) {

@@ -58,10 +58,11 @@ export class TerrainGenerator {
   }
 
   public getHeight(worldX: number, worldZ: number): number {
-    const broad = this._valueNoise(worldX * 0.006, worldZ * 0.006, 11)
-    const medium = this._valueNoise(worldX * 0.022, worldZ * 0.022, 23)
-    const small = this._valueNoise(worldX * 0.08, worldZ * 0.08, 41)
-    const baseHeight = broad * 8 + medium * 2.5 + small * 0.7
+    const regionalElevation = this._getRegionalElevation(worldX, worldZ)
+    const rollingHills = this._getRollingHillElevation(worldX, worldZ)
+    const ridgeElevation = this._getRidgeElevation(worldX, worldZ)
+    const surfaceRoughness = this._getSurfaceRoughness(worldX, worldZ)
+    const baseHeight = regionalElevation + rollingHills + ridgeElevation + surfaceRoughness
 
     return this._applyWaterFeatures(baseHeight, worldX, worldZ)
   }
@@ -90,6 +91,37 @@ export class TerrainGenerator {
     }
 
     return TerrainMaterial.Grass
+  }
+
+  private _getRegionalElevation(worldX: number, worldZ: number): number {
+    const continental = this._valueNoise(worldX * 0.0018, worldZ * 0.0018, 5)
+    const uplands = this._valueNoise(worldX * 0.004, worldZ * 0.004, 11)
+
+    return continental * 28 + uplands * 12
+  }
+
+  private _getRollingHillElevation(worldX: number, worldZ: number): number {
+    const warpX = this._valueNoise(worldX * 0.006, worldZ * 0.006, 17) * 22
+    const warpZ = this._valueNoise(worldX * 0.006, worldZ * 0.006, 19) * 22
+    const hills = this._valueNoise((worldX + warpX) * 0.014, (worldZ + warpZ) * 0.014, 23)
+
+    return hills * 7
+  }
+
+  private _getRidgeElevation(worldX: number, worldZ: number): number {
+    const ridgeNoise = this._valueNoise(worldX * 0.007, worldZ * 0.007, 29)
+    const ridgeShape = 1 - Math.abs(ridgeNoise)
+    const sharpenedRidge = ridgeShape * ridgeShape
+    const mountainMask = (this._valueNoise(worldX * 0.0025, worldZ * 0.0025, 31) + 1) / 2
+
+    return sharpenedRidge * mountainMask * 18
+  }
+
+  private _getSurfaceRoughness(worldX: number, worldZ: number): number {
+    const medium = this._valueNoise(worldX * 0.035, worldZ * 0.035, 41)
+    const small = this._valueNoise(worldX * 0.09, worldZ * 0.09, 43)
+
+    return medium * 1.6 + small * 0.45
   }
 
   private _generateProps(coord: ChunkCoord): GeneratedPropData[] {
