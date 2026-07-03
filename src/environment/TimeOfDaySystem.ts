@@ -37,6 +37,11 @@ export class TimeOfDaySystem implements GameSystem {
     this.setTimeOfDayHours(timeOfDayHours)
   }
 
+  public setWorldClock(day: number, timeOfDayHours: number, elapsedWorldSeconds: number): void {
+    this.setWorldTime(day, timeOfDayHours)
+    this._elapsedWorldSeconds = Math.max(0, elapsedWorldSeconds)
+  }
+
   public update(deltaSeconds: number): void {
     const worldDelta = deltaSeconds * this._timeScale
     const totalHours = this._timeOfDayHours + worldDelta / 3600

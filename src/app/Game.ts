@@ -1,6 +1,6 @@
 import { BabylonBootstrap } from "../engine/BabylonBootstrap"
 import { LocalForageChunkRepository } from "../data/LocalForageChunkRepository"
-import type { SaveGameRepository } from "../data/SaveGameRepository"
+import type { SaveGameData, SaveGameRepository } from "../data/SaveGameRepository"
 import { DebugOverlay } from "../debug/DebugOverlay"
 import { LightingController } from "../environment/LightingController"
 import { TimeOfDaySystem } from "../environment/TimeOfDaySystem"
@@ -21,6 +21,7 @@ export class Game {
   private readonly _systems: GameSystem[] = []
   private _lastFrameTime = 0
   private _player: PlayerController | null = null
+  private _time: TimeOfDaySystem | null = null
 
   public constructor(
     private readonly _canvas: HTMLCanvasElement,
@@ -38,6 +39,8 @@ export class Game {
 
     const time = new TimeOfDaySystem(this._config.startTimeOfDayHours, this._config.timeScale)
     const player = new PlayerController(this._context)
+
+    this._time = time
     const chunkRepository = new LocalForageChunkRepository()
     const worldFeatures = new WorldFeatureGenerator({
       seed: this._context.config.worldSeed,
@@ -49,6 +52,7 @@ export class Game {
     player.setInvertMouseY(this._settings.invertMouseY)
     player.setPositionClampProvider((worldX, worldZ) => worldBounds.clampPosition(worldX, worldZ))
     player.setGroundHeightProvider((worldX, worldZ) => terrain.getHeightAt(worldX, worldZ))
+    await this._restoreSaveGame(player, time)
     this._player = player
 
     const lighting = new LightingController(this._context, time)
@@ -105,6 +109,30 @@ export class Game {
     this._player?.setInvertMouseY(settings.invertMouseY)
   }
 
+  public async saveGame(): Promise<void> {
+    if (!this._saveGameRepository || !this._player || !this._time) {
+      return
+    }
+
+    const position = this._player.position
+
+    await this._saveGameRepository.saveGame({
+      version: 1,
+      savedAt: Date.now(),
+      worldId: this._config.worldId,
+      worldSeed: this._config.worldSeed,
+      player: {
+        position: [position.x, position.y, position.z],
+        headingDegrees: this._player.headingDegrees,
+      },
+      world: {
+        day: this._time.day,
+        timeOfDayHours: this._time.timeOfDayHours,
+        elapsedWorldSeconds: this._time.elapsedWorldSeconds,
+      },
+    })
+  }
+
   public dispose(): void {
     window.removeEventListener("resize", this._handleResize)
 
@@ -114,8 +142,29 @@ export class Game {
 
     this._systems.length = 0
     this._player = null
+    this._time = null
     this._context?.engine.dispose()
     this._context = null
+  }
+
+  private async _restoreSaveGame(player: PlayerController, time: TimeOfDaySystem): Promise<void> {
+    const saveGame = await this._saveGameRepository?.getSaveGame()
+
+    if (!saveGame || !this._isCompatibleSaveGame(saveGame)) {
+      return
+    }
+
+    player.setPosition(...saveGame.player.position)
+    player.setHeadingDegrees(saveGame.player.headingDegrees)
+    time.setWorldClock(
+      saveGame.world.day,
+      saveGame.world.timeOfDayHours,
+      saveGame.world.elapsedWorldSeconds,
+    )
+  }
+
+  private _isCompatibleSaveGame(saveGame: SaveGameData): boolean {
+    return saveGame.worldId === this._config.worldId && saveGame.worldSeed === this._config.worldSeed
   }
 
   private async _resetTerrainCache(chunkRepository: LocalForageChunkRepository): Promise<void> {

@@ -82,7 +82,30 @@ body {
   display: flex;
   gap: 8px;
   align-items: center;
+  margin-bottom: 10px;
   cursor: pointer;
+}
+
+#save-game-button {
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid rgb(243 234 216 / 25%);
+  border-radius: 4px;
+  color: #f3ead8;
+  background: rgb(38 45 32 / 85%);
+  cursor: pointer;
+}
+
+#save-game-button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+#save-game-status {
+  min-height: 1.4em;
+  margin: 8px 0 0;
+  color: rgb(243 234 216 / 78%);
+  font-size: 13px;
 }
 
 #inventory-panel {

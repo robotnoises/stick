@@ -43,7 +43,7 @@ Responsibilities:
 
 ### `SaveGameRepository`
 
-Stores high-level save/world state that is not tied to a single terrain chunk. The first implementation persists the current `worldId` and `worldSeed` so debug tooling can switch seeds or create a new random world without changing source config.
+Stores high-level save/world state that is not tied to a single terrain chunk. The first implementation persists the current `worldId` and `worldSeed` so debug tooling can switch seeds or create a new random world without changing source config. It also stores the current save snapshot used by the menu save action: player position/heading and world clock values.
 
 Likely responsibilities:
 

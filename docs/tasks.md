@@ -6,9 +6,9 @@
   - [ ] Stop or gate gameplay simulation updates while paused.
   - [ ] Keep pause/menu UI interactive while paused.
   - [ ] Decide whether inventory/backpack and paper map pause the world or leave time running.
-- [ ] Add a save game option to the menu.
+- [X] Add a save game option to the menu.
 - [X] Rename “Options” to “Menu”.
-- [ ] Persist last player position to the database when saving.
+- [X] Persist last player position to the database when saving.
 - [ ] Prevent accidental refresh/close. Short term: use a browser alert/confirmation.
 
 ## UI and Design System
@@ -109,7 +109,7 @@
 ## Persistence and Save Data
 
 - [X] Add a `SaveGameRepository` for high-level save state.
-- [ ] Persist and restore time of day and elapsed world time.
+- [X] Persist and restore time of day and elapsed world time.
 - [ ] Persist and restore survival state once vitals exist.
 - [ ] Add save slots or world IDs and prefix chunk keys to avoid collisions between worlds.
 - [ ] Add chunk dirty-state tracking, mutation saves, and debounced autosave/safety saves.

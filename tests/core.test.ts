@@ -152,6 +152,11 @@ describe("player, compass, debug overlay, and time", () => {
     time.setWorldTime(0, -1)
     expect(time.day).toBe(1)
     expect(time.timeOfDayHours).toBeCloseTo(23)
+
+    time.setWorldClock(2, 10, -5)
+    expect(time.day).toBe(2)
+    expect(time.timeOfDayHours).toBe(10)
+    expect(time.elapsedWorldSeconds).toBe(0)
   })
 
   it("computes compass heading from camera forward direction", () => {
@@ -708,6 +713,19 @@ describe("data repositories", () => {
 
     await repository.saveWorldConfig({ worldId: "world_test", worldSeed: 42 })
     expect(await repository.getWorldConfig()).toEqual({ worldId: "world_test", worldSeed: 42 })
+
+    const saveGame = {
+      version: 1,
+      savedAt: 123,
+      worldId: "world_test",
+      worldSeed: 42,
+      player: { position: [1, 2, 3] as const, headingDegrees: 90 },
+      world: { day: 2, timeOfDayHours: 10, elapsedWorldSeconds: 20 },
+    }
+
+    expect(await repository.getSaveGame()).toBeNull()
+    await repository.saveGame(saveGame)
+    expect(await repository.getSaveGame()).toEqual(saveGame)
   })
 
   it("saves, lists, loads, and deletes chunks through localForage", async () => {
@@ -931,6 +949,8 @@ describe("main entrypoint", () => {
       <button id="options-button" type="button">Options</button>
       <section id="options-panel" hidden></section>
       <input id="invert-mouse-y" type="checkbox" />
+      <button id="save-game-button" type="button">Save game</button>
+      <p id="save-game-status"></p>
     `
 
     await import("../src/main")
@@ -938,6 +958,8 @@ describe("main entrypoint", () => {
     const optionsButton = document.querySelector<HTMLButtonElement>("#options-button")
     const optionsPanel = document.querySelector<HTMLElement>("#options-panel")
     const invertMouseInput = document.querySelector<HTMLInputElement>("#invert-mouse-y")
+    const saveGameButton = document.querySelector<HTMLButtonElement>("#save-game-button")
+    const saveGameStatus = document.querySelector<HTMLElement>("#save-game-status")
 
     optionsButton?.click()
     expect(optionsPanel?.hidden).toBe(false)
@@ -945,6 +967,10 @@ describe("main entrypoint", () => {
     invertMouseInput!.checked = true
     invertMouseInput?.dispatchEvent(new Event("change"))
     expect(loadGameSettings()).toEqual({ invertMouseY: true })
+
+    saveGameButton?.click()
+    await new Promise((resolve) => window.setTimeout(resolve, 0))
+    expect(saveGameStatus?.textContent).toBe("Game saved.")
 
     window.dispatchEvent(new Event("beforeunload"))
   })
@@ -956,10 +982,52 @@ describe("game runtime", () => {
     const canvas = document.createElement("canvas")
     const reloadWindow = vi.fn()
     const saveGameRepository = new LocalForageSaveGameRepository()
+    const gameWithoutRepository = new Game(document.createElement("canvas"))
+
+    await gameWithoutRepository.saveGame()
+
+    await saveGameRepository.saveGame({
+      version: 1,
+      savedAt: 1,
+      worldId: "other_world",
+      worldSeed: defaultGameConfig.worldSeed,
+      player: { position: [99, 99, 99], headingDegrees: 90 },
+      world: { day: 9, timeOfDayHours: 9, elapsedWorldSeconds: 9 },
+    })
+
+    const incompatibleSaveGame = new Game(
+      document.createElement("canvas"),
+      defaultGameConfig,
+      defaultGameSettings,
+      reloadWindow,
+      saveGameRepository,
+    )
+
+    await incompatibleSaveGame.start()
+    incompatibleSaveGame.dispose()
+
+    await saveGameRepository.saveGame({
+      version: 1,
+      savedAt: 1,
+      worldId: defaultGameConfig.worldId,
+      worldSeed: defaultGameConfig.worldSeed,
+      player: { position: [12, 13, 14], headingDegrees: 180 },
+      world: { day: 4, timeOfDayHours: 6.5, elapsedWorldSeconds: 1234 },
+    })
+
     const game = new Game(canvas, defaultGameConfig, defaultGameSettings, reloadWindow, saveGameRepository)
 
     await game.start()
     game.updateSettings({ invertMouseY: true })
+    await game.saveGame()
+
+    const savedGame = await saveGameRepository.getSaveGame()
+
+    expect(savedGame?.player.position).toEqual([12, 13, 14])
+    expect(savedGame?.player.headingDegrees).toBe(0)
+    expect(savedGame?.world.day).toBe(4)
+    expect(savedGame?.world.timeOfDayHours).toBe(6.5)
+    expect(savedGame?.world.elapsedWorldSeconds).toBe(1234)
 
     document.querySelector<HTMLElement>("#debug-overlay")?.click()
     document.querySelectorAll<HTMLButtonElement>("#debug-overlay-editor button[type='button']")[1]?.click()
