@@ -95,7 +95,7 @@
 
 ## World Streaming and Terrain Generation
 
-- [ ] Add a terrain generation worker and keep Babylon mesh creation on the main thread unless benchmarks prove otherwise.
+- [x] Add a terrain generation worker and keep Babylon mesh creation on the main thread unless benchmarks prove otherwise.
 - [x] Add a per-frame terrain streaming budget so loading chunks does not hitch gameplay. See [Terrain Streaming Budget](terrain-streaming-budget.md).
 - [x] Add regional elevation, rolling hills, and ridge/mountain noise layers.
 - [ ] Add terrain material masks for grass, dirt, sand, pine needles / forest floor, rock, shore, and water-adjacent areas.

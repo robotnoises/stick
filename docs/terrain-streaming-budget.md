@@ -234,9 +234,12 @@ Status: implemented.
 
 ### Phase 4: Worker Integration
 
-- Move terrain data generation to a worker.
-- Keep Babylon mesh creation on the main thread.
-- Use the same queue/budget system to schedule worker requests and main-thread mesh builds.
+Status: initial terrain worker implemented.
+
+- [x] Move terrain data generation to a worker with main-thread fallback.
+- [x] Keep Babylon mesh creation on the main thread.
+- [x] Use the same queue/budget system to schedule worker requests and main-thread mesh builds.
+- [ ] Add worker timing/error stats to terrain debug metrics.
 
 ## Open Questions
 

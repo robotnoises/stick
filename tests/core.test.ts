@@ -20,6 +20,15 @@ import { TerrainChunk } from "../src/world/TerrainChunk"
 import { TerrainMaterial, type ChunkTerrainData } from "../src/world/TerrainTypes"
 import { WorldBoundsHelper } from "../src/world/WorldBounds"
 import { TerrainGenerator } from "../src/world/generation/TerrainGenerator"
+import { TerrainGeneratorWorkerClient } from "../src/world/generation/TerrainGeneratorWorkerClient"
+import type {
+  TerrainGenerationRequest,
+  TerrainGenerationResponse,
+} from "../src/world/generation/TerrainGenerationTypes"
+import {
+  generateTerrainChunkResponse,
+  initializeTerrainWorker,
+} from "../src/world/generation/terrain.worker"
 import { WorldFeatureGenerator } from "../src/world/generation/WorldFeatureGenerator"
 import { LocalForageChunkRepository } from "../src/data/LocalForageChunkRepository"
 import { LocalForageSaveGameRepository } from "../src/data/LocalForageSaveGameRepository"
@@ -818,6 +827,128 @@ describe("chunk coordinates and generation", () => {
     expect(generator.getTerrainMaterial(1.5, 2.5)).toBe(generator.getTerrainMaterial(1.5, 2.5))
   })
 
+  it("generates terrain data in worker-compatible request/response shapes", () => {
+    const request: TerrainGenerationRequest = {
+      requestId: 7,
+      seed: 1337,
+      chunkX: 1,
+      chunkZ: -1,
+      chunkSizeMeters: 8,
+      resolution: 2,
+      worldBounds: defaultGameConfig.worldBounds,
+    }
+    const postedMessages: TerrainGenerationResponse[] = []
+    const postedTransfers: Transferable[][] = []
+    let messageListener = (_event: MessageEvent<TerrainGenerationRequest>): void => {
+      throw new Error("Missing worker message listener")
+    }
+    const scope = {
+      addEventListener: vi.fn(
+        (_type: "message", listener: (event: MessageEvent<TerrainGenerationRequest>) => void) => {
+          messageListener = listener
+        },
+      ),
+      postMessage: vi.fn((message: TerrainGenerationResponse, transfer: Transferable[]) => {
+        postedMessages.push(message)
+        postedTransfers.push(transfer)
+      }),
+    }
+
+    const response = generateTerrainChunkResponse(request)
+
+    expect(response.requestId).toBe(7)
+    expect(response.key).toBe("chunk_1_-1")
+    expect(response.heights).toBeInstanceOf(Float32Array)
+    expect(response.terrainMaterials).toBeInstanceOf(Uint8Array)
+
+    initializeTerrainWorker(scope)
+    messageListener(new MessageEvent("message", { data: request }))
+
+    expect(scope.addEventListener).toHaveBeenCalledOnce()
+    expect(postedMessages[0]?.requestId).toBe(7)
+    expect(postedTransfers[0]).toHaveLength(2)
+  })
+
+  it("uses a terrain worker client and falls back when workers are unavailable", async () => {
+    const worker = new FakeTerrainWorker()
+    const client = new TerrainGeneratorWorkerClient(
+      {
+        seed: 1337,
+        chunkSizeMeters: 8,
+        resolution: 2,
+        worldBounds: defaultGameConfig.worldBounds,
+      },
+      () => worker,
+    )
+
+    const firstChunk = await client.generateChunk(new ChunkCoord(0, 0))
+    worker.emit(
+      generateTerrainChunkResponse({
+        requestId: 999,
+        seed: 1337,
+        chunkX: 99,
+        chunkZ: 99,
+        chunkSizeMeters: 8,
+        resolution: 2,
+        worldBounds: defaultGameConfig.worldBounds,
+      }),
+    )
+    const secondChunk = await client.generateChunk(new ChunkCoord(1, 0))
+
+    expect(firstChunk.key).toBe("chunk_0_0")
+    expect(secondChunk.key).toBe("chunk_1_0")
+    expect(worker.postedRequests).toHaveLength(2)
+
+    client.dispose()
+    expect(worker.terminated).toBe(true)
+    worker.emit(
+      generateTerrainChunkResponse({
+        requestId: 1,
+        seed: 1337,
+        chunkX: 0,
+        chunkZ: 0,
+        chunkSizeMeters: 8,
+        resolution: 2,
+        worldBounds: defaultGameConfig.worldBounds,
+      }),
+    )
+
+    const fallbackClient = new TerrainGeneratorWorkerClient(
+      {
+        seed: 1337,
+        chunkSizeMeters: 8,
+        resolution: 2,
+        worldBounds: defaultGameConfig.worldBounds,
+      },
+      () => {
+        throw new Error("Workers unavailable")
+      },
+    )
+    const fallbackChunk = await fallbackClient.generateChunk(new ChunkCoord(2, 0))
+
+    expect(fallbackChunk.key).toBe("chunk_2_0")
+    fallbackClient.dispose()
+  })
+
+  it("rejects pending terrain worker requests on dispose", async () => {
+    const worker = new FakeTerrainWorker(false)
+    const client = new TerrainGeneratorWorkerClient(
+      {
+        seed: 1337,
+        chunkSizeMeters: 8,
+        resolution: 2,
+        worldBounds: defaultGameConfig.worldBounds,
+      },
+      () => worker,
+    )
+    const pending = client.generateChunk(new ChunkCoord(0, 0))
+
+    client.dispose()
+
+    await expect(pending).rejects.toThrow("Terrain worker disposed.")
+    expect(worker.terminated).toBe(true)
+  })
+
   it("builds and disposes terrain chunk meshes and supported props", () => {
     const context = createContext()
     const material = {
@@ -1400,6 +1531,46 @@ class TestFoundItem implements Item {
 
   public use(): ItemUseResult {
     return { success: true, message: "You use the found test item." }
+  }
+}
+
+class FakeTerrainWorker {
+  public readonly postedRequests: TerrainGenerationRequest[] = []
+  public terminated = false
+  private _listener: ((event: MessageEvent<TerrainGenerationResponse>) => void) | null = null
+
+  public constructor(private readonly _autoRespond = true) {}
+
+  public postMessage(message: TerrainGenerationRequest): void {
+    this.postedRequests.push(message)
+
+    if (this._autoRespond) {
+      this.emit(generateTerrainChunkResponse(message))
+    }
+  }
+
+  public addEventListener(
+    _type: "message",
+    listener: (event: MessageEvent<TerrainGenerationResponse>) => void,
+  ): void {
+    this._listener = listener
+  }
+
+  public removeEventListener(
+    _type: "message",
+    listener: (event: MessageEvent<TerrainGenerationResponse>) => void,
+  ): void {
+    if (this._listener === listener) {
+      this._listener = null
+    }
+  }
+
+  public terminate(): void {
+    this.terminated = true
+  }
+
+  public emit(response: TerrainGenerationResponse): void {
+    this._listener?.(new MessageEvent("message", { data: response }))
   }
 }
 

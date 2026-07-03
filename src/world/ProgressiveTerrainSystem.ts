@@ -5,6 +5,7 @@ import type { PlayerController } from "../player/PlayerController"
 import { ChunkCoord } from "./ChunkCoord"
 import { ChunkManager, type TerrainStreamingDebugStats } from "./ChunkManager"
 import { TerrainGenerator } from "./generation/TerrainGenerator"
+import { TerrainGeneratorWorkerClient } from "./generation/TerrainGeneratorWorkerClient"
 import type { WorldFeatureGenerator } from "./generation/WorldFeatureGenerator"
 
 export class ProgressiveTerrainSystem implements GameSystem {
@@ -40,6 +41,12 @@ export class ProgressiveTerrainSystem implements GameSystem {
         worldBounds: this._context.config.worldBounds,
         worldId: this._context.config.worldId,
       },
+      new TerrainGeneratorWorkerClient({
+        seed: this._context.config.worldSeed,
+        chunkSizeMeters: 64,
+        resolution: 32,
+        worldBounds: this._context.config.worldBounds,
+      }),
     )
   }
 

@@ -34,6 +34,11 @@ interface CachedChunkData {
   lastUsed: number
 }
 
+export interface ChunkDataGenerator {
+  generateChunk(coord: ChunkCoord): Promise<ChunkTerrainData> | ChunkTerrainData
+  dispose?(): void
+}
+
 export interface TerrainStreamingDebugStats {
   readonly activeChunkCount: number
   readonly queuedChunkCount: number
@@ -61,6 +66,7 @@ export class ChunkManager {
     private readonly _repository: ChunkRepository,
     private readonly _worldFeatures: WorldFeatureGenerator,
     private readonly _options: ChunkManagerOptions,
+    private readonly _chunkDataGenerator: ChunkDataGenerator = _generator,
   ) {
     this._bounds = this._options.worldBounds
       ? new WorldBoundsHelper(this._options.worldBounds)
@@ -156,6 +162,7 @@ export class ChunkManager {
     this._materials.needles.dispose()
     this._materials.rock.dispose()
     this._materials.water.dispose()
+    this._chunkDataGenerator.dispose?.()
   }
 
   private async _ensureChunk(coord: ChunkCoord): Promise<void> {
@@ -198,7 +205,7 @@ export class ChunkManager {
       return data
     }
 
-    const generated = this._generator.generateChunk(coord)
+    const generated = await this._chunkDataGenerator.generateChunk(coord)
     const now = Date.now()
 
     this._dataCache.set(coord.key, { data: generated, lastUsed: now })
