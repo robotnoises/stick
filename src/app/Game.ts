@@ -46,7 +46,12 @@ export class Game {
       seed: this._context.config.worldSeed,
       worldBounds: this._context.config.worldBounds,
     })
-    const terrain = new ProgressiveTerrainSystem(this._context, player, chunkRepository, worldFeatures)
+    const terrain = new ProgressiveTerrainSystem(
+      this._context,
+      player,
+      chunkRepository,
+      worldFeatures,
+    )
     const worldBounds = new WorldBoundsHelper(this._context.config.worldBounds)
 
     player.setInvertMouseY(this._settings.invertMouseY)
@@ -67,17 +72,20 @@ export class Game {
           z: player.position.z,
         },
         playerHeadingDegrees: player.headingDegrees,
+        chunkSizeMeters: 64,
         lakes: worldFeatures.lakes.map((lake) => ({
           id: lake.id,
           centerX: lake.centerX,
           centerZ: lake.centerZ,
           radiusX: lake.radiusX,
           radiusZ: lake.radiusZ,
+          shoreFalloffMeters: lake.shoreFalloffMeters,
         })),
         rivers: worldFeatures.rivers.map((river) => ({
           id: river.id,
           points: river.points,
           widthMeters: river.widthMeters,
+          bankFalloffMeters: river.bankFalloffMeters,
         })),
       }),
       getWorldSeed: () => this._config.worldSeed,
@@ -169,7 +177,9 @@ export class Game {
   }
 
   private _isCompatibleSaveGame(saveGame: SaveGameData): boolean {
-    return saveGame.worldId === this._config.worldId && saveGame.worldSeed === this._config.worldSeed
+    return (
+      saveGame.worldId === this._config.worldId && saveGame.worldSeed === this._config.worldSeed
+    )
   }
 
   private async _resetTerrainCache(chunkRepository: LocalForageChunkRepository): Promise<void> {

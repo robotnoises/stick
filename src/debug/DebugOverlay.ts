@@ -8,12 +8,14 @@ export interface DebugMapLakeData {
   readonly centerZ: number
   readonly radiusX: number
   readonly radiusZ: number
+  readonly shoreFalloffMeters: number
 }
 
 export interface DebugMapRiverData {
   readonly id: string
   readonly points: ReadonlyArray<readonly [number, number]>
   readonly widthMeters: number
+  readonly bankFalloffMeters: number
 }
 
 export interface DebugMapData {
@@ -28,6 +30,7 @@ export interface DebugMapData {
     readonly z: number
   }
   readonly playerHeadingDegrees: number
+  readonly chunkSizeMeters: number
   readonly lakes: readonly DebugMapLakeData[]
   readonly rivers: readonly DebugMapRiverData[]
 }
@@ -216,7 +219,8 @@ export class DebugOverlay implements GameSystem {
     modal.id = "debug-world-map-modal"
     panel.id = "debug-world-map-panel"
     title.textContent = "Debug world map"
-    details.textContent = "Revealed debug view: world bounds, grid, origin/start, player, and major water features."
+    details.textContent =
+      "Revealed debug view: world bounds, chunk grid, origin/start, player, and major water features."
     closeButton.type = "button"
     closeButton.textContent = "Close"
     closeButton.addEventListener("click", () => modal.remove())
@@ -227,7 +231,7 @@ export class DebugOverlay implements GameSystem {
       svg.classList.toggle("debug-map-placing-player", isPlacingPlayer)
       details.textContent = isPlacingPlayer
         ? "Click any point inside the map to move the player there. A confirmation prompt will appear."
-        : "Revealed debug view: world bounds, grid, origin/start, player, and major water features."
+        : "Revealed debug view: world bounds, chunk grid, origin/start, player, and major water features."
     })
     svg.addEventListener("click", (event) => {
       if (!isPlacingPlayer) {
@@ -304,12 +308,32 @@ export class DebugOverlay implements GameSystem {
 
     svg.setAttribute("viewBox", `0 0 ${size} ${size}`)
     svg.setAttribute("role", "img")
-    svg.setAttribute("aria-label", "Debug map of world bounds, grid, player, origin, and major landforms")
+    svg.setAttribute(
+      "aria-label",
+      "Debug map of world bounds, grid, player, origin, and major landforms",
+    )
 
     this._appendSvgRect(svg, padding, padding, plotSize, plotSize, "debug-map-world-bounds")
+    this._appendDebugMapChunkGrid(
+      svg,
+      bounds,
+      padding,
+      plotSize,
+      data.chunkSizeMeters,
+      toSvgX,
+      toSvgY,
+    )
     this._appendDebugMapGrid(svg, bounds, padding, plotSize, toSvgX, toSvgY)
 
     for (const lake of data.lakes) {
+      this._appendSvgEllipse(
+        svg,
+        toSvgX(lake.centerX),
+        toSvgY(lake.centerZ),
+        ((lake.radiusX + lake.shoreFalloffMeters) / width) * plotSize,
+        ((lake.radiusZ + lake.shoreFalloffMeters) / depth) * plotSize,
+        "debug-map-lake-shore-falloff",
+      )
       this._appendSvgEllipse(
         svg,
         toSvgX(lake.centerX),
@@ -321,6 +345,7 @@ export class DebugOverlay implements GameSystem {
     }
 
     for (const river of data.rivers) {
+      this._appendDebugMapRiverBank(svg, river, toSvgX, toSvgY, width, plotSize)
       this._appendDebugMapRiver(svg, river, toSvgX, toSvgY, width, plotSize)
     }
 
@@ -334,6 +359,29 @@ export class DebugOverlay implements GameSystem {
     return svg
   }
 
+  private _appendDebugMapRiverBank(
+    svg: SVGSVGElement,
+    river: DebugMapRiverData,
+    toSvgX: (worldX: number) => number,
+    toSvgY: (worldZ: number) => number,
+    worldWidth: number,
+    plotSize: number,
+  ): void {
+    const strokeWidth = Math.max(
+      3,
+      ((river.widthMeters + river.bankFalloffMeters * 2) / worldWidth) * plotSize,
+    )
+
+    this._appendDebugMapPolyline(
+      svg,
+      river.points,
+      toSvgX,
+      toSvgY,
+      "debug-map-river-bank-falloff",
+      strokeWidth,
+    )
+  }
+
   private _appendDebugMapRiver(
     svg: SVGSVGElement,
     river: DebugMapRiverData,
@@ -342,14 +390,23 @@ export class DebugOverlay implements GameSystem {
     worldWidth: number,
     plotSize: number,
   ): void {
-    const polyline = document.createElementNS("http://www.w3.org/2000/svg", "polyline")
     const strokeWidth = Math.max(2, (river.widthMeters / worldWidth) * plotSize)
 
-    polyline.setAttribute(
-      "points",
-      river.points.map(([x, z]) => `${toSvgX(x)},${toSvgY(z)}`).join(" "),
-    )
-    polyline.setAttribute("class", "debug-map-river")
+    this._appendDebugMapPolyline(svg, river.points, toSvgX, toSvgY, "debug-map-river", strokeWidth)
+  }
+
+  private _appendDebugMapPolyline(
+    svg: SVGSVGElement,
+    points: ReadonlyArray<readonly [number, number]>,
+    toSvgX: (worldX: number) => number,
+    toSvgY: (worldZ: number) => number,
+    className: string,
+    strokeWidth: number,
+  ): void {
+    const polyline = document.createElementNS("http://www.w3.org/2000/svg", "polyline")
+
+    polyline.setAttribute("points", points.map(([x, z]) => `${toSvgX(x)},${toSvgY(z)}`).join(" "))
+    polyline.setAttribute("class", className)
     polyline.setAttribute("stroke-width", String(strokeWidth))
     svg.appendChild(polyline)
   }
@@ -372,6 +429,41 @@ export class DebugOverlay implements GameSystem {
     this._appendSvgLine(svg, playerX, playerY, endX, endY, "debug-map-player-heading")
     this._appendSvgLine(svg, endX, endY, arrowLeftX, arrowLeftY, "debug-map-player-heading")
     this._appendSvgLine(svg, endX, endY, arrowRightX, arrowRightY, "debug-map-player-heading")
+  }
+
+  private _appendDebugMapChunkGrid(
+    svg: SVGSVGElement,
+    bounds: DebugMapData["worldBounds"],
+    padding: number,
+    plotSize: number,
+    chunkSizeMeters: number,
+    toSvgX: (worldX: number) => number,
+    toSvgY: (worldZ: number) => number,
+  ): void {
+    const startX = Math.ceil(bounds.minX / chunkSizeMeters) * chunkSizeMeters
+    const startZ = Math.ceil(bounds.minZ / chunkSizeMeters) * chunkSizeMeters
+
+    for (let x = startX; x <= bounds.maxX; x += chunkSizeMeters) {
+      this._appendSvgLine(
+        svg,
+        toSvgX(x),
+        padding,
+        toSvgX(x),
+        padding + plotSize,
+        "debug-map-chunk-grid",
+      )
+    }
+
+    for (let z = startZ; z <= bounds.maxZ; z += chunkSizeMeters) {
+      this._appendSvgLine(
+        svg,
+        padding,
+        toSvgY(z),
+        padding + plotSize,
+        toSvgY(z),
+        "debug-map-chunk-grid",
+      )
+    }
   }
 
   private _appendDebugMapGrid(
@@ -504,9 +596,16 @@ export class DebugOverlay implements GameSystem {
     const timeOfDay = this._readNumber(form, "timeOfDay", this._time.timeOfDayHours)
     const currentSeed = this._actions.getWorldSeed?.()
     const nextSeed =
-      currentSeed === undefined ? null : Math.floor(this._readNumber(form, "worldSeed", currentSeed))
+      currentSeed === undefined
+        ? null
+        : Math.floor(this._readNumber(form, "worldSeed", currentSeed))
 
-    if (currentSeed !== undefined && nextSeed !== null && nextSeed !== currentSeed && this._actions.setWorldSeed) {
+    if (
+      currentSeed !== undefined &&
+      nextSeed !== null &&
+      nextSeed !== currentSeed &&
+      this._actions.setWorldSeed
+    ) {
       const confirmed = window.confirm(
         `Set world seed to ${nextSeed}? This will clear terrain chunks and reload the game.`,
       )

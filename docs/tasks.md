@@ -6,9 +6,9 @@
   - [ ] Stop or gate gameplay simulation updates while paused.
   - [ ] Keep pause/menu UI interactive while paused.
   - [ ] Decide whether inventory/backpack and paper map pause the world or leave time running.
-- [X] Add a save game option to the menu.
-- [X] Rename “Options” to “Menu”.
-- [X] Persist last player position to the database when saving.
+- [x] Add a save game option to the menu.
+- [x] Rename “Options” to “Menu”.
+- [x] Persist last player position to the database when saving.
 - [ ] Prevent accidental refresh/close. Short term: use a browser alert/confirmation.
 
 ## UI and Design System
@@ -32,7 +32,7 @@
   - [ ] flint & steel
   - [ ] knife
   - [ ] canteen
-  - [X] solar flashlight
+  - [x] solar flashlight
   - [ ] blank paper map
 - [ ] Add backpack UI for viewing items.
 - [ ] Add one-selected-item behavior.
@@ -77,31 +77,31 @@
   - [ ] Add deterministic boundary landforms for world-edge enforcement: mountains/cliffs, wide rivers/canyons, horizon lakes, dense deadfall/forest, or road/closure barriers.
   - [ ] Add a hard collision/clamp fallback behind natural boundary features.
 - [ ] Add more terrain generation variety:
-  - [X] grass
-  - [X] dirt
-  - [X] sand
-  - [X] pine needles / forest floor
+  - [x] grass
+  - [x] dirt
+  - [x] sand
+  - [x] pine needles / forest floor
 - [ ] Add more tree types.
 - [ ] Add animals.
 - [ ] Add more flora; this should be a major investment area.
 - [ ] Add tree states:
-  - [X] alive
-  - [X] dead
-  - [X] fallen/log variants
+  - [x] alive
+  - [x] dead
+  - [x] fallen/log variants
 - [ ] Add water features:
-  - [X] lakes
-  - [X] ponds
-  - [X] rivers
+  - [x] lakes
+  - [x] ponds
+  - [x] rivers
 
 ## World Streaming and Terrain Generation
 
 - [ ] Add a terrain generation worker and keep Babylon mesh creation on the main thread unless benchmarks prove otherwise.
 - [ ] Add a per-frame terrain streaming budget so loading chunks does not hitch gameplay.
-- [X] Add regional elevation, rolling hills, and ridge/mountain noise layers.
+- [x] Add regional elevation, rolling hills, and ridge/mountain noise layers.
 - [ ] Add terrain material masks for grass, dirt, sand, pine needles / forest floor, rock, shore, and water-adjacent areas.
 - [ ] Add deterministic world-space feature generation for large landforms that cross chunk boundaries.
 - [ ] Add deterministic lake and pond basin features with simple water planes.
-- [X] Add deterministic river path features with carved channels, bank smoothing, and water strip meshes.
+- [x] Add deterministic river path features with carved channels, bank smoothing, and water strip meshes.
 - [ ] Polish river rendering; see [Water Features](water.md).
   - [ ] Replace cell-based river water with smoother river ribbon meshes.
   - [ ] Improve river edge clipping/shape against carved channels.
@@ -110,13 +110,17 @@
   - [ ] Add downstream water-level profiles and simple flow visuals.
 - [ ] Add a world feature registry/save shape for rivers, lakes, hills, and mountain ranges.
 - [ ] Add debug visualization for chunk boundaries, feature paths, water basins, and biome/material masks.
-  - [X] Show lake basins and river paths on the revealed debug world map.
+  - [x] Show chunk boundaries on the revealed debug world map.
+  - [x] Show lake basins and shore falloff on the revealed debug world map.
+  - [x] Show river paths, water width, and bank falloff on the revealed debug world map.
+  - [ ] Add terrain material / biome mask visualization.
+  - [ ] Add in-world debug overlays for nearby chunk boundaries and water masks.
 - [ ] Remove or fully retire `TestTerrainSystem` once progressive terrain is the only terrain path.
 
 ## Persistence and Save Data
 
-- [X] Add a `SaveGameRepository` for high-level save state.
-- [X] Persist and restore time of day and elapsed world time.
+- [x] Add a `SaveGameRepository` for high-level save state.
+- [x] Persist and restore time of day and elapsed world time.
 - [ ] Persist and restore survival state once vitals exist.
 - [ ] Add save slots or world IDs and prefix chunk keys to avoid collisions between worlds.
 - [ ] Add chunk dirty-state tracking, mutation saves, and debounced autosave/safety saves.

@@ -245,6 +245,7 @@ describe("player, compass, debug overlay, and time", () => {
         worldBounds: { minX: -1000, maxX: 1000, minZ: -1000, maxZ: 1000 },
         playerPosition: { x: 100, z: -200 },
         playerHeadingDegrees: 90,
+        chunkSizeMeters: 64,
         lakes: [
           {
             id: "debug_lake",
@@ -252,6 +253,7 @@ describe("player, compass, debug overlay, and time", () => {
             centerZ: 100,
             radiusX: 150,
             radiusZ: 90,
+            shoreFalloffMeters: 20,
           },
         ],
         rivers: [
@@ -263,6 +265,7 @@ describe("player, compass, debug overlay, and time", () => {
               [800, -800],
             ],
             widthMeters: 24,
+            bankFalloffMeters: 16,
           },
         ],
       }),
@@ -283,20 +286,37 @@ describe("player, compass, debug overlay, and time", () => {
     expect(document.querySelector<HTMLFormElement>("#debug-overlay-editor")?.noValidate).toBe(true)
     expect(document.querySelector<HTMLInputElement>("input[name='positionX']")?.step).toBe("any")
 
-    document.querySelector<HTMLButtonElement>("#debug-overlay-editor button[type='button']")?.click()
+    document
+      .querySelector<HTMLButtonElement>("#debug-overlay-editor button[type='button']")
+      ?.click()
     expect(document.querySelector("#debug-overlay-editor")).toBeNull()
 
     document.querySelector<HTMLElement>("#debug-overlay")?.click()
-    document.querySelectorAll<HTMLButtonElement>("#debug-overlay-editor button[type='button']")[1]?.click()
+    document
+      .querySelectorAll<HTMLButtonElement>("#debug-overlay-editor button[type='button']")[1]
+      ?.click()
     let debugMapSvg = document.querySelector<SVGSVGElement>("#debug-world-map-modal svg")!
 
     expect(debugMapSvg.getAttribute("role")).toBe("img")
+    expect(
+      document.querySelectorAll("#debug-world-map-modal .debug-map-chunk-grid").length,
+    ).toBeGreaterThan(0)
     expect(document.querySelectorAll("#debug-world-map-modal .debug-map-lake").length).toBe(1)
+    expect(
+      document.querySelectorAll("#debug-world-map-modal .debug-map-lake-shore-falloff").length,
+    ).toBe(1)
     expect(document.querySelectorAll("#debug-world-map-modal .debug-map-river").length).toBe(1)
-    expect(document.querySelectorAll("#debug-world-map-modal .debug-map-player-heading").length).toBe(3)
+    expect(
+      document.querySelectorAll("#debug-world-map-modal .debug-map-river-bank-falloff").length,
+    ).toBe(1)
+    expect(
+      document.querySelectorAll("#debug-world-map-modal .debug-map-player-heading").length,
+    ).toBe(3)
     document.querySelectorAll<HTMLButtonElement>("#debug-world-map-panel button")[1]?.click()
     expect(document.querySelector("#debug-world-map-modal")).toBeNull()
-    document.querySelectorAll<HTMLButtonElement>("#debug-overlay-editor button[type='button']")[1]?.click()
+    document
+      .querySelectorAll<HTMLButtonElement>("#debug-overlay-editor button[type='button']")[1]
+      ?.click()
     debugMapSvg = document.querySelector<SVGSVGElement>("#debug-world-map-modal svg")!
     Object.defineProperty(debugMapSvg, "getBoundingClientRect", {
       configurable: true,
@@ -322,28 +342,36 @@ describe("player, compass, debug overlay, and time", () => {
 
     document.querySelector<HTMLElement>("#debug-overlay")?.click()
     vi.spyOn(window, "confirm").mockReturnValueOnce(false)
-    document.querySelectorAll<HTMLButtonElement>("#debug-overlay-editor button[type='button']")[2]?.click()
+    document
+      .querySelectorAll<HTMLButtonElement>("#debug-overlay-editor button[type='button']")[2]
+      ?.click()
     expect(resetTerrainCache).not.toHaveBeenCalled()
 
     vi.spyOn(window, "confirm").mockReturnValueOnce(true)
-    document.querySelectorAll<HTMLButtonElement>("#debug-overlay-editor button[type='button']")[2]?.click()
+    document
+      .querySelectorAll<HTMLButtonElement>("#debug-overlay-editor button[type='button']")[2]
+      ?.click()
     expect(resetTerrainCache).toHaveBeenCalledOnce()
 
     vi.spyOn(window, "confirm").mockReturnValueOnce(false)
-    document.querySelectorAll<HTMLButtonElement>("#debug-overlay-editor button[type='button']")[3]?.click()
+    document
+      .querySelectorAll<HTMLButtonElement>("#debug-overlay-editor button[type='button']")[3]
+      ?.click()
     expect(createNewWorld).not.toHaveBeenCalled()
 
     vi.spyOn(window, "confirm").mockReturnValueOnce(true)
-    document.querySelectorAll<HTMLButtonElement>("#debug-overlay-editor button[type='button']")[3]?.click()
+    document
+      .querySelectorAll<HTMLButtonElement>("#debug-overlay-editor button[type='button']")[3]
+      ?.click()
     expect(createNewWorld).toHaveBeenCalledOnce()
 
-    ;(document.querySelector<HTMLInputElement>("input[name='positionX']")!.value = "10")
-    ;(document.querySelector<HTMLInputElement>("input[name='positionY']")!.value = "11")
-    ;(document.querySelector<HTMLInputElement>("input[name='positionZ']")!.value = "12")
-    ;(document.querySelector<HTMLInputElement>("input[name='heading']")!.value = "270")
-    ;(document.querySelector<HTMLInputElement>("input[name='day']")!.value = "3")
-    ;(document.querySelector<HTMLInputElement>("input[name='timeOfDay']")!.value = "21.5")
-    ;(document.querySelector<HTMLInputElement>("input[name='worldSeed']")!.value = "1337")
+    document.querySelector<HTMLInputElement>("input[name='positionX']")!.value = "10"
+    document.querySelector<HTMLInputElement>("input[name='positionY']")!.value = "11"
+    document.querySelector<HTMLInputElement>("input[name='positionZ']")!.value = "12"
+    document.querySelector<HTMLInputElement>("input[name='heading']")!.value = "270"
+    document.querySelector<HTMLInputElement>("input[name='day']")!.value = "3"
+    document.querySelector<HTMLInputElement>("input[name='timeOfDay']")!.value = "21.5"
+    document.querySelector<HTMLInputElement>("input[name='worldSeed']")!.value = "1337"
     ;(overlay as any)._readNumber(
       { elements: { namedItem: () => ({ value: "not-a-number" }) } },
       "missing",
@@ -360,7 +388,7 @@ describe("player, compass, debug overlay, and time", () => {
     expect(document.querySelector("#debug-overlay")?.textContent).toContain("time: 21.50h")
 
     document.querySelector<HTMLElement>("#debug-overlay")?.click()
-    ;(document.querySelector<HTMLInputElement>("input[name='worldSeed']")!.value = "999")
+    document.querySelector<HTMLInputElement>("input[name='worldSeed']")!.value = "999"
     vi.spyOn(window, "confirm").mockReturnValueOnce(false)
     document
       .querySelector<HTMLFormElement>("#debug-overlay-editor")
@@ -378,9 +406,15 @@ describe("player, compass, debug overlay, and time", () => {
     const overlayWithoutActions = new DebugOverlay(player as any, time)
 
     document.querySelector<HTMLElement>("#debug-overlay")?.click()
-    document.querySelectorAll<HTMLButtonElement>("#debug-overlay-editor button[type='button']")[1]?.click()
-    document.querySelectorAll<HTMLButtonElement>("#debug-overlay-editor button[type='button']")[2]?.click()
-    document.querySelectorAll<HTMLButtonElement>("#debug-overlay-editor button[type='button']")[3]?.click()
+    document
+      .querySelectorAll<HTMLButtonElement>("#debug-overlay-editor button[type='button']")[1]
+      ?.click()
+    document
+      .querySelectorAll<HTMLButtonElement>("#debug-overlay-editor button[type='button']")[2]
+      ?.click()
+    document
+      .querySelectorAll<HTMLButtonElement>("#debug-overlay-editor button[type='button']")[3]
+      ?.click()
     document
       .querySelector<HTMLFormElement>("#debug-overlay-editor")
       ?.dispatchEvent(new SubmitEvent("submit", { bubbles: true, cancelable: true }))
@@ -509,7 +543,9 @@ describe("backpack and inventory", () => {
     expect(document.querySelector<HTMLElement>("#inventory-panel")?.hidden).toBe(false)
 
     document.querySelector<HTMLElement>("#inventory-panel")?.click()
-    document.querySelector<HTMLButtonElement>("button[data-item-id='core_flint_and_steel']")?.click()
+    document
+      .querySelector<HTMLButtonElement>("button[data-item-id='core_flint_and_steel']")
+      ?.click()
     expect(inventory.selectedItemName).toBe("Flint & steel")
     expect(document.querySelector("#inventory-panel")?.textContent).toContain(
       "Flint & steel selected.",
@@ -633,7 +669,16 @@ describe("chunk coordinates and generation", () => {
       distanceToShoreMeters: 10,
     })
     expect((a as any)._getDistanceToSegmentMeters(3, 4, 0, 0, 0, 0)).toBe(5)
-    ;(a as any)._rivers = [{ ...river, widthMeters: 0, points: [[0, 0], [1, 0]] }]
+    ;(a as any)._rivers = [
+      {
+        ...river,
+        widthMeters: 0,
+        points: [
+          [0, 0],
+          [1, 0],
+        ],
+      },
+    ]
     expect(a.sample(0.5, 0).water?.normalizedDistance).toBe(0)
 
     ;(a as any)._lakes = [
@@ -718,9 +763,9 @@ describe("chunk coordinates and generation", () => {
     expect(riverCenterHeight).toBeLessThanOrEqual(river.waterLevelMeters)
     expect(shoreMaterial).toBe(TerrainMaterial.Sand)
     expect(riverBankMaterial).toBeTypeOf("number")
-    expect(lakeProps.every((prop) => prop.position[1] > lake.waterLevelMeters - lake.depthMeters)).toBe(
-      true,
-    )
+    expect(
+      lakeProps.every((prop) => prop.position[1] > lake.waterLevelMeters - lake.depthMeters),
+    ).toBe(true)
     expect(generator.getHeight(1.5, 2.5)).toBe(generator.getHeight(1.5, 2.5))
     expect(generator.getTerrainMaterial(1.5, 2.5)).toBe(generator.getTerrainMaterial(1.5, 2.5))
   })
@@ -774,7 +819,12 @@ describe("chunk coordinates and generation", () => {
         },
       }),
     }
-    const chunk = new TerrainChunk(context, createSmallChunkData(), material, fakeWorldFeatures as any)
+    const chunk = new TerrainChunk(
+      context,
+      createSmallChunkData(),
+      material,
+      fakeWorldFeatures as any,
+    )
     const sparseChunk = new TerrainChunk(
       context,
       {
@@ -1105,7 +1155,13 @@ describe("game runtime", () => {
       world: { day: 4, timeOfDayHours: 6.5, elapsedWorldSeconds: 1234 },
     })
 
-    const game = new Game(canvas, defaultGameConfig, defaultGameSettings, reloadWindow, saveGameRepository)
+    const game = new Game(
+      canvas,
+      defaultGameConfig,
+      defaultGameSettings,
+      reloadWindow,
+      saveGameRepository,
+    )
 
     await game.start()
     game.updateSettings({ invertMouseY: true })
@@ -1120,25 +1176,36 @@ describe("game runtime", () => {
     expect(savedGame?.world.elapsedWorldSeconds).toBe(1234)
 
     document.querySelector<HTMLElement>("#debug-overlay")?.click()
-    document.querySelectorAll<HTMLButtonElement>("#debug-overlay-editor button[type='button']")[1]?.click()
+    document
+      .querySelectorAll<HTMLButtonElement>("#debug-overlay-editor button[type='button']")[1]
+      ?.click()
     expect(document.querySelector("#debug-world-map-modal")).toBeTruthy()
-    document.querySelector("#debug-world-map-modal")?.dispatchEvent(new MouseEvent("click", { bubbles: true }))
+    document
+      .querySelector("#debug-world-map-modal")
+      ?.dispatchEvent(new MouseEvent("click", { bubbles: true }))
     vi.spyOn(window, "confirm").mockReturnValueOnce(true)
-    document.querySelectorAll<HTMLButtonElement>("#debug-overlay-editor button[type='button']")[2]?.click()
+    document
+      .querySelectorAll<HTMLButtonElement>("#debug-overlay-editor button[type='button']")[2]
+      ?.click()
     await new Promise((resolve) => window.setTimeout(resolve, 0))
     expect(reloadWindow).toHaveBeenCalledOnce()
 
     vi.spyOn(window, "confirm").mockReturnValueOnce(true)
-    ;(document.querySelector<HTMLInputElement>("input[name='worldSeed']")!.value = "2024")
+    document.querySelector<HTMLInputElement>("input[name='worldSeed']")!.value = "2024"
     document
       .querySelector<HTMLFormElement>("#debug-overlay-editor")
       ?.dispatchEvent(new SubmitEvent("submit", { bubbles: true, cancelable: true }))
     await new Promise((resolve) => window.setTimeout(resolve, 0))
-    expect(await saveGameRepository.getWorldConfig()).toEqual({ worldId: "world_2024", worldSeed: 2024 })
+    expect(await saveGameRepository.getWorldConfig()).toEqual({
+      worldId: "world_2024",
+      worldSeed: 2024,
+    })
 
     vi.spyOn(Math, "random").mockReturnValueOnce(0.5)
     vi.spyOn(window, "confirm").mockReturnValueOnce(true)
-    document.querySelectorAll<HTMLButtonElement>("#debug-overlay-editor button[type='button']")[3]?.click()
+    document
+      .querySelectorAll<HTMLButtonElement>("#debug-overlay-editor button[type='button']")[3]
+      ?.click()
     await new Promise((resolve) => window.setTimeout(resolve, 0))
     const newWorldConfig = await saveGameRepository.getWorldConfig()
 
@@ -1177,7 +1244,9 @@ function createPersistedChunk(
 }
 
 function createTestFlashlightUseAction(message = "Test flashlight action."): {
-  readonly toggle: ReturnType<typeof vi.fn<() => { readonly enabled: boolean; readonly message: string }>>
+  readonly toggle: ReturnType<
+    typeof vi.fn<() => { readonly enabled: boolean; readonly message: string }>
+  >
 } {
   return {
     toggle: vi.fn(() => ({ enabled: true, message })),

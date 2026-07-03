@@ -297,8 +297,19 @@ body {
   stroke-width: 2;
 }
 
+.debug-map-chunk-grid {
+  stroke: rgb(243 234 216 / 5%);
+  stroke-width: 0.5;
+}
+
 .debug-map-grid {
-  stroke: rgb(243 234 216 / 13%);
+  stroke: rgb(243 234 216 / 16%);
+  stroke-width: 1;
+}
+
+.debug-map-lake-shore-falloff {
+  fill: rgb(177 143 82 / 22%);
+  stroke: rgb(230 190 116 / 55%);
   stroke-width: 1;
 }
 
@@ -306,6 +317,13 @@ body {
   fill: rgb(51 128 164 / 70%);
   stroke: rgb(130 196 219 / 90%);
   stroke-width: 1.5;
+}
+
+.debug-map-river-bank-falloff {
+  fill: none;
+  stroke: rgb(177 143 82 / 28%);
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .debug-map-river {
