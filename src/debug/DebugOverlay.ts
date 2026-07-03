@@ -25,8 +25,11 @@ export interface DebugMapData {
 }
 
 export interface DebugOverlayActions {
-  resetWorld?(): Promise<void> | void
+  createNewWorld?(): Promise<void> | void
   getDebugMapData?(): DebugMapData
+  getWorldSeed?(): number
+  resetTerrainCache?(): Promise<void> | void
+  setWorldSeed?(seed: number): Promise<void> | void
 }
 
 export class DebugOverlay implements GameSystem {
@@ -79,7 +82,8 @@ export class DebugOverlay implements GameSystem {
     const form = document.createElement("form")
     const submitButton = document.createElement("button")
     const cancelButton = document.createElement("button")
-    const resetWorldButton = document.createElement("button")
+    const resetTerrainCacheButton = document.createElement("button")
+    const newWorldButton = document.createElement("button")
     const revealMapButton = document.createElement("button")
 
     this._isEditing = true
@@ -92,9 +96,12 @@ export class DebugOverlay implements GameSystem {
     cancelButton.type = "button"
     cancelButton.textContent = "Cancel"
     cancelButton.addEventListener("click", this._handleCancel)
-    resetWorldButton.type = "button"
-    resetWorldButton.textContent = "Reset world"
-    resetWorldButton.addEventListener("click", this._handleResetWorld)
+    resetTerrainCacheButton.type = "button"
+    resetTerrainCacheButton.textContent = "Reset terrain cache"
+    resetTerrainCacheButton.addEventListener("click", this._handleResetTerrainCache)
+    newWorldButton.type = "button"
+    newWorldButton.textContent = "New random world"
+    newWorldButton.addEventListener("click", this._handleNewWorld)
     revealMapButton.type = "button"
     revealMapButton.textContent = "Reveal world map"
     revealMapButton.addEventListener("click", this._handleRevealMap)
@@ -107,9 +114,10 @@ export class DebugOverlay implements GameSystem {
       this._createNumberField("heading", "heading", this._player.headingDegrees),
       this._createNumberField("day", "day", this._time.day),
       this._createNumberField("timeOfDay", "time", this._time.timeOfDayHours),
+      this._createOptionalSeedField(),
       this._createButtonRow(submitButton, cancelButton),
       this._createDebugToolRow(revealMapButton),
-      this._createDangerRow(resetWorldButton),
+      this._createDangerRow(resetTerrainCacheButton, newWorldButton),
     )
 
     this._element.replaceChildren(form)
@@ -122,6 +130,16 @@ export class DebugOverlay implements GameSystem {
     heading.textContent = "Edit debug values"
 
     return heading
+  }
+
+  private _createOptionalSeedField(): HTMLLabelElement | DocumentFragment {
+    const seed = this._actions.getWorldSeed?.()
+
+    if (seed === undefined) {
+      return document.createDocumentFragment()
+    }
+
+    return this._createNumberField("worldSeed", "seed", seed)
   }
 
   private _createNumberField(name: string, labelText: string, value: number): HTMLLabelElement {
@@ -161,11 +179,14 @@ export class DebugOverlay implements GameSystem {
     return row
   }
 
-  private _createDangerRow(resetWorldButton: HTMLButtonElement): HTMLDivElement {
+  private _createDangerRow(
+    resetTerrainCacheButton: HTMLButtonElement,
+    newWorldButton: HTMLButtonElement,
+  ): HTMLDivElement {
     const row = document.createElement("div")
 
     row.className = "debug-overlay-actions debug-overlay-danger-actions"
-    row.append(resetWorldButton)
+    row.append(resetTerrainCacheButton, newWorldButton)
 
     return row
   }
@@ -431,6 +452,22 @@ export class DebugOverlay implements GameSystem {
     const heading = this._readNumber(form, "heading", this._player.headingDegrees)
     const day = this._readNumber(form, "day", this._time.day)
     const timeOfDay = this._readNumber(form, "timeOfDay", this._time.timeOfDayHours)
+    const currentSeed = this._actions.getWorldSeed?.()
+    const nextSeed =
+      currentSeed === undefined ? null : Math.floor(this._readNumber(form, "worldSeed", currentSeed))
+
+    if (currentSeed !== undefined && nextSeed !== null && nextSeed !== currentSeed && this._actions.setWorldSeed) {
+      const confirmed = window.confirm(
+        `Set world seed to ${nextSeed}? This will clear terrain chunks and reload the game.`,
+      )
+
+      if (!confirmed) {
+        return
+      }
+
+      void this._actions.setWorldSeed(nextSeed)
+      return
+    }
 
     this._player.setPosition(x, y, z)
     this._player.setHeadingDegrees(heading)
@@ -452,19 +489,35 @@ export class DebugOverlay implements GameSystem {
     this._renderDebugMap(data)
   }
 
-  private readonly _handleResetWorld = (): void => {
-    if (!this._actions.resetWorld) {
+  private readonly _handleResetTerrainCache = (): void => {
+    if (!this._actions.resetTerrainCache) {
       return
     }
 
     const confirmed = window.confirm(
-      "Reset the world? This deletes persisted terrain chunks and reloads the game.",
+      "Reset terrain cache? This deletes persisted terrain chunks but keeps the current world seed.",
     )
 
     if (!confirmed) {
       return
     }
 
-    void this._actions.resetWorld()
+    void this._actions.resetTerrainCache()
+  }
+
+  private readonly _handleNewWorld = (): void => {
+    if (!this._actions.createNewWorld) {
+      return
+    }
+
+    const confirmed = window.confirm(
+      "Create a new random world? This changes the seed, deletes terrain chunks, and reloads the game.",
+    )
+
+    if (!confirmed) {
+      return
+    }
+
+    void this._actions.createNewWorld()
   }
 }

@@ -41,9 +41,9 @@ Responsibilities:
 - Hide storage implementation from world systems.
 - Handle schema version migration later.
 
-### Future `SaveGameRepository`
+### `SaveGameRepository`
 
-Stores high-level save state that is not tied to a single terrain chunk.
+Stores high-level save/world state that is not tied to a single terrain chunk. The first implementation persists the current `worldId` and `worldSeed` so debug tooling can switch seeds or create a new random world without changing source config.
 
 Likely responsibilities:
 
@@ -52,6 +52,7 @@ Likely responsibilities:
 - Save/load survival state.
 - Save/load backpack contents and selected item.
 - Manage save slots/world IDs.
+- Persist the active world identity (`worldId`, `worldSeed`).
 
 ## Persistence Shape
 

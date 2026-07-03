@@ -22,6 +22,7 @@ import { WorldBoundsHelper } from "../src/world/WorldBounds"
 import { TerrainGenerator } from "../src/world/generation/TerrainGenerator"
 import { WorldFeatureGenerator } from "../src/world/generation/WorldFeatureGenerator"
 import { LocalForageChunkRepository } from "../src/data/LocalForageChunkRepository"
+import { LocalForageSaveGameRepository } from "../src/data/LocalForageSaveGameRepository"
 import type { ChunkRepository, PersistedChunkData } from "../src/data/ChunkRepository"
 import { TestTerrainSystem } from "../src/world/TestTerrainSystem"
 
@@ -223,8 +224,11 @@ describe("player, compass, debug overlay, and time", () => {
       }),
     }
     const time = new TimeOfDaySystem(8.5, 1)
-    const resetWorld = vi.fn()
+    const resetTerrainCache = vi.fn()
+    const createNewWorld = vi.fn()
+    const setWorldSeed = vi.fn()
     const overlay = new DebugOverlay(player as any, time, {
+      createNewWorld,
       getDebugMapData: () => ({
         worldBounds: { minX: -1000, maxX: 1000, minZ: -1000, maxZ: 1000 },
         playerPosition: { x: 100, z: -200 },
@@ -238,7 +242,9 @@ describe("player, compass, debug overlay, and time", () => {
           },
         ],
       }),
-      resetWorld,
+      getWorldSeed: () => 1337,
+      resetTerrainCache,
+      setWorldSeed,
     })
 
     overlay.update(0.016)
@@ -291,11 +297,19 @@ describe("player, compass, debug overlay, and time", () => {
     document.querySelector<HTMLElement>("#debug-overlay")?.click()
     vi.spyOn(window, "confirm").mockReturnValueOnce(false)
     document.querySelectorAll<HTMLButtonElement>("#debug-overlay-editor button[type='button']")[2]?.click()
-    expect(resetWorld).not.toHaveBeenCalled()
+    expect(resetTerrainCache).not.toHaveBeenCalled()
 
     vi.spyOn(window, "confirm").mockReturnValueOnce(true)
     document.querySelectorAll<HTMLButtonElement>("#debug-overlay-editor button[type='button']")[2]?.click()
-    expect(resetWorld).toHaveBeenCalledOnce()
+    expect(resetTerrainCache).toHaveBeenCalledOnce()
+
+    vi.spyOn(window, "confirm").mockReturnValueOnce(false)
+    document.querySelectorAll<HTMLButtonElement>("#debug-overlay-editor button[type='button']")[3]?.click()
+    expect(createNewWorld).not.toHaveBeenCalled()
+
+    vi.spyOn(window, "confirm").mockReturnValueOnce(true)
+    document.querySelectorAll<HTMLButtonElement>("#debug-overlay-editor button[type='button']")[3]?.click()
+    expect(createNewWorld).toHaveBeenCalledOnce()
 
     ;(document.querySelector<HTMLInputElement>("input[name='positionX']")!.value = "10")
     ;(document.querySelector<HTMLInputElement>("input[name='positionY']")!.value = "11")
@@ -303,6 +317,7 @@ describe("player, compass, debug overlay, and time", () => {
     ;(document.querySelector<HTMLInputElement>("input[name='heading']")!.value = "270")
     ;(document.querySelector<HTMLInputElement>("input[name='day']")!.value = "3")
     ;(document.querySelector<HTMLInputElement>("input[name='timeOfDay']")!.value = "21.5")
+    ;(document.querySelector<HTMLInputElement>("input[name='worldSeed']")!.value = "1337")
     ;(overlay as any)._readNumber(
       { elements: { namedItem: () => ({ value: "not-a-number" }) } },
       "missing",
@@ -318,6 +333,19 @@ describe("player, compass, debug overlay, and time", () => {
     expect(time.timeOfDayHours).toBe(21.5)
     expect(document.querySelector("#debug-overlay")?.textContent).toContain("time: 21.50h")
 
+    document.querySelector<HTMLElement>("#debug-overlay")?.click()
+    ;(document.querySelector<HTMLInputElement>("input[name='worldSeed']")!.value = "999")
+    vi.spyOn(window, "confirm").mockReturnValueOnce(false)
+    document
+      .querySelector<HTMLFormElement>("#debug-overlay-editor")
+      ?.dispatchEvent(new SubmitEvent("submit", { bubbles: true, cancelable: true }))
+    expect(setWorldSeed).not.toHaveBeenCalled()
+    vi.spyOn(window, "confirm").mockReturnValueOnce(true)
+    document
+      .querySelector<HTMLFormElement>("#debug-overlay-editor")
+      ?.dispatchEvent(new SubmitEvent("submit", { bubbles: true, cancelable: true }))
+    expect(setWorldSeed).toHaveBeenCalledWith(999)
+
     overlay.dispose()
     expect(document.querySelector("#debug-overlay")).toBeNull()
 
@@ -326,6 +354,10 @@ describe("player, compass, debug overlay, and time", () => {
     document.querySelector<HTMLElement>("#debug-overlay")?.click()
     document.querySelectorAll<HTMLButtonElement>("#debug-overlay-editor button[type='button']")[1]?.click()
     document.querySelectorAll<HTMLButtonElement>("#debug-overlay-editor button[type='button']")[2]?.click()
+    document.querySelectorAll<HTMLButtonElement>("#debug-overlay-editor button[type='button']")[3]?.click()
+    document
+      .querySelector<HTMLFormElement>("#debug-overlay-editor")
+      ?.dispatchEvent(new SubmitEvent("submit", { bubbles: true, cancelable: true }))
     overlayWithoutActions.dispose()
   })
 })
@@ -667,6 +699,15 @@ describe("chunk coordinates and generation", () => {
 })
 
 describe("data repositories", () => {
+  it("saves and loads world config through localForage", async () => {
+    const repository = new LocalForageSaveGameRepository()
+
+    expect(await repository.getWorldConfig()).toBeNull()
+
+    await repository.saveWorldConfig({ worldId: "world_test", worldSeed: 42 })
+    expect(await repository.getWorldConfig()).toEqual({ worldId: "world_test", worldSeed: 42 })
+  })
+
   it("saves, lists, loads, and deletes chunks through localForage", async () => {
     const repository = new LocalForageChunkRepository()
     const chunk = createPersistedChunk("chunk_repo")
@@ -912,7 +953,8 @@ describe("game runtime", () => {
     const { Game } = await import("../src/app/Game")
     const canvas = document.createElement("canvas")
     const reloadWindow = vi.fn()
-    const game = new Game(canvas, defaultGameConfig, defaultGameSettings, reloadWindow)
+    const saveGameRepository = new LocalForageSaveGameRepository()
+    const game = new Game(canvas, defaultGameConfig, defaultGameSettings, reloadWindow, saveGameRepository)
 
     await game.start()
     game.updateSettings({ invertMouseY: true })
@@ -925,6 +967,23 @@ describe("game runtime", () => {
     document.querySelectorAll<HTMLButtonElement>("#debug-overlay-editor button[type='button']")[2]?.click()
     await new Promise((resolve) => window.setTimeout(resolve, 0))
     expect(reloadWindow).toHaveBeenCalledOnce()
+
+    vi.spyOn(window, "confirm").mockReturnValueOnce(true)
+    ;(document.querySelector<HTMLInputElement>("input[name='worldSeed']")!.value = "2024")
+    document
+      .querySelector<HTMLFormElement>("#debug-overlay-editor")
+      ?.dispatchEvent(new SubmitEvent("submit", { bubbles: true, cancelable: true }))
+    await new Promise((resolve) => window.setTimeout(resolve, 0))
+    expect(await saveGameRepository.getWorldConfig()).toEqual({ worldId: "world_2024", worldSeed: 2024 })
+
+    vi.spyOn(Math, "random").mockReturnValueOnce(0.5)
+    vi.spyOn(window, "confirm").mockReturnValueOnce(true)
+    document.querySelectorAll<HTMLButtonElement>("#debug-overlay-editor button[type='button']")[3]?.click()
+    await new Promise((resolve) => window.setTimeout(resolve, 0))
+    const newWorldConfig = await saveGameRepository.getWorldConfig()
+
+    expect(newWorldConfig?.worldId.startsWith("world_1000000000_")).toBe(true)
+    expect(newWorldConfig?.worldSeed).toBe(1_000_000_000)
 
     window.dispatchEvent(new Event("resize"))
     ;((game as any)._context.engine.renderLoop as () => void)()

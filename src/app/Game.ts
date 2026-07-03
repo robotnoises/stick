@@ -1,5 +1,6 @@
 import { BabylonBootstrap } from "../engine/BabylonBootstrap"
 import { LocalForageChunkRepository } from "../data/LocalForageChunkRepository"
+import type { SaveGameRepository } from "../data/SaveGameRepository"
 import { DebugOverlay } from "../debug/DebugOverlay"
 import { LightingController } from "../environment/LightingController"
 import { TimeOfDaySystem } from "../environment/TimeOfDaySystem"
@@ -26,6 +27,7 @@ export class Game {
     private readonly _config: GameConfig = defaultGameConfig,
     private _settings: GameSettings = defaultGameSettings,
     private readonly _reloadWindow: () => void = window.location.reload.bind(window.location),
+    private readonly _saveGameRepository: SaveGameRepository | null = null,
   ) {}
 
   public async start(): Promise<void> {
@@ -53,6 +55,7 @@ export class Game {
     const flashlight = new FlashlightController(this._context, player)
     const inventory = new InventorySystem(createCoreBackpack(flashlight))
     const debug = new DebugOverlay(player, time, {
+      createNewWorld: () => this._createNewWorld(chunkRepository),
       getDebugMapData: () => ({
         worldBounds: this._context!.config.worldBounds,
         playerPosition: {
@@ -67,7 +70,9 @@ export class Game {
           radiusZ: lake.radiusZ,
         })),
       }),
-      resetWorld: () => this._resetWorld(chunkRepository),
+      getWorldSeed: () => this._config.worldSeed,
+      resetTerrainCache: () => this._resetTerrainCache(chunkRepository),
+      setWorldSeed: (seed) => this._setWorldSeed(seed, chunkRepository),
     })
 
     this._systems.push(time, player, terrain, lighting, flashlight, inventory, debug)
@@ -112,11 +117,36 @@ export class Game {
     this._context = null
   }
 
-  private async _resetWorld(chunkRepository: LocalForageChunkRepository): Promise<void> {
+  private async _resetTerrainCache(chunkRepository: LocalForageChunkRepository): Promise<void> {
+    await this._deleteTerrainChunks(chunkRepository)
+    this._reloadWindow()
+  }
+
+  private async _createNewWorld(chunkRepository: LocalForageChunkRepository): Promise<void> {
+    const worldSeed = Math.floor(Math.random() * 2_000_000_000)
+
+    await this._saveWorldIdentity(`world_${worldSeed}_${Date.now()}`, worldSeed)
+    await this._deleteTerrainChunks(chunkRepository)
+    this._reloadWindow()
+  }
+
+  private async _setWorldSeed(
+    worldSeed: number,
+    chunkRepository: LocalForageChunkRepository,
+  ): Promise<void> {
+    await this._saveWorldIdentity(`world_${worldSeed}`, worldSeed)
+    await this._deleteTerrainChunks(chunkRepository)
+    this._reloadWindow()
+  }
+
+  private async _saveWorldIdentity(worldId: string, worldSeed: number): Promise<void> {
+    await this._saveGameRepository?.saveWorldConfig({ worldId, worldSeed })
+  }
+
+  private async _deleteTerrainChunks(chunkRepository: LocalForageChunkRepository): Promise<void> {
     const keys = await chunkRepository.listChunkKeys()
 
     await Promise.all(keys.map((key) => chunkRepository.deleteChunk(key)))
-    this._reloadWindow()
   }
 
   private readonly _handleResize = (): void => {

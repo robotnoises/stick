@@ -108,7 +108,7 @@
 
 ## Persistence and Save Data
 
-- [ ] Add a `SaveGameRepository` for high-level save state.
+- [X] Add a `SaveGameRepository` for high-level save state.
 - [ ] Persist and restore time of day and elapsed world time.
 - [ ] Persist and restore survival state once vitals exist.
 - [ ] Add save slots or world IDs and prefix chunk keys to avoid collisions between worlds.

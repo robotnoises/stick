@@ -1,6 +1,8 @@
 import "./styles.css"
 import { Game } from "./app/Game"
+import { defaultGameConfig } from "./app/GameConfig"
 import { loadGameSettings, saveGameSettings } from "./app/GameSettings"
+import { LocalForageSaveGameRepository } from "./data/LocalForageSaveGameRepository"
 
 const canvas = document.querySelector<HTMLCanvasElement>("#game-canvas")
 const optionsButton = document.querySelector<HTMLButtonElement>("#options-button")
@@ -16,9 +18,14 @@ if (!optionsButton || !optionsPanel || !invertMouseInput) {
 }
 
 const settings = loadGameSettings()
+const saveGameRepository = new LocalForageSaveGameRepository()
+const savedWorldConfig = await saveGameRepository.getWorldConfig()
+/* v8 ignore next */
+const gameConfig = { ...defaultGameConfig, ...(savedWorldConfig ?? {}) }
+
 invertMouseInput.checked = settings.invertMouseY
 
-const game = new Game(canvas, undefined, settings)
+const game = new Game(canvas, gameConfig, settings, undefined, saveGameRepository)
 
 optionsButton.addEventListener("click", () => {
   optionsPanel.hidden = !optionsPanel.hidden
