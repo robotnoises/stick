@@ -176,18 +176,26 @@ export class TerrainGenerator {
 
         return roll < 0.24 ? "pine" : null
       case TerrainMaterial.PineNeedles:
-        if (roll < 0.46) {
+        if (roll < 0.38) {
           return "pine"
         }
 
-        return roll < 0.62 ? "log" : null
+        if (roll < 0.46) {
+          return "deadPine"
+        }
+
+        return roll < 0.64 ? "log" : null
       case TerrainMaterial.Grass:
       default:
-        if (roll < 0.28) {
+        if (roll < 0.24) {
           return "pine"
         }
 
-        return roll < 0.36 ? "rock" : null
+        if (roll < 0.29) {
+          return "deadPine"
+        }
+
+        return roll < 0.38 ? "rock" : null
     }
   }
 
@@ -197,6 +205,8 @@ export class TerrainGenerator {
         return 0.45 + roll * 1.1
       case "log":
         return 0.7 + roll * 0.8
+      case "deadPine":
+        return 0.7 + roll * 0.65
       case "pine":
         return 0.75 + roll * 0.75
     }

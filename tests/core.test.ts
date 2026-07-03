@@ -79,6 +79,13 @@ function createSmallChunkData(): ChunkTerrainData {
         scale: 1,
       },
       {
+        id: "dead-pine-1",
+        type: "deadPine",
+        position: [0.75, 0, 0.75],
+        rotationY: 0.1,
+        scale: 1,
+      },
+      {
         id: "rock-1",
         type: "rock",
         position: [1, 0, 1],
@@ -673,6 +680,7 @@ describe("chunk coordinates and generation", () => {
         { diffuseColor: new FakeColor3(), dispose: vi.fn() } as any,
       ],
       trunk: { diffuseColor: new FakeColor3(), dispose: vi.fn() } as any,
+      deadWood: { diffuseColor: new FakeColor3(), dispose: vi.fn() } as any,
       needles: { diffuseColor: new FakeColor3(), dispose: vi.fn() } as any,
       rock: { diffuseColor: new FakeColor3(), dispose: vi.fn() } as any,
       water: { diffuseColor: new FakeColor3(), dispose: vi.fn() } as any,

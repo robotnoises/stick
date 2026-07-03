@@ -45,7 +45,9 @@ export class ChunkManager {
     private readonly _worldFeatures: WorldFeatureGenerator,
     private readonly _options: ChunkManagerOptions,
   ) {
-    this._bounds = this._options.worldBounds ? new WorldBoundsHelper(this._options.worldBounds) : null
+    this._bounds = this._options.worldBounds
+      ? new WorldBoundsHelper(this._options.worldBounds)
+      : null
     this._materials = this._createMaterials()
   }
 
@@ -86,6 +88,7 @@ export class ChunkManager {
       terrainMaterial.dispose()
     }
     this._materials.trunk.dispose()
+    this._materials.deadWood.dispose()
     this._materials.needles.dispose()
     this._materials.rock.dispose()
     this._materials.water.dispose()
@@ -306,7 +309,11 @@ export class ChunkManager {
         const worldX = chunk.coordX * chunk.chunkSizeMeters + x * step
         const worldZ = chunk.coordZ * chunk.chunkSizeMeters + z * step
 
-        terrainMaterials[index] = this._generator.getTerrainMaterial(worldX, worldZ, heights[index] ?? 0)
+        terrainMaterials[index] = this._generator.getTerrainMaterial(
+          worldX,
+          worldZ,
+          heights[index] ?? 0,
+        )
       }
     }
 
@@ -322,11 +329,24 @@ export class ChunkManager {
   }
 
   private _createMaterials(): TerrainChunkMaterials {
-    const grassTerrain = new StandardMaterial("progressive-grass-terrain-material", this._context.scene)
-    const dirtTerrain = new StandardMaterial("progressive-dirt-terrain-material", this._context.scene)
-    const sandTerrain = new StandardMaterial("progressive-sand-terrain-material", this._context.scene)
-    const pineNeedlesTerrain = new StandardMaterial("progressive-pine-needles-terrain-material", this._context.scene)
+    const grassTerrain = new StandardMaterial(
+      "progressive-grass-terrain-material",
+      this._context.scene,
+    )
+    const dirtTerrain = new StandardMaterial(
+      "progressive-dirt-terrain-material",
+      this._context.scene,
+    )
+    const sandTerrain = new StandardMaterial(
+      "progressive-sand-terrain-material",
+      this._context.scene,
+    )
+    const pineNeedlesTerrain = new StandardMaterial(
+      "progressive-pine-needles-terrain-material",
+      this._context.scene,
+    )
     const trunk = new StandardMaterial("progressive-pine-trunk-material", this._context.scene)
+    const deadWood = new StandardMaterial("progressive-dead-wood-material", this._context.scene)
     const needles = new StandardMaterial("progressive-pine-needles-material", this._context.scene)
     const rock = new StandardMaterial("progressive-rock-material", this._context.scene)
     const water = new StandardMaterial("progressive-water-material", this._context.scene)
@@ -336,20 +356,49 @@ export class ChunkManager {
       mossSmallFernsBaseColorUrl,
       new Color3(0.9, 1, 0.85),
     )
-    this._configureTerrainMaterial(dirtTerrain, marsSmoothRockBaseColorUrl, new Color3(0.55, 0.42, 0.3))
-    this._configureTerrainMaterial(sandTerrain, fineClumpySandBaseColorUrl, new Color3(1, 0.94, 0.78))
+    this._configureTerrainMaterial(
+      dirtTerrain,
+      marsSmoothRockBaseColorUrl,
+      new Color3(0.55, 0.42, 0.3),
+    )
+    this._configureTerrainMaterial(
+      sandTerrain,
+      fineClumpySandBaseColorUrl,
+      new Color3(1, 0.94, 0.78),
+    )
     this._configureTerrainMaterial(
       pineNeedlesTerrain,
       mossSmallFernsBaseColorUrl,
       new Color3(0.55, 0.47, 0.3),
     )
-    this._configureTexturedMaterial(trunk, orangePineTreeBarkBaseColorUrl, 1, new Color3(0.72, 0.48, 0.3))
+    this._configureTexturedMaterial(
+      trunk,
+      orangePineTreeBarkBaseColorUrl,
+      1,
+      new Color3(0.72, 0.48, 0.3),
+    )
+    this._configureTexturedMaterial(
+      deadWood,
+      orangePineTreeBarkBaseColorUrl,
+      1.5,
+      new Color3(0.62, 0.55, 0.45),
+    )
+    this._configureTexturedMaterial(
+      rock,
+      marsSmoothRockBaseColorUrl,
+      2,
+      new Color3(0.8, 0.78, 0.72),
+    )
+
     trunk.backFaceCulling = false
     trunk.twoSidedLighting = true
     trunk.specularColor = Color3.Black()
+    deadWood.backFaceCulling = false
+    deadWood.twoSidedLighting = true
+
     needles.diffuseColor = new Color3(0.11, 0.27, 0.14)
     needles.specularColor = Color3.Black()
-    this._configureTexturedMaterial(rock, marsSmoothRockBaseColorUrl, 2, new Color3(0.8, 0.78, 0.72))
+
     water.diffuseColor = new Color3(0.12, 0.32, 0.44)
     water.emissiveColor = new Color3(0.02, 0.08, 0.1)
     water.specularColor = new Color3(0.25, 0.35, 0.38)
@@ -358,6 +407,7 @@ export class ChunkManager {
     return {
       terrain: [grassTerrain, dirtTerrain, sandTerrain, pineNeedlesTerrain],
       trunk,
+      deadWood,
       needles,
       rock,
       water,

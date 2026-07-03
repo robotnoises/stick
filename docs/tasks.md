@@ -85,8 +85,8 @@
 - [ ] Add animals.
 - [ ] Add more flora; this should be a major investment area.
 - [ ] Add tree states:
-  - [ ] alive
-  - [ ] dead
+  - [X] alive
+  - [X] dead
   - [X] fallen/log variants
 - [ ] Add water features:
   - [X] lakes

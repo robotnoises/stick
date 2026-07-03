@@ -13,6 +13,7 @@ import type { WorldFeatureGenerator } from "./generation/WorldFeatureGenerator"
 export interface TerrainChunkMaterials {
   readonly terrain: readonly StandardMaterial[]
   readonly trunk: StandardMaterial
+  readonly deadWood: StandardMaterial
   readonly needles: StandardMaterial
   readonly rock: StandardMaterial
   readonly water: StandardMaterial
@@ -208,6 +209,9 @@ export class TerrainChunk {
       case "pine":
         this._createPineProp(prop)
         return
+      case "deadPine":
+        this._createDeadPineProp(prop)
+        return
       case "rock":
         this._createRockProp(prop)
         return
@@ -219,14 +223,14 @@ export class TerrainChunk {
 
   private _createPineProp(prop: GeneratedPropData): void {
     const position = new Vector3(prop.position[0], prop.position[1], prop.position[2])
-    const trunkHeight = 4.5 * prop.scale
-    const needlesHeight = 6 * prop.scale
+    const trunkHeight = 9 * prop.scale
+    const needlesHeight = 12 * prop.scale
     const trunk = MeshBuilder.CreateCylinder(
       `${prop.id}_trunk`,
       {
         height: trunkHeight,
-        diameterTop: 0.25 * prop.scale,
-        diameterBottom: 0.45 * prop.scale,
+        diameterTop: 0.32 * prop.scale,
+        diameterBottom: 0.65 * prop.scale,
         tessellation: 6,
       },
       this._context.scene,
@@ -240,8 +244,8 @@ export class TerrainChunk {
       `${prop.id}_needles`,
       {
         height: needlesHeight,
-        diameterTop: 0.1 * prop.scale,
-        diameterBottom: 3.4 * prop.scale,
+        diameterTop: 0.15 * prop.scale,
+        diameterBottom: 5.2 * prop.scale,
         tessellation: 8,
       },
       this._context.scene,
@@ -252,6 +256,47 @@ export class TerrainChunk {
     needles.material = this._materials.needles
 
     this._props.push(trunk, needles)
+  }
+
+  private _createDeadPineProp(prop: GeneratedPropData): void {
+    const position = new Vector3(prop.position[0], prop.position[1], prop.position[2])
+    const trunkHeight = 10.4 * prop.scale
+    const trunk = MeshBuilder.CreateCylinder(
+      `${prop.id}_trunk`,
+      {
+        height: trunkHeight,
+        diameterTop: 0.25 * prop.scale,
+        diameterBottom: 0.7 * prop.scale,
+        tessellation: 6,
+      },
+      this._context.scene,
+    )
+
+    trunk.position = position.add(new Vector3(0, trunkHeight / 2, 0))
+    trunk.rotation.y = prop.rotationY
+    trunk.material = this._materials.deadWood
+    this._props.push(trunk)
+
+    for (let branchIndex = 0; branchIndex < 3; branchIndex += 1) {
+      const branchHeight = trunkHeight * (0.38 + branchIndex * 0.17)
+      const branchLength = (2.1 - branchIndex * 0.32) * prop.scale
+      const branch = MeshBuilder.CreateCylinder(
+        `${prop.id}_branch_${branchIndex}`,
+        {
+          height: branchLength,
+          diameterTop: 0.06 * prop.scale,
+          diameterBottom: 0.12 * prop.scale,
+          tessellation: 5,
+        },
+        this._context.scene,
+      )
+
+      branch.position = position.add(new Vector3(0, branchHeight, 0))
+      branch.rotation.y = prop.rotationY + branchIndex * ((Math.PI * 2) / 3)
+      branch.rotation.z = Math.PI / 2.8
+      branch.material = this._materials.deadWood
+      this._props.push(branch)
+    }
   }
 
   private _createRockProp(prop: GeneratedPropData): void {
@@ -288,7 +333,7 @@ export class TerrainChunk {
     log.position = new Vector3(prop.position[0], prop.position[1] + logDiameter / 2, prop.position[2])
     log.rotation.y = prop.rotationY
     log.rotation.z = Math.PI / 2
-    log.material = this._materials.trunk
+    log.material = this._materials.deadWood
 
     this._props.push(log)
   }
