@@ -1,7 +1,9 @@
 import { Texture } from "@babylonjs/core/Materials/Textures/texture"
+import { Material } from "@babylonjs/core/Materials/material"
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial"
 import { Color3 } from "@babylonjs/core/Maths/math.color"
 import { Vector3 } from "@babylonjs/core/Maths/math.vector"
+import type { Observer } from "@babylonjs/core/Misc/observable"
 import { Mesh } from "@babylonjs/core/Meshes/mesh"
 import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder"
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData"
@@ -11,6 +13,8 @@ import fineClumpySandBaseColorUrl from "../../assets/exported/textures/terrain/f
 import grass004ColorUrl from "../../assets/exported/textures/terrain/grass004-color.png?url"
 import ground048ColorUrl from "../../assets/exported/textures/terrain/ground048-color.png?url"
 import rock058ColorUrl from "../../assets/exported/textures/terrain/rock058-color.png?url"
+import waterColorUrl from "../../assets/exported/textures/terrain/water.jpg?url"
+import type { Scene } from "@babylonjs/core/scene"
 import type { EngineContext } from "../app/EngineContext"
 import type { WorldBounds } from "../app/GameConfig"
 import type { ChunkRepository, ChunkMutation, PersistedChunkData } from "../data/ChunkRepository"
@@ -77,6 +81,7 @@ export class ChunkManager {
   private readonly _chunkBoundaryMeshes = new Map<string, Mesh>()
   private readonly _riverWaterMeshes: Mesh[] = []
   private _chunkBoundariesDebugEnabled = false
+  private _waterFlowObserver: Observer<Scene> | null = null
   private _builtChunkCount = 0
   private _lastMeshBuildMilliseconds: number | null = null
   private _totalMeshBuildMilliseconds = 0
@@ -193,6 +198,9 @@ export class ChunkManager {
     this._materials.deadWood.dispose()
     this._materials.needles.dispose()
     this._materials.rock.dispose()
+    this._waterFlowObserver?.remove()
+    this._waterFlowObserver = null
+    this._materials.water.diffuseTexture?.dispose()
     this._materials.water.dispose()
     this._chunkDataGenerator.dispose?.()
   }
@@ -549,7 +557,7 @@ export class ChunkManager {
     const uvs: number[] = []
     const halfWidthMeters = river.widthMeters / 2 + 1.25
     const waterY = river.waterLevelMeters + 0.08
-    const uvLengthScaleMeters = 8
+    const uvLengthScaleMeters = 48
 
     for (let stationIndex = 0; stationIndex < stations.length; stationIndex += 1) {
       const station = stations[stationIndex]!
@@ -688,12 +696,30 @@ export class ChunkManager {
     needles.diffuseColor = new Color3(0.11, 0.27, 0.14)
     needles.specularColor = Color3.Black()
 
-    water.diffuseColor = new Color3(0.12, 0.42, 0.56)
-    water.emissiveColor = new Color3(0.04, 0.16, 0.2)
-    water.specularColor = new Color3(0.35, 0.45, 0.5)
-    water.alpha = 0.82
+    const waterTexture = new Texture(waterColorUrl, this._context.scene)
+
+    waterTexture.uScale = 1.2
+    waterTexture.vScale = 1.2
+    waterTexture.level = 0.22
+
+    water.diffuseTexture = waterTexture
+    water.diffuseColor = new Color3(0.22, 0.64, 0.9)
+    water.emissiveColor = new Color3(0.04, 0.13, 0.18)
+    water.specularColor = new Color3(1.35, 1.3, 1.12)
+    water.specularPower = 48
+    water.roughness = 0.08
+    water.alpha = 0.72
+    water.useSpecularOverAlpha = true
+    water.transparencyMode = Material.MATERIAL_ALPHABLEND
     water.backFaceCulling = false
     water.twoSidedLighting = true
+
+    this._waterFlowObserver = this._context.scene.onBeforeRenderObservable.add(() => {
+      const deltaSeconds = this._context.engine.getDeltaTime() / 1000
+
+      waterTexture.uOffset += deltaSeconds * 0.004
+      waterTexture.vOffset += deltaSeconds * 0.018
+    })
 
     return {
       terrain: [grassTerrain, dirtTerrain, sandTerrain, pineNeedlesTerrain],
