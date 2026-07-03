@@ -2,8 +2,9 @@ import { Texture } from "@babylonjs/core/Materials/Textures/texture"
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial"
 import { Color3 } from "@babylonjs/core/Maths/math.color"
 import { Vector3 } from "@babylonjs/core/Maths/math.vector"
-import type { Mesh } from "@babylonjs/core/Meshes/mesh"
+import { Mesh } from "@babylonjs/core/Meshes/mesh"
 import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder"
+import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData"
 import bark006ColorUrl from "../../assets/exported/textures/terrain/bark006-color.png?url"
 import bark014ColorUrl from "../../assets/exported/textures/terrain/bark014-color.png?url"
 import fineClumpySandBaseColorUrl from "../../assets/exported/textures/terrain/fine-clumpy-sand-basecolor.png?url"
@@ -19,7 +20,7 @@ import type { ChunkTerrainData } from "./TerrainTypes"
 import { WorldBoundsHelper } from "./WorldBounds"
 import { TerrainGenerator } from "./generation/TerrainGenerator"
 import type { TerrainGenerationDebugStats } from "./generation/TerrainGeneratorWorkerClient"
-import type { WorldFeatureGenerator } from "./generation/WorldFeatureGenerator"
+import type { RiverFeature, WorldFeatureGenerator } from "./generation/WorldFeatureGenerator"
 
 export interface ChunkManagerOptions {
   readonly loadRadiusChunks: number
@@ -33,6 +34,12 @@ export interface ChunkManagerOptions {
 interface CachedChunkData {
   readonly data: ChunkTerrainData
   lastUsed: number
+}
+
+interface RiverWaterStation {
+  readonly x: number
+  readonly z: number
+  readonly distanceMeters: number
 }
 
 export interface ChunkDataGenerator {
@@ -68,6 +75,7 @@ export class ChunkManager {
   private readonly _materials: TerrainChunkMaterials
   private readonly _queuedCoords = new Map<string, ChunkCoord>()
   private readonly _chunkBoundaryMeshes = new Map<string, Mesh>()
+  private readonly _riverWaterMeshes: Mesh[] = []
   private _chunkBoundariesDebugEnabled = false
   private _builtChunkCount = 0
   private _lastMeshBuildMilliseconds: number | null = null
@@ -85,6 +93,7 @@ export class ChunkManager {
       ? new WorldBoundsHelper(this._options.worldBounds)
       : null
     this._materials = this._createMaterials()
+    this._createRiverWaterMeshes()
   }
 
   public get hasPendingWork(): boolean {
@@ -176,6 +185,7 @@ export class ChunkManager {
     this._inFlightLoads.clear()
     this._queuedCoords.clear()
     this._disposeChunkBoundaryMeshes()
+    this._disposeRiverWaterMeshes()
     for (const terrainMaterial of this._materials.terrain) {
       terrainMaterial.dispose()
     }
@@ -516,6 +526,118 @@ export class ChunkManager {
     }
 
     return `${this._options.worldId}:${coord.key}`
+  }
+
+  private _createRiverWaterMeshes(): void {
+    for (const river of this._worldFeatures.rivers) {
+      this._createRiverWaterMesh(river)
+    }
+  }
+
+  private _createRiverWaterMesh(river: RiverFeature): void {
+    const stations = this._getRiverWaterStations(river)
+
+    if (stations.length < 2) {
+      return
+    }
+
+    const mesh = new Mesh(`water_${river.id}`, this._context.scene)
+    const vertexData = new VertexData()
+    const positions: number[] = []
+    const indices: number[] = []
+    const normals: number[] = []
+    const uvs: number[] = []
+    const halfWidthMeters = river.widthMeters / 2 + 1.25
+    const waterY = river.waterLevelMeters + 0.08
+    const uvLengthScaleMeters = 8
+
+    for (let stationIndex = 0; stationIndex < stations.length; stationIndex += 1) {
+      const station = stations[stationIndex]!
+      const previous = stations[Math.max(0, stationIndex - 1)]!
+      const next = stations[Math.min(stations.length - 1, stationIndex + 1)]!
+      const tangentX = next.x - previous.x
+      const tangentZ = next.z - previous.z
+      const tangentLength = Math.hypot(tangentX, tangentZ) || 1
+      const normalX = -tangentZ / tangentLength
+      const normalZ = tangentX / tangentLength
+      const leftX = station.x + normalX * halfWidthMeters
+      const leftZ = station.z + normalZ * halfWidthMeters
+      const rightX = station.x - normalX * halfWidthMeters
+      const rightZ = station.z - normalZ * halfWidthMeters
+      const vertexStart = stationIndex * 2
+      const riverV = station.distanceMeters / uvLengthScaleMeters
+
+      positions.push(leftX, waterY, leftZ, rightX, waterY, rightZ)
+      normals.push(0, 1, 0, 0, 1, 0)
+      uvs.push(0, riverV, 1, riverV)
+
+      if (stationIndex === 0) {
+        continue
+      }
+
+      indices.push(
+        vertexStart - 2,
+        vertexStart,
+        vertexStart - 1,
+        vertexStart - 1,
+        vertexStart,
+        vertexStart + 1,
+      )
+    }
+
+    vertexData.positions = positions
+    vertexData.indices = indices
+    vertexData.normals = normals
+    vertexData.uvs = uvs
+    vertexData.applyToMesh(mesh)
+
+    mesh.material = this._materials.water
+    mesh.isPickable = false
+    this._riverWaterMeshes.push(mesh)
+  }
+
+  private _getRiverWaterStations(river: RiverFeature): RiverWaterStation[] {
+    const stations: RiverWaterStation[] = []
+    const segmentLengthMeters = 4
+    let riverDistanceMeters = 0
+
+    for (let pointIndex = 1; pointIndex < river.points.length; pointIndex += 1) {
+      const [startX, startZ] = river.points[pointIndex - 1]!
+      const [endX, endZ] = river.points[pointIndex]!
+      const segmentLength = Math.hypot(endX - startX, endZ - startZ)
+
+      if (segmentLength === 0) {
+        continue
+      }
+
+      const subdivisions = Math.max(1, Math.ceil(segmentLength / segmentLengthMeters))
+
+      for (let subdivision = 0; subdivision <= subdivisions; subdivision += 1) {
+        if (stations.length > 0 && subdivision === 0) {
+          continue
+        }
+
+        const t = subdivision / subdivisions
+
+        stations.push({
+          x: this._lerp(startX, endX, t),
+          z: this._lerp(startZ, endZ, t),
+          distanceMeters: riverDistanceMeters + segmentLength * t,
+        })
+      }
+
+      riverDistanceMeters += segmentLength
+    }
+
+    return stations
+  }
+
+  private _disposeRiverWaterMeshes(): void {
+    for (const mesh of this._riverWaterMeshes) {
+      mesh.dispose()
+    }
+
+    this._riverWaterMeshes.length = 0
   }
 
   private _createMaterials(): TerrainChunkMaterials {
