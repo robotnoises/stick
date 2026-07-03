@@ -264,6 +264,7 @@ See [`docs/data.md`](docs/data.md) and [`docs/progressive-terrain.md`](docs/prog
 - [`docs/planning.md`](docs/planning.md) — product direction, pillars, MVP, milestones
 - [`docs/architecture.md`](docs/architecture.md) — current architecture plan and source layout
 - [`docs/progressive-terrain.md`](docs/progressive-terrain.md) — streaming terrain plan
+- [`docs/terrain-streaming-budget.md`](docs/terrain-streaming-budget.md) — per-frame terrain streaming budget plan
 - [`docs/landforms.md`](docs/landforms.md) — large world feature generation
 - [`docs/water.md`](docs/water.md) — lake, pond, and river generation notes and polish backlog
 - [`docs/data.md`](docs/data.md) — persistence boundaries and repository contracts

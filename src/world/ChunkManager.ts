@@ -21,6 +21,7 @@ export interface ChunkManagerOptions {
   readonly loadRadiusChunks: number
   readonly unloadRadiusChunks: number
   readonly memoryRadiusChunks: number
+  readonly maxChunkLoadsPerFrame?: number
   readonly worldBounds?: WorldBounds
   readonly worldId?: string
 }
@@ -39,6 +40,7 @@ export class ChunkManager {
   private readonly _dataCache = new Map<string, CachedChunkData>()
   private readonly _inFlightLoads = new Set<string>()
   private readonly _materials: TerrainChunkMaterials
+  private readonly _queuedCoords = new Map<string, ChunkCoord>()
 
   public constructor(
     private readonly _context: EngineContext,
@@ -53,12 +55,30 @@ export class ChunkManager {
     this._materials = this._createMaterials()
   }
 
+  public get hasPendingWork(): boolean {
+    return this._queuedCoords.size > 0 || this._inFlightLoads.size > 0
+  }
+
   public async updateAround(center: ChunkCoord): Promise<void> {
+    do {
+      await this.updateStreaming(center)
+    } while (this.hasPendingWork)
+  }
+
+  public async updateStreaming(center: ChunkCoord): Promise<void> {
     this._disposeDistantChunks(center)
+    this._queueMissingDesiredChunks(center)
 
-    const desiredCoords = this._getDesiredCoords(center)
+    const maxLoads = this._options.maxChunkLoadsPerFrame ?? Number.POSITIVE_INFINITY
+    const loadsThisFrame = Math.max(1, maxLoads)
 
-    for (const coord of desiredCoords) {
+    for (let index = 0; index < loadsThisFrame; index += 1) {
+      const coord = this._dequeueNextChunk()
+
+      if (!coord) {
+        break
+      }
+
       await this._ensureChunk(coord)
     }
 
@@ -86,6 +106,7 @@ export class ChunkManager {
     this._activeCoords.clear()
     this._dataCache.clear()
     this._inFlightLoads.clear()
+    this._queuedCoords.clear()
     for (const terrainMaterial of this._materials.terrain) {
       terrainMaterial.dispose()
     }
@@ -159,6 +180,50 @@ export class ChunkManager {
     } catch (error) {
       console.warn(`Failed to persist terrain chunk ${chunk.key}.`, error)
     }
+  }
+
+  private _queueMissingDesiredChunks(center: ChunkCoord): void {
+    const desiredCoords = this._getDesiredCoords(center)
+    const desiredKeys = new Set(desiredCoords.map((coord) => coord.key))
+
+    for (const key of this._queuedCoords.keys()) {
+      if (!desiredKeys.has(key)) {
+        this._queuedCoords.delete(key)
+      }
+    }
+
+    for (const coord of desiredCoords) {
+      if (
+        this._activeChunks.has(coord.key) ||
+        this._inFlightLoads.has(coord.key) ||
+        this._queuedCoords.has(coord.key)
+      ) {
+        continue
+      }
+
+      this._queuedCoords.set(coord.key, coord)
+    }
+
+    const prioritizedCoords = [...this._queuedCoords.values()].sort(
+      (a, b) => a.distanceTo(center) - b.distanceTo(center),
+    )
+
+    this._queuedCoords.clear()
+
+    for (const coord of prioritizedCoords) {
+      this._queuedCoords.set(coord.key, coord)
+    }
+  }
+
+  private _dequeueNextChunk(): ChunkCoord | null {
+    const next = this._queuedCoords.values().next()
+
+    if (next.done) {
+      return null
+    }
+
+    this._queuedCoords.delete(next.value.key)
+    return next.value
   }
 
   private _disposeDistantChunks(center: ChunkCoord): void {
@@ -353,16 +418,8 @@ export class ChunkManager {
     const rock = new StandardMaterial("progressive-rock-material", this._context.scene)
     const water = new StandardMaterial("progressive-water-material", this._context.scene)
 
-    this._configureTerrainMaterial(
-      grassTerrain,
-      grass004ColorUrl,
-      new Color3(0.92, 1, 0.86),
-    )
-    this._configureTerrainMaterial(
-      dirtTerrain,
-      ground048ColorUrl,
-      new Color3(0.75, 0.58, 0.42),
-    )
+    this._configureTerrainMaterial(grassTerrain, grass004ColorUrl, new Color3(0.92, 1, 0.86))
+    this._configureTerrainMaterial(dirtTerrain, ground048ColorUrl, new Color3(0.75, 0.58, 0.42))
     this._configureTerrainMaterial(
       sandTerrain,
       fineClumpySandBaseColorUrl,
@@ -373,24 +430,9 @@ export class ChunkManager {
       ground048ColorUrl,
       new Color3(0.48, 0.38, 0.24),
     )
-    this._configureTexturedMaterial(
-      trunk,
-      bark014ColorUrl,
-      1,
-      new Color3(0.8, 0.72, 0.62),
-    )
-    this._configureTexturedMaterial(
-      deadWood,
-      bark006ColorUrl,
-      1.5,
-      new Color3(0.6, 0.46, 0.32),
-    )
-    this._configureTexturedMaterial(
-      rock,
-      rock058ColorUrl,
-      2,
-      new Color3(0.82, 0.86, 0.86),
-    )
+    this._configureTexturedMaterial(trunk, bark014ColorUrl, 1, new Color3(0.8, 0.72, 0.62))
+    this._configureTexturedMaterial(deadWood, bark006ColorUrl, 1.5, new Color3(0.6, 0.46, 0.32))
+    this._configureTexturedMaterial(rock, rock058ColorUrl, 2, new Color3(0.82, 0.86, 0.86))
 
     trunk.backFaceCulling = false
     trunk.twoSidedLighting = true

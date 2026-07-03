@@ -36,6 +36,7 @@ export class ProgressiveTerrainSystem implements GameSystem {
         loadRadiusChunks: 3,
         unloadRadiusChunks: 4,
         memoryRadiusChunks: 5,
+        maxChunkLoadsPerFrame: 1,
         worldBounds: this._context.config.worldBounds,
         worldId: this._context.config.worldId,
       },
@@ -50,13 +51,14 @@ export class ProgressiveTerrainSystem implements GameSystem {
   public update(_deltaSeconds: number): void {
     const center = this._getPlayerChunkCoord()
 
-    if (center.key === this._targetCenter?.key) {
-      return
+    if (center.key !== this._targetCenter?.key) {
+      this._targetCenter = center
     }
 
-    this._targetCenter = center
-
-    if (!this._isRefreshing) {
+    if (
+      !this._isRefreshing &&
+      (this._chunkManager.hasPendingWork || center.key !== this._loadedCenterKey)
+    ) {
       void this._refreshChunks()
     }
   }
@@ -77,10 +79,10 @@ export class ProgressiveTerrainSystem implements GameSystem {
     this._isRefreshing = true
 
     try {
-      while (this._targetCenter && this._targetCenter.key !== this._loadedCenterKey) {
+      if (this._targetCenter) {
         const center = this._targetCenter
 
-        await this._chunkManager.updateAround(center)
+        await this._chunkManager.updateStreaming(center)
         this._loadedCenterKey = center.key
       }
     } finally {

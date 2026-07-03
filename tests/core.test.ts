@@ -711,6 +711,9 @@ describe("chunk coordinates and generation", () => {
     expect([...a.terrainMaterials]).toEqual([...b.terrainMaterials])
     expect(a.props.length).toBeGreaterThan(0)
     expect(new Set(a.props.map((prop) => prop.type)).size).toBeGreaterThan(1)
+    expect(generator.getTerrainMaterial(0, 0, -6)).toBe(TerrainMaterial.Sand)
+    expect((generator as any)._choosePropType(TerrainMaterial.Sand, 0.94)).toBe("rock")
+    expect((generator as any)._choosePropType(TerrainMaterial.Sand, 0.5)).toBeNull()
 
     const regionalElevation = (generator as any)._getRegionalElevation(120, -80)
     const rollingHills = (generator as any)._getRollingHillElevation(120, -80)
@@ -723,10 +726,15 @@ describe("chunk coordinates and generation", () => {
     expect(ridgeElevation).toBeGreaterThanOrEqual(0)
 
     let foundDirt = false
+    let foundNoisyLowlandSand = false
 
-    for (let z = 0; z < 20 && !foundDirt; z += 1) {
-      for (let x = 0; x < 20 && !foundDirt; x += 1) {
-        foundDirt = generator.getTerrainMaterial(x * 13, z * 13, 0) === TerrainMaterial.Dirt
+    for (let z = 0; z < 20 && (!foundDirt || !foundNoisyLowlandSand); z += 1) {
+      for (let x = 0; x < 20 && (!foundDirt || !foundNoisyLowlandSand); x += 1) {
+        foundDirt =
+          foundDirt || generator.getTerrainMaterial(x * 13, z * 13, 0) === TerrainMaterial.Dirt
+        foundNoisyLowlandSand =
+          foundNoisyLowlandSand ||
+          generator.getTerrainMaterial(x * 13, z * 13, -4) === TerrainMaterial.Sand
       }
     }
 
@@ -759,6 +767,7 @@ describe("chunk coordinates and generation", () => {
     )
 
     expect(foundDirt).toBe(true)
+    expect(foundNoisyLowlandSand).toBe(true)
     expect(lakeCenterHeight).toBeLessThanOrEqual(lake.waterLevelMeters)
     expect(riverCenterHeight).toBeLessThanOrEqual(river.waterLevelMeters)
     expect(shoreMaterial).toBe(TerrainMaterial.Sand)
@@ -921,6 +930,57 @@ describe("chunk manager", () => {
     manager.dispose()
   })
 
+  it("processes terrain streaming with a per-frame chunk budget", async () => {
+    const context = createContext()
+    const repository = new MemoryChunkRepository()
+    const generator = new TerrainGenerator({ seed: 1337, chunkSizeMeters: 8, resolution: 2 })
+    const manager = new ChunkManager(context, generator, repository, createWorldFeatures(), {
+      loadRadiusChunks: 1,
+      unloadRadiusChunks: 1,
+      memoryRadiusChunks: 1,
+      maxChunkLoadsPerFrame: 1,
+    })
+
+    await manager.updateStreaming(new ChunkCoord(0, 0))
+    expect(repository.savedKeys).toHaveLength(1)
+    expect(manager.hasPendingWork).toBe(true)
+
+    await manager.updateStreaming(new ChunkCoord(5, 5))
+    expect(repository.savedKeys).toHaveLength(2)
+
+    await manager.updateStreaming(new ChunkCoord(0, 0))
+    expect(repository.savedKeys).toHaveLength(3)
+
+    await (manager as any)._ensureChunk(new ChunkCoord(0, 0))
+    ;(manager as any)._inFlightLoads.add("chunk_9_9")
+    await (manager as any)._ensureChunk(new ChunkCoord(9, 9))
+    expect(repository.savedKeys).toHaveLength(3)
+    ;(manager as any)._inFlightLoads.clear()
+
+    await manager.updateAround(new ChunkCoord(0, 0))
+    expect(manager.hasPendingWork).toBe(false)
+    expect(repository.savedKeys.length).toBeGreaterThanOrEqual(10)
+
+    manager.dispose()
+  })
+
+  it("enforces at least one terrain chunk load per streaming update", async () => {
+    const context = createContext()
+    const repository = new MemoryChunkRepository()
+    const generator = new TerrainGenerator({ seed: 1337, chunkSizeMeters: 8, resolution: 2 })
+    const manager = new ChunkManager(context, generator, repository, createWorldFeatures(), {
+      loadRadiusChunks: 0,
+      unloadRadiusChunks: 1,
+      memoryRadiusChunks: 1,
+      maxChunkLoadsPerFrame: 0,
+    })
+
+    await manager.updateStreaming(new ChunkCoord(0, 0))
+    expect(repository.savedKeys).toEqual(["chunk_0_0"])
+
+    manager.dispose()
+  })
+
   it("scopes persisted chunk keys by world id", async () => {
     const context = createContext()
     const repository = new MemoryChunkRepository()
@@ -1053,6 +1113,12 @@ describe("terrain systems", () => {
     ;(terrain as any)._isRefreshing = false
 
     terrain.update(0.016)
+    ;(terrain as any)._chunkManager._queuedCoords.clear()
+    ;(terrain as any)._chunkManager._inFlightLoads.clear()
+    terrain.update(0.016)
+    ;(terrain as any)._targetCenter = null
+    ;(terrain as any)._isRefreshing = false
+    await (terrain as any)._refreshChunks()
     ;(terrain as any)._isRefreshing = true
     ;(player as any)._camera.position.x = 500
     terrain.update(0.016)
