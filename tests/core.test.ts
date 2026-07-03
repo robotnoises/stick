@@ -666,7 +666,12 @@ describe("chunk coordinates and generation", () => {
   it("builds and disposes terrain chunk meshes and supported props", () => {
     const context = createContext()
     const material = {
-      terrain: { diffuseColor: new FakeColor3(), dispose: vi.fn() } as any,
+      terrain: [
+        { diffuseColor: new FakeColor3(), dispose: vi.fn() } as any,
+        { diffuseColor: new FakeColor3(), dispose: vi.fn() } as any,
+        { diffuseColor: new FakeColor3(), dispose: vi.fn() } as any,
+        { diffuseColor: new FakeColor3(), dispose: vi.fn() } as any,
+      ],
       trunk: { diffuseColor: new FakeColor3(), dispose: vi.fn() } as any,
       needles: { diffuseColor: new FakeColor3(), dispose: vi.fn() } as any,
       rock: { diffuseColor: new FakeColor3(), dispose: vi.fn() } as any,

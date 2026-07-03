@@ -77,6 +77,15 @@ class FakeTexture {
   ) {}
 }
 
+class FakeMultiMaterial {
+  public readonly subMaterials: unknown[] = []
+
+  public constructor(
+    public readonly name: string,
+    public readonly scene: unknown,
+  ) {}
+}
+
 class FakeStandardMaterial {
   public diffuseColor = new FakeColor3()
   public specularColor = new FakeColor3()
@@ -110,6 +119,7 @@ class FakeMesh {
   public enabled = true
   public disposed = false
   public vertexData: unknown = null
+  public subMeshes: unknown[] = []
   public isPickable = true
   public alwaysSelectAsActiveMesh = false
   public billboardMode = 0
@@ -125,6 +135,19 @@ class FakeMesh {
 
   public dispose(): void {
     this.disposed = true
+  }
+}
+
+class FakeSubMesh {
+  public constructor(
+    public readonly materialIndex: number,
+    public readonly verticesStart: number,
+    public readonly verticesCount: number,
+    public readonly indexStart: number,
+    public readonly indexCount: number,
+    public readonly mesh: FakeMesh,
+  ) {
+    mesh.subMeshes.push(this)
   }
 }
 
@@ -318,10 +341,12 @@ vi.mock("@babylonjs/core/Maths/math.color", () => ({
 
 vi.mock("@babylonjs/core/Maths/math.vector", () => ({ Vector3: FakeVector3 }))
 vi.mock("@babylonjs/core/Materials/Textures/texture", () => ({ Texture: FakeTexture }))
+vi.mock("@babylonjs/core/Materials/multiMaterial", () => ({ MultiMaterial: FakeMultiMaterial }))
 vi.mock("@babylonjs/core/Materials/standardMaterial", () => ({
   StandardMaterial: FakeStandardMaterial,
 }))
 vi.mock("@babylonjs/core/Meshes/mesh", () => ({ Mesh: FakeMesh }))
+vi.mock("@babylonjs/core/Meshes/subMesh", () => ({ SubMesh: FakeSubMesh }))
 vi.mock("@babylonjs/core/Meshes/meshBuilder", () => ({
   MeshBuilder: {
     CreateCylinder: createMesh,
@@ -381,7 +406,9 @@ Object.assign(globalThis, {
   FakeColor4,
   FakeVector3,
   FakeTexture,
+  FakeMultiMaterial,
   FakeStandardMaterial,
+  FakeSubMesh,
   FakeMesh,
   FakeVertexData,
   FakeDirectionalLight,

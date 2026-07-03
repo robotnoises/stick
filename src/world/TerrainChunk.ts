@@ -1,7 +1,9 @@
+import { MultiMaterial } from "@babylonjs/core/Materials/multiMaterial"
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial"
 import { Vector3 } from "@babylonjs/core/Maths/math.vector"
 import { Mesh } from "@babylonjs/core/Meshes/mesh"
 import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder"
+import { SubMesh } from "@babylonjs/core/Meshes/subMesh"
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData"
 import type { EngineContext } from "../app/EngineContext"
 import type { WorldBounds } from "../app/GameConfig"
@@ -9,7 +11,7 @@ import { TerrainMaterial, type ChunkTerrainData, type GeneratedPropData } from "
 import type { WorldFeatureGenerator } from "./generation/WorldFeatureGenerator"
 
 export interface TerrainChunkMaterials {
-  readonly terrain: StandardMaterial
+  readonly terrain: readonly StandardMaterial[]
   readonly trunk: StandardMaterial
   readonly needles: StandardMaterial
   readonly rock: StandardMaterial
@@ -51,6 +53,7 @@ export class TerrainChunk {
     const mesh = new Mesh(`terrain_${this._data.key}`, this._context.scene)
     const vertexData = new VertexData()
     const positions: number[] = []
+    const materialIndices: number[][] = [[], [], [], []]
     const indices: number[] = []
     const normals: number[] = []
     const uvs: number[] = []
@@ -77,9 +80,15 @@ export class TerrainChunk {
         const bottomLeft = topLeft + gridSize
         const bottomRight = bottomLeft + 1
 
-        indices.push(topLeft, bottomLeft, topRight)
-        indices.push(topRight, bottomLeft, bottomRight)
+        const material = this._getCellTerrainMaterial(topLeft, topRight, bottomLeft, bottomRight)
+
+        materialIndices[material]?.push(topLeft, bottomLeft, topRight)
+        materialIndices[material]?.push(topRight, bottomLeft, bottomRight)
       }
+    }
+
+    for (const materialIndexGroup of materialIndices) {
+      indices.push(...materialIndexGroup)
     }
 
     VertexData.ComputeNormals(positions, indices, normals)
@@ -91,8 +100,50 @@ export class TerrainChunk {
     vertexData.colors = colors
     vertexData.applyToMesh(mesh)
 
-    mesh.material = this._materials.terrain
+    this._applyTerrainMaterials(mesh, materialIndices)
     return mesh
+  }
+
+  private _getCellTerrainMaterial(
+    topLeft: number,
+    topRight: number,
+    bottomLeft: number,
+    bottomRight: number,
+  ): number {
+    const counts = new Map<number, number>()
+
+    for (const material of [topLeft, topRight, bottomLeft, bottomRight].map(
+      (index) => this._data.terrainMaterials[index] ?? TerrainMaterial.Grass,
+    )) {
+      counts.set(material, (counts.get(material) ?? 0) + 1)
+    }
+
+    const sortedCounts = [...counts.entries()].sort((a, b) => b[1] - a[1])
+
+    return sortedCounts[0]![0]
+  }
+
+  private _applyTerrainMaterials(
+    mesh: Mesh,
+    materialIndices: readonly number[][],
+  ): void {
+    const multiMaterial = new MultiMaterial(`terrain_materials_${this._data.key}`, this._context.scene)
+    let indexStart = 0
+
+    multiMaterial.subMaterials.push(...this._materials.terrain)
+    mesh.material = multiMaterial
+    mesh.subMeshes = []
+
+    for (let materialIndex = 0; materialIndex < materialIndices.length; materialIndex += 1) {
+      const indexCount = materialIndices[materialIndex]!.length
+
+      if (indexCount === 0) {
+        continue
+      }
+
+      new SubMesh(materialIndex, 0, this._data.heights.length, indexStart, indexCount, mesh)
+      indexStart += indexCount
+    }
   }
 
   private _createWaterMeshes(): void {
