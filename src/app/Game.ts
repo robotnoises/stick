@@ -65,6 +65,7 @@ export class Game {
     const inventory = new InventorySystem(createCoreBackpack(flashlight))
     const debug = new DebugOverlay(player, time, {
       createNewWorld: () => this._createNewWorld(chunkRepository),
+      getChunkBoundariesDebugEnabled: () => terrain.chunkBoundariesDebugEnabled,
       getDebugMapData: () => ({
         worldBounds: this._context!.config.worldBounds,
         playerPosition: {
@@ -91,6 +92,7 @@ export class Game {
       getTerrainStreamingStats: () => terrain.getStreamingDebugStats(),
       getWorldSeed: () => this._config.worldSeed,
       resetTerrainCache: () => this._resetTerrainCache(chunkRepository),
+      setChunkBoundariesDebugEnabled: (enabled) => terrain.setChunkBoundariesDebugEnabled(enabled),
       setWorldSeed: (seed) => this._setWorldSeed(seed, chunkRepository),
     })
 

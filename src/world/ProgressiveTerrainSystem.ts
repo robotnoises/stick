@@ -71,6 +71,14 @@ export class ProgressiveTerrainSystem implements GameSystem {
     return this._chunkManager.getDebugStats()
   }
 
+  public get chunkBoundariesDebugEnabled(): boolean {
+    return this._chunkManager.chunkBoundariesDebugEnabled
+  }
+
+  public setChunkBoundariesDebugEnabled(enabled: boolean): void {
+    this._chunkManager.setChunkBoundariesDebugEnabled(enabled)
+  }
+
   public dispose(): void {
     this._chunkManager.dispose()
   }

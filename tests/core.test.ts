@@ -238,6 +238,7 @@ describe("player, compass, debug overlay, and time", () => {
     const time = new TimeOfDaySystem(8.5, 1)
     const resetTerrainCache = vi.fn()
     const createNewWorld = vi.fn()
+    const setChunkBoundariesDebugEnabled = vi.fn()
     const setWorldSeed = vi.fn()
     const overlay = new DebugOverlay(player as any, time, {
       createNewWorld,
@@ -276,8 +277,10 @@ describe("player, compass, debug overlay, and time", () => {
         cachedChunkDataCount: 4,
         maxChunkLoadsPerFrame: 1,
       }),
+      getChunkBoundariesDebugEnabled: () => false,
       getWorldSeed: () => 1337,
       resetTerrainCache,
+      setChunkBoundariesDebugEnabled,
       setWorldSeed,
     })
 
@@ -298,6 +301,9 @@ describe("player, compass, debug overlay, and time", () => {
     expect(document.querySelector("#debug-overlay-editor")).toBeTruthy()
     expect(document.querySelector<HTMLFormElement>("#debug-overlay-editor")?.noValidate).toBe(true)
     expect(document.querySelector<HTMLInputElement>("input[name='positionX']")?.step).toBe("any")
+    expect(document.querySelector<HTMLInputElement>("input[name='chunkBoundaries']")?.checked).toBe(
+      false,
+    )
 
     document
       .querySelector<HTMLButtonElement>("#debug-overlay-editor button[type='button']")
@@ -385,6 +391,7 @@ describe("player, compass, debug overlay, and time", () => {
     document.querySelector<HTMLInputElement>("input[name='day']")!.value = "3"
     document.querySelector<HTMLInputElement>("input[name='timeOfDay']")!.value = "21.5"
     document.querySelector<HTMLInputElement>("input[name='worldSeed']")!.value = "1337"
+    document.querySelector<HTMLInputElement>("input[name='chunkBoundaries']")!.checked = true
     ;(overlay as any)._readNumber(
       { elements: { namedItem: () => ({ value: "not-a-number" }) } },
       "missing",
@@ -398,6 +405,7 @@ describe("player, compass, debug overlay, and time", () => {
     expect(player.setHeadingDegrees).toHaveBeenCalledWith(270)
     expect(time.day).toBe(3)
     expect(time.timeOfDayHours).toBe(21.5)
+    expect(setChunkBoundariesDebugEnabled).toHaveBeenCalledWith(true)
     expect(document.querySelector("#debug-overlay")?.textContent).toContain("time: 21.50h")
 
     document.querySelector<HTMLElement>("#debug-overlay")?.click()
@@ -942,6 +950,13 @@ describe("chunk manager", () => {
     await manager.updateAround(new ChunkCoord(0, 0))
     expect(repository.savedKeys).toContain("chunk_0_0")
     expect(manager.getHeightAt(1, 1)).toBeTypeOf("number")
+    expect(manager.chunkBoundariesDebugEnabled).toBe(false)
+
+    manager.setChunkBoundariesDebugEnabled(true)
+    expect(manager.chunkBoundariesDebugEnabled).toBe(true)
+    expect((manager as any)._chunkBoundaryMeshes.size).toBe(1)
+    manager.setChunkBoundariesDebugEnabled(false)
+    expect((manager as any)._chunkBoundaryMeshes.size).toBe(0)
 
     ;(manager as any)._activeChunks.clear()
     await manager.updateAround(new ChunkCoord(0, 0))
@@ -1151,6 +1166,9 @@ describe("terrain systems", () => {
     await terrain.initialize()
     expect(terrain.getHeightAt(0, 0)).toBeTypeOf("number")
     expect(terrain.getStreamingDebugStats().maxChunkLoadsPerFrame).toBe(1)
+    expect(terrain.chunkBoundariesDebugEnabled).toBe(false)
+    terrain.setChunkBoundariesDebugEnabled(true)
+    expect(terrain.chunkBoundariesDebugEnabled).toBe(true)
 
     ;(terrain as any)._isRefreshing = true
     await (terrain as any)._refreshChunks()
@@ -1293,6 +1311,14 @@ describe("game runtime", () => {
     document
       .querySelector("#debug-world-map-modal")
       ?.dispatchEvent(new MouseEvent("click", { bubbles: true }))
+    document.querySelector<HTMLInputElement>("input[name='chunkBoundaries']")!.checked = true
+    document
+      .querySelector<HTMLFormElement>("#debug-overlay-editor")
+      ?.dispatchEvent(new SubmitEvent("submit", { bubbles: true, cancelable: true }))
+    document.querySelector<HTMLElement>("#debug-overlay")?.click()
+    expect(document.querySelector<HTMLInputElement>("input[name='chunkBoundaries']")!.checked).toBe(
+      true,
+    )
     vi.spyOn(window, "confirm").mockReturnValueOnce(true)
     document
       .querySelectorAll<HTMLButtonElement>("#debug-overlay-editor button[type='button']")[2]

@@ -352,6 +352,7 @@ vi.mock("@babylonjs/core/Meshes/meshBuilder", () => ({
     CreateCylinder: createMesh,
     CreateDisc: createMesh,
     CreateGround: createMesh,
+    CreateLines: createMesh,
     CreateSphere: createMesh,
   },
 }))

@@ -1,6 +1,9 @@
 import { Texture } from "@babylonjs/core/Materials/Textures/texture"
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial"
 import { Color3 } from "@babylonjs/core/Maths/math.color"
+import { Vector3 } from "@babylonjs/core/Maths/math.vector"
+import type { Mesh } from "@babylonjs/core/Meshes/mesh"
+import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder"
 import bark006ColorUrl from "../../assets/exported/textures/terrain/bark006-color.png?url"
 import bark014ColorUrl from "../../assets/exported/textures/terrain/bark014-color.png?url"
 import fineClumpySandBaseColorUrl from "../../assets/exported/textures/terrain/fine-clumpy-sand-basecolor.png?url"
@@ -49,6 +52,8 @@ export class ChunkManager {
   private readonly _inFlightLoads = new Set<string>()
   private readonly _materials: TerrainChunkMaterials
   private readonly _queuedCoords = new Map<string, ChunkCoord>()
+  private readonly _chunkBoundaryMeshes = new Map<string, Mesh>()
+  private _chunkBoundariesDebugEnabled = false
 
   public constructor(
     private readonly _context: EngineContext,
@@ -65,6 +70,23 @@ export class ChunkManager {
 
   public get hasPendingWork(): boolean {
     return this._queuedCoords.size > 0 || this._inFlightLoads.size > 0
+  }
+
+  public get chunkBoundariesDebugEnabled(): boolean {
+    return this._chunkBoundariesDebugEnabled
+  }
+
+  public setChunkBoundariesDebugEnabled(enabled: boolean): void {
+    this._chunkBoundariesDebugEnabled = enabled
+
+    if (!enabled) {
+      this._disposeChunkBoundaryMeshes()
+      return
+    }
+
+    for (const coord of this._activeCoords.values()) {
+      this._ensureChunkBoundaryMesh(coord)
+    }
   }
 
   public getDebugStats(): TerrainStreamingDebugStats {
@@ -125,6 +147,7 @@ export class ChunkManager {
     this._dataCache.clear()
     this._inFlightLoads.clear()
     this._queuedCoords.clear()
+    this._disposeChunkBoundaryMeshes()
     for (const terrainMaterial of this._materials.terrain) {
       terrainMaterial.dispose()
     }
@@ -148,6 +171,7 @@ export class ChunkManager {
 
       this._activeChunks.set(coord.key, chunk)
       this._activeCoords.set(coord.key, coord)
+      this._ensureChunkBoundaryMesh(coord)
     } finally {
       this._inFlightLoads.delete(coord.key)
     }
@@ -253,9 +277,53 @@ export class ChunkManager {
       }
 
       chunk.dispose()
+      this._disposeChunkBoundaryMesh(key)
       this._activeChunks.delete(key)
       this._activeCoords.delete(key)
     }
+  }
+
+  private _ensureChunkBoundaryMesh(coord: ChunkCoord): void {
+    if (!this._chunkBoundariesDebugEnabled || this._chunkBoundaryMeshes.has(coord.key)) {
+      return
+    }
+
+    const minX = coord.x * this._generator.chunkSizeMeters
+    const minZ = coord.z * this._generator.chunkSizeMeters
+    const maxX = minX + this._generator.chunkSizeMeters
+    const maxZ = minZ + this._generator.chunkSizeMeters
+    const lift = 0.45
+    const boundary = MeshBuilder.CreateLines(
+      `debug_chunk_boundary_${coord.key}`,
+      {
+        points: [
+          new Vector3(minX, this.getHeightAt(minX, minZ) + lift, minZ),
+          new Vector3(maxX, this.getHeightAt(maxX, minZ) + lift, minZ),
+          new Vector3(maxX, this.getHeightAt(maxX, maxZ) + lift, maxZ),
+          new Vector3(minX, this.getHeightAt(minX, maxZ) + lift, maxZ),
+          new Vector3(minX, this.getHeightAt(minX, minZ) + lift, minZ),
+        ],
+      },
+      this._context.scene,
+    ) as Mesh
+
+    boundary.isPickable = false
+    this._chunkBoundaryMeshes.set(coord.key, boundary)
+  }
+
+  private _disposeChunkBoundaryMesh(key: string): void {
+    const boundary = this._chunkBoundaryMeshes.get(key)
+
+    boundary?.dispose()
+    this._chunkBoundaryMeshes.delete(key)
+  }
+
+  private _disposeChunkBoundaryMeshes(): void {
+    for (const boundary of this._chunkBoundaryMeshes.values()) {
+      boundary.dispose()
+    }
+
+    this._chunkBoundaryMeshes.clear()
   }
 
   private _evictDistantCachedData(center: ChunkCoord): void {

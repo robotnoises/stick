@@ -45,10 +45,12 @@ export interface DebugTerrainStreamingStats {
 
 export interface DebugOverlayActions {
   createNewWorld?(): Promise<void> | void
+  getChunkBoundariesDebugEnabled?(): boolean
   getDebugMapData?(): DebugMapData
   getTerrainStreamingStats?(): DebugTerrainStreamingStats
   getWorldSeed?(): number
   resetTerrainCache?(): Promise<void> | void
+  setChunkBoundariesDebugEnabled?(enabled: boolean): void
   setWorldSeed?(seed: number): Promise<void> | void
 }
 
@@ -151,6 +153,7 @@ export class DebugOverlay implements GameSystem {
       this._createNumberField("day", "day", this._time.day),
       this._createNumberField("timeOfDay", "time", this._time.timeOfDayHours),
       this._createOptionalSeedField(),
+      this._createOptionalChunkBoundaryField(),
       this._createButtonRow(submitButton, cancelButton),
       this._createDebugToolRow(revealMapButton),
       this._createDangerRow(resetTerrainCacheButton, newWorldButton),
@@ -176,6 +179,35 @@ export class DebugOverlay implements GameSystem {
     }
 
     return this._createNumberField("worldSeed", "seed", seed)
+  }
+
+  private _createOptionalChunkBoundaryField(): HTMLLabelElement | DocumentFragment {
+    const enabled = this._actions.getChunkBoundariesDebugEnabled?.()
+
+    if (enabled === undefined) {
+      return document.createDocumentFragment()
+    }
+
+    return this._createCheckboxField("chunkBoundaries", "chunks", enabled)
+  }
+
+  private _createCheckboxField(
+    name: string,
+    labelText: string,
+    checked: boolean,
+  ): HTMLLabelElement {
+    const label = document.createElement("label")
+    const labelSpan = document.createElement("span")
+    const input = document.createElement("input")
+
+    labelSpan.textContent = labelText
+    input.name = name
+    input.type = "checkbox"
+    input.checked = checked
+
+    label.append(labelSpan, input)
+
+    return label
   }
 
   private _createNumberField(name: string, labelText: string, value: number): HTMLLabelElement {
@@ -589,6 +621,12 @@ export class DebugOverlay implements GameSystem {
     return Number.isFinite(parsed) ? parsed : fallback
   }
 
+  private _readOptionalCheckbox(form: HTMLFormElement, name: string): boolean | null {
+    const input = form.elements.namedItem(name) as HTMLInputElement | null
+
+    return input ? input.checked : null
+  }
+
   private _exitEditor(): void {
     this._isEditing = false
     this._renderReadOnly()
@@ -624,6 +662,7 @@ export class DebugOverlay implements GameSystem {
       currentSeed === undefined
         ? null
         : Math.floor(this._readNumber(form, "worldSeed", currentSeed))
+    const chunkBoundariesEnabled = this._readOptionalCheckbox(form, "chunkBoundaries")
 
     if (
       currentSeed !== undefined &&
@@ -646,6 +685,11 @@ export class DebugOverlay implements GameSystem {
     this._player.setPosition(x, y, z)
     this._player.setHeadingDegrees(heading)
     this._time.setWorldTime(day, timeOfDay)
+
+    if (chunkBoundariesEnabled !== null) {
+      this._actions.setChunkBoundariesDebugEnabled?.(chunkBoundariesEnabled)
+    }
+
     this._exitEditor()
   }
 
