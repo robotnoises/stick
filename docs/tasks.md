@@ -167,6 +167,9 @@
 
 ## Testing and Quality Gates
 
+- [ ] Ban new uses of the TypeScript `any` keyword in application and test code.
+  - [ ] Replace existing `as any` test internals access with typed test helpers or public debug/test APIs.
+  - [ ] Add linting or a typecheck-adjacent gate to prevent future `any` usage.
 - [ ] Add or maintain unit coverage for terrain generation, chunk coordinate math, repository serialization, save data, and survival logic.
 - [ ] Run required checks before completing TypeScript work:
   - [ ] `npm run typecheck`
