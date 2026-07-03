@@ -10,6 +10,12 @@ export interface DebugMapLakeData {
   readonly radiusZ: number
 }
 
+export interface DebugMapRiverData {
+  readonly id: string
+  readonly points: ReadonlyArray<readonly [number, number]>
+  readonly widthMeters: number
+}
+
 export interface DebugMapData {
   readonly worldBounds: {
     readonly minX: number
@@ -23,6 +29,7 @@ export interface DebugMapData {
   }
   readonly playerHeadingDegrees: number
   readonly lakes: readonly DebugMapLakeData[]
+  readonly rivers: readonly DebugMapRiverData[]
 }
 
 export interface DebugOverlayActions {
@@ -313,6 +320,10 @@ export class DebugOverlay implements GameSystem {
       )
     }
 
+    for (const river of data.rivers) {
+      this._appendDebugMapRiver(svg, river, toSvgX, toSvgY, width, plotSize)
+    }
+
     this._appendSvgCircle(svg, toSvgX(0), toSvgY(0), 5, "debug-map-origin")
     const playerX = toSvgX(data.playerPosition.x)
     const playerY = toSvgY(data.playerPosition.z)
@@ -321,6 +332,26 @@ export class DebugOverlay implements GameSystem {
     this._appendDebugMapPlayerHeading(svg, playerX, playerY, data.playerHeadingDegrees)
 
     return svg
+  }
+
+  private _appendDebugMapRiver(
+    svg: SVGSVGElement,
+    river: DebugMapRiverData,
+    toSvgX: (worldX: number) => number,
+    toSvgY: (worldZ: number) => number,
+    worldWidth: number,
+    plotSize: number,
+  ): void {
+    const polyline = document.createElementNS("http://www.w3.org/2000/svg", "polyline")
+    const strokeWidth = Math.max(2, (river.widthMeters / worldWidth) * plotSize)
+
+    polyline.setAttribute(
+      "points",
+      river.points.map(([x, z]) => `${toSvgX(x)},${toSvgY(z)}`).join(" "),
+    )
+    polyline.setAttribute("class", "debug-map-river")
+    polyline.setAttribute("stroke-width", String(strokeWidth))
+    svg.appendChild(polyline)
   }
 
   private _appendDebugMapPlayerHeading(

@@ -254,6 +254,17 @@ describe("player, compass, debug overlay, and time", () => {
             radiusZ: 90,
           },
         ],
+        rivers: [
+          {
+            id: "debug_river",
+            points: [
+              [-800, 800],
+              [0, 0],
+              [800, -800],
+            ],
+            widthMeters: 24,
+          },
+        ],
       }),
       getWorldSeed: () => 1337,
       resetTerrainCache,
@@ -281,6 +292,7 @@ describe("player, compass, debug overlay, and time", () => {
 
     expect(debugMapSvg.getAttribute("role")).toBe("img")
     expect(document.querySelectorAll("#debug-world-map-modal .debug-map-lake").length).toBe(1)
+    expect(document.querySelectorAll("#debug-world-map-modal .debug-map-river").length).toBe(1)
     expect(document.querySelectorAll("#debug-world-map-modal .debug-map-player-heading").length).toBe(3)
     document.querySelectorAll<HTMLButtonElement>("#debug-world-map-panel button")[1]?.click()
     expect(document.querySelector("#debug-world-map-modal")).toBeNull()
@@ -601,14 +613,34 @@ describe("chunk coordinates and generation", () => {
     expect(shoreSample.water?.isUnderWater).toBe(false)
     expect(shoreSample.water?.isShore).toBe(true)
     expect(farSample.water?.distanceToShoreMeters).toBeTypeOf("number")
+    expect(a.rivers.length).toBeGreaterThan(0)
     expect(a.getLakesIntersectingBounds(bounds).length).toBeGreaterThan(0)
+    expect(a.getRiversIntersectingBounds(bounds).length).toBeGreaterThan(0)
     expect(
       a.getLakesIntersectingBounds({ minX: 100_000, maxX: 101_000, minZ: 100_000, maxZ: 101_000 }),
     ).toEqual([])
+    const river = a.rivers[0]!
+    const riverMidpointX = (river.points[0]![0] + river.points[1]![0]) / 2
+    const riverMidpointZ = (river.points[0]![1] + river.points[1]![1]) / 2
+
+    ;(a as any)._lakes = []
+    expect(a.sample(riverMidpointX, riverMidpointZ).water?.type).toBe("river")
+    expect(a.sample(riverMidpointX, riverMidpointZ).water?.isUnderWater).toBe(true)
+    expect(
+      a.getRiversIntersectingBounds({ minX: 100_000, maxX: 101_000, minZ: 100_000, maxZ: 101_000 }),
+    ).toEqual([])
+    expect((a as any)._chooseNearestWaterSample({ distanceToShoreMeters: 10 }, null)).toEqual({
+      distanceToShoreMeters: 10,
+    })
+    expect((a as any)._getDistanceToSegmentMeters(3, 4, 0, 0, 0, 0)).toBe(5)
+    ;(a as any)._rivers = [{ ...river, widthMeters: 0, points: [[0, 0], [1, 0]] }]
+    expect(a.sample(0.5, 0).water?.normalizedDistance).toBe(0)
+
     ;(a as any)._lakes = [
       { ...lake, id: "wide", centerX: 0, centerZ: 0, radiusX: 100, radiusZ: 100 },
       { ...lake, id: "equal", centerX: 0, centerZ: 0, radiusX: 100, radiusZ: 100 },
     ]
+    ;(a as any)._rivers = []
     expect(a.sample(0, 0).water?.feature.id).toBe("wide")
     ;(a as any)._lakes = [
       { ...lake, id: "near", centerX: 0, centerZ: 0, radiusX: 10, radiusZ: 10 },
@@ -616,7 +648,9 @@ describe("chunk coordinates and generation", () => {
     ]
     expect(a.sample(5, 0).water?.feature.id).toBe("closer")
     ;(a as any)._lakes.length = 0
+    ;(a as any)._rivers.length = 0
     expect(a.lakes.length).toBe(0)
+    expect(a.rivers.length).toBe(0)
     expect(a.sample(0, 0)).toEqual({ water: null })
   })
 
@@ -670,10 +704,20 @@ describe("chunk coordinates and generation", () => {
     const lakeProps = waterGenerator.generateChunk(
       ChunkCoord.fromWorldPosition(lake.centerX, lake.centerZ, 64),
     ).props
+    const river = waterFeatures.rivers[0]!
+    const riverMidpointX = (river.points[0]![0] + river.points[1]![0]) / 2
+    const riverMidpointZ = (river.points[0]![1] + river.points[1]![1]) / 2
+    const riverCenterHeight = waterGenerator.getHeight(riverMidpointX, riverMidpointZ)
+    const riverBankMaterial = waterGenerator.getTerrainMaterial(
+      riverMidpointX + river.widthMeters / 2 + river.bankFalloffMeters / 2,
+      riverMidpointZ,
+    )
 
     expect(foundDirt).toBe(true)
     expect(lakeCenterHeight).toBeLessThanOrEqual(lake.waterLevelMeters)
+    expect(riverCenterHeight).toBeLessThanOrEqual(river.waterLevelMeters)
     expect(shoreMaterial).toBe(TerrainMaterial.Sand)
+    expect(riverBankMaterial).toBeTypeOf("number")
     expect(lakeProps.every((prop) => prop.position[1] > lake.waterLevelMeters - lake.depthMeters)).toBe(
       true,
     )
@@ -709,6 +753,26 @@ describe("chunk coordinates and generation", () => {
           shoreFalloffMeters: 4,
         },
       ],
+      getRiversIntersectingBounds: () => [
+        {
+          id: "test_river",
+          points: [
+            [-1, 1],
+            [3, 1],
+          ],
+          widthMeters: 1,
+          depthMeters: 1,
+          bankFalloffMeters: 1,
+          waterLevelMeters: 0.25,
+        },
+      ],
+      sample: () => ({
+        water: {
+          feature: { id: "test_river" },
+          type: "river",
+          isUnderWater: true,
+        },
+      }),
     }
     const chunk = new TerrainChunk(context, createSmallChunkData(), material, fakeWorldFeatures as any)
     const sparseChunk = new TerrainChunk(
@@ -716,7 +780,7 @@ describe("chunk coordinates and generation", () => {
       {
         ...createSmallChunkData(),
         key: "chunk_sparse",
-        heights: new Float32Array([0]),
+        heights: new Float32Array([]),
         terrainMaterials: new Uint8Array([]),
       },
       material,
@@ -724,6 +788,8 @@ describe("chunk coordinates and generation", () => {
 
     expect(chunk.key).toBe("chunk_0_0")
     expect(((chunk as any)._terrainMesh.vertexData.colors as number[]).length).toBe(16)
+    expect((chunk as any)._sampleChunkHeight(1, 1)).toBeTypeOf("number")
+    expect((sparseChunk as any)._sampleChunkHeight(1, 1)).toBe(0)
     chunk.dispose()
     sparseChunk.dispose()
   })

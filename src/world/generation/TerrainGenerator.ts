@@ -179,17 +179,18 @@ export class TerrainGenerator {
   }
 
   private _getLakeBedHeight(baseHeight: number, water: WaterFeatureSample): number {
-    const lake = water.feature
+    const feature = water.feature
     const depthFactor = 1 - Math.min(Math.max(water.normalizedDistance, 0), 1)
-    const bedHeight = lake.waterLevelMeters - lake.depthMeters * (0.35 + depthFactor * 0.65)
+    const bedHeight = feature.waterLevelMeters - feature.depthMeters * (0.35 + depthFactor * 0.65)
 
     return Math.min(baseHeight, bedHeight)
   }
 
   private _getShoreHeight(baseHeight: number, water: WaterFeatureSample): number {
-    const lake = water.feature
-    const shoreT = Math.min(Math.max(water.distanceToShoreMeters / lake.shoreFalloffMeters, 0), 1)
-    const shoreHeight = this._lerp(lake.waterLevelMeters + 0.2, baseHeight, shoreT)
+    const feature = water.feature
+    const falloffMeters = "shoreFalloffMeters" in feature ? feature.shoreFalloffMeters : feature.bankFalloffMeters
+    const shoreT = Math.min(Math.max(water.distanceToShoreMeters / falloffMeters, 0), 1)
+    const shoreHeight = this._lerp(feature.waterLevelMeters + 0.2, baseHeight, shoreT)
 
     return Math.min(baseHeight, shoreHeight)
   }

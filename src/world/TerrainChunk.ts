@@ -8,7 +8,7 @@ import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData"
 import type { EngineContext } from "../app/EngineContext"
 import type { WorldBounds } from "../app/GameConfig"
 import { TerrainMaterial, type ChunkTerrainData, type GeneratedPropData } from "./TerrainTypes"
-import type { WorldFeatureGenerator } from "./generation/WorldFeatureGenerator"
+import type { RiverFeature, WorldFeatureGenerator } from "./generation/WorldFeatureGenerator"
 
 export interface TerrainChunkMaterials {
   readonly terrain: readonly StandardMaterial[]
@@ -176,6 +176,108 @@ export class TerrainChunk {
 
       this._props.push(water)
     }
+
+    for (const river of this._worldFeatures.getRiversIntersectingBounds(bounds)) {
+      this._createRiverWaterMeshes(river, bounds)
+    }
+  }
+
+  private _createRiverWaterMeshes(river: RiverFeature, bounds: WorldBounds): void {
+    const mesh = new Mesh(`water_${this._data.key}_${river.id}`, this._context.scene)
+    const vertexData = new VertexData()
+    const positions: number[] = []
+    const indices: number[] = []
+    const normals: number[] = []
+    const uvs: number[] = []
+    const step = this._data.chunkSizeMeters / this._data.resolution
+    const waterLiftMeters = 0.35
+
+    for (let z = 0; z < this._data.resolution; z += 1) {
+      for (let x = 0; x < this._data.resolution; x += 1) {
+        const worldX = bounds.minX + (x + 0.5) * step
+        const worldZ = bounds.minZ + (z + 0.5) * step
+        const sample = this._worldFeatures?.sample(worldX, worldZ).water
+
+        if (sample?.type !== "river" || sample.feature.id !== river.id || !sample.isUnderWater) {
+          continue
+        }
+
+        this._appendRiverWaterQuad(positions, indices, uvs, bounds.minX + x * step, bounds.minZ + z * step, step, waterLiftMeters)
+      }
+    }
+
+    if (positions.length === 0) {
+      mesh.dispose()
+      return
+    }
+
+    VertexData.ComputeNormals(positions, indices, normals)
+
+    vertexData.positions = positions
+    vertexData.indices = indices
+    vertexData.normals = normals
+    vertexData.uvs = uvs
+    vertexData.applyToMesh(mesh)
+
+    mesh.material = this._materials.water
+    mesh.isPickable = false
+    this._props.push(mesh)
+  }
+
+  private _appendRiverWaterQuad(
+    positions: number[],
+    indices: number[],
+    uvs: number[],
+    minX: number,
+    minZ: number,
+    step: number,
+    waterLiftMeters: number,
+  ): void {
+    const vertexStart = positions.length / 3
+    const x0 = minX
+    const x1 = minX + step
+    const z0 = minZ
+    const z1 = minZ + step
+
+    positions.push(
+      x0,
+      this._sampleChunkHeight(x0, z0) + waterLiftMeters,
+      z0,
+      x1,
+      this._sampleChunkHeight(x1, z0) + waterLiftMeters,
+      z0,
+      x0,
+      this._sampleChunkHeight(x0, z1) + waterLiftMeters,
+      z1,
+      x1,
+      this._sampleChunkHeight(x1, z1) + waterLiftMeters,
+      z1,
+    )
+    uvs.push(0, 0, 1, 0, 0, 1, 1, 1)
+    indices.push(vertexStart, vertexStart + 2, vertexStart + 1, vertexStart + 1, vertexStart + 2, vertexStart + 3)
+  }
+
+  private _sampleChunkHeight(worldX: number, worldZ: number): number {
+    const localX = worldX - this._data.coord.x * this._data.chunkSizeMeters
+    const localZ = worldZ - this._data.coord.z * this._data.chunkSizeMeters
+    const gridSize = this._data.resolution + 1
+    const step = this._data.chunkSizeMeters / this._data.resolution
+    const sampleX = Math.min(Math.max(localX / step, 0), this._data.resolution)
+    const sampleZ = Math.min(Math.max(localZ / step, 0), this._data.resolution)
+    const x0 = Math.floor(sampleX)
+    const z0 = Math.floor(sampleZ)
+    const x1 = Math.min(x0 + 1, this._data.resolution)
+    const z1 = Math.min(z0 + 1, this._data.resolution)
+    const tx = sampleX - x0
+    const tz = sampleZ - z0
+    const a = this._data.heights[z0 * gridSize + x0] ?? 0
+    const b = this._data.heights[z0 * gridSize + x1] ?? a
+    const c = this._data.heights[z1 * gridSize + x0] ?? a
+    const d = this._data.heights[z1 * gridSize + x1] ?? c
+    const xMix0 = this._lerp(a, b, tx)
+    const xMix1 = this._lerp(c, d, tx)
+
+    return this._lerp(xMix0, xMix1, tz)
   }
 
   private _getChunkBounds(): WorldBounds {
@@ -202,6 +304,10 @@ export class TerrainChunk {
       default:
         return [0.33, 0.44, 0.2, 1]
     }
+  }
+
+  private _lerp(from: number, to: number, amount: number): number {
+    return from + (to - from) * amount
   }
 
   private _createProp(prop: GeneratedPropData): void {

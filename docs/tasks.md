@@ -91,7 +91,7 @@
 - [ ] Add water features:
   - [X] lakes
   - [X] ponds
-  - [ ] rivers
+  - [X] rivers
 
 ## World Streaming and Terrain Generation
 
@@ -101,9 +101,16 @@
 - [ ] Add terrain material masks for grass, dirt, sand, pine needles / forest floor, rock, shore, and water-adjacent areas.
 - [ ] Add deterministic world-space feature generation for large landforms that cross chunk boundaries.
 - [ ] Add deterministic lake and pond basin features with simple water planes.
-- [ ] Add deterministic river path features with carved channels, bank smoothing, and water strip meshes.
+- [X] Add deterministic river path features with carved channels, bank smoothing, and water strip meshes.
+- [ ] Polish river rendering; see [Water Features](water.md).
+  - [ ] Replace cell-based river water with smoother river ribbon meshes.
+  - [ ] Improve river edge clipping/shape against carved channels.
+  - [ ] Add river bank material transitions for wet sand, mud, gravel, and stones.
+  - [ ] Tune river carving to reduce jagged or overly steep banks.
+  - [ ] Add downstream water-level profiles and simple flow visuals.
 - [ ] Add a world feature registry/save shape for rivers, lakes, hills, and mountain ranges.
 - [ ] Add debug visualization for chunk boundaries, feature paths, water basins, and biome/material masks.
+  - [X] Show lake basins and river paths on the revealed debug world map.
 - [ ] Remove or fully retire `TestTerrainSystem` once progressive terrain is the only terrain path.
 
 ## Persistence and Save Data

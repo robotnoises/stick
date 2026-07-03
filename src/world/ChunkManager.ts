@@ -401,10 +401,12 @@ export class ChunkManager {
     needles.diffuseColor = new Color3(0.11, 0.27, 0.14)
     needles.specularColor = Color3.Black()
 
-    water.diffuseColor = new Color3(0.12, 0.32, 0.44)
-    water.emissiveColor = new Color3(0.02, 0.08, 0.1)
-    water.specularColor = new Color3(0.25, 0.35, 0.38)
-    water.alpha = 0.72
+    water.diffuseColor = new Color3(0.12, 0.42, 0.56)
+    water.emissiveColor = new Color3(0.04, 0.16, 0.2)
+    water.specularColor = new Color3(0.35, 0.45, 0.5)
+    water.alpha = 0.82
+    water.backFaceCulling = false
+    water.twoSidedLighting = true
 
     return {
       terrain: [grassTerrain, dirtTerrain, sandTerrain, pineNeedlesTerrain],

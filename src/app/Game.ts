@@ -74,6 +74,11 @@ export class Game {
           radiusX: lake.radiusX,
           radiusZ: lake.radiusZ,
         })),
+        rivers: worldFeatures.rivers.map((river) => ({
+          id: river.id,
+          points: river.points,
+          widthMeters: river.widthMeters,
+        })),
       }),
       getWorldSeed: () => this._config.worldSeed,
       resetTerrainCache: () => this._resetTerrainCache(chunkRepository),

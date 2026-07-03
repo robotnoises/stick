@@ -16,11 +16,20 @@ export interface LakeFeature {
   readonly shoreFalloffMeters: number
 }
 
-export type WaterFeature = LakeFeature
+export interface RiverFeature {
+  readonly id: string
+  readonly points: ReadonlyArray<readonly [number, number]>
+  readonly widthMeters: number
+  readonly depthMeters: number
+  readonly bankFalloffMeters: number
+  readonly waterLevelMeters: number
+}
+
+export type WaterFeature = LakeFeature | RiverFeature
 
 export interface WaterFeatureSample {
   readonly feature: WaterFeature
-  readonly type: "lake"
+  readonly type: "lake" | "river"
   readonly normalizedDistance: number
   readonly distanceToShoreMeters: number
   readonly isUnderWater: boolean
@@ -35,16 +44,38 @@ export class WorldFeatureGenerator {
   public static readonly version = 1
 
   private readonly _lakes: LakeFeature[]
+  private readonly _rivers: RiverFeature[]
 
   public constructor(private readonly _options: WorldFeatureGeneratorOptions) {
     this._lakes = this._generateLakes()
+    this._rivers = this._generateRivers()
   }
 
   public get lakes(): readonly LakeFeature[] {
     return this._lakes
   }
 
+  public get rivers(): readonly RiverFeature[] {
+    return this._rivers
+  }
+
   public sample(worldX: number, worldZ: number): WorldFeatureSample {
+    const lake = this._getNearestLakeWaterSample(worldX, worldZ)
+    const river = this._getNearestRiverWaterSample(worldX, worldZ)
+    const water = this._chooseNearestWaterSample(lake, river)
+
+    return { water }
+  }
+
+  public getLakesIntersectingBounds(bounds: WorldBounds): readonly LakeFeature[] {
+    return this._lakes.filter((lake) => this._lakeIntersectsBounds(lake, bounds))
+  }
+
+  public getRiversIntersectingBounds(bounds: WorldBounds): readonly RiverFeature[] {
+    return this._rivers.filter((river) => this._riverIntersectsBounds(river, bounds))
+  }
+
+  private _getNearestLakeWaterSample(worldX: number, worldZ: number): WaterFeatureSample | null {
     let nearestLake: LakeFeature | null = null
     let nearestNormalizedDistance = Number.POSITIVE_INFINITY
     let nearestDistanceToShore = Number.POSITIVE_INFINITY
@@ -57,7 +88,9 @@ export class WorldFeatureGenerator {
 
       if (
         (isInsideLake && (!currentIsInsideLake || normalizedDistance < nearestNormalizedDistance)) ||
-        (!isInsideLake && !currentIsInsideLake && Math.abs(distanceToShore) < Math.abs(nearestDistanceToShore))
+        (!isInsideLake &&
+          !currentIsInsideLake &&
+          Math.abs(distanceToShore) < Math.abs(nearestDistanceToShore))
       ) {
         nearestLake = lake
         nearestNormalizedDistance = normalizedDistance
@@ -66,25 +99,70 @@ export class WorldFeatureGenerator {
     }
 
     if (!nearestLake) {
-      return { water: null }
+      return null
     }
 
     return {
-      water: {
-        feature: nearestLake,
-        type: "lake",
-        normalizedDistance: nearestNormalizedDistance,
-        distanceToShoreMeters: nearestDistanceToShore,
-        isUnderWater: nearestNormalizedDistance < 1,
-        isShore:
-          nearestNormalizedDistance >= 1 &&
-          nearestDistanceToShore <= nearestLake.shoreFalloffMeters,
-      },
+      feature: nearestLake,
+      type: "lake",
+      normalizedDistance: nearestNormalizedDistance,
+      distanceToShoreMeters: nearestDistanceToShore,
+      isUnderWater: nearestNormalizedDistance < 1,
+      isShore:
+        nearestNormalizedDistance >= 1 && nearestDistanceToShore <= nearestLake.shoreFalloffMeters,
     }
   }
 
-  public getLakesIntersectingBounds(bounds: WorldBounds): readonly LakeFeature[] {
-    return this._lakes.filter((lake) => this._lakeIntersectsBounds(lake, bounds))
+  private _getNearestRiverWaterSample(worldX: number, worldZ: number): WaterFeatureSample | null {
+    let nearestRiver: RiverFeature | null = null
+    let nearestDistanceToCenter = Number.POSITIVE_INFINITY
+
+    for (const river of this._rivers) {
+      const distanceToCenter = this._getDistanceToRiverCenterMeters(river, worldX, worldZ)
+
+      if (distanceToCenter < nearestDistanceToCenter) {
+        nearestRiver = river
+        nearestDistanceToCenter = distanceToCenter
+      }
+    }
+
+    if (!nearestRiver) {
+      return null
+    }
+
+    const halfWidth = nearestRiver.widthMeters / 2
+    const normalizedDistance = halfWidth === 0 ? 0 : nearestDistanceToCenter / halfWidth
+    const distanceToShore = nearestDistanceToCenter - halfWidth
+
+    return {
+      feature: nearestRiver,
+      type: "river",
+      normalizedDistance,
+      distanceToShoreMeters: distanceToShore,
+      isUnderWater: distanceToShore < 0,
+      isShore: distanceToShore >= 0 && distanceToShore <= nearestRiver.bankFalloffMeters,
+    }
+  }
+
+  private _chooseNearestWaterSample(
+    lake: WaterFeatureSample | null,
+    river: WaterFeatureSample | null,
+  ): WaterFeatureSample | null {
+    if (!lake) {
+      return river
+    }
+
+    if (!river) {
+      return lake
+    }
+
+    if (lake.isUnderWater !== river.isUnderWater) {
+      return lake.isUnderWater ? lake : river
+    }
+
+    return Math.abs(lake.distanceToShoreMeters) <= Math.abs(river.distanceToShoreMeters)
+      ? lake
+      : river
   }
 
   private _generateLakes(): LakeFeature[] {
@@ -118,6 +196,42 @@ export class WorldFeatureGenerator {
     return lakes
   }
 
+  private _generateRivers(): RiverFeature[] {
+    const bounds = this._options.worldBounds
+    const width = bounds.maxX - bounds.minX
+    const depth = bounds.maxZ - bounds.minZ
+    const riverCount = Math.max(1, Math.min(3, Math.floor((width * depth) / 32_000_000)))
+    const rivers: RiverFeature[] = []
+
+    for (let index = 0; index < riverCount; index += 1) {
+      const random = this._createRandom(this._hash(index, 0, 613))
+      const pointCount = 5
+      const points: Array<[number, number]> = []
+      const startX = this._lerp(bounds.minX + width * 0.15, bounds.maxX - width * 0.15, random())
+      const endX = this._lerp(bounds.minX + width * 0.15, bounds.maxX - width * 0.15, random())
+
+      for (let pointIndex = 0; pointIndex < pointCount; pointIndex += 1) {
+        const t = pointIndex / (pointCount - 1)
+        const bend = (random() - 0.5) * width * 0.22
+        const x = this._lerp(startX, endX, t) + bend
+        const z = this._lerp(bounds.maxZ + 120, bounds.minZ - 120, t)
+
+        points.push([Math.min(Math.max(x, bounds.minX - 120), bounds.maxX + 120), z])
+      }
+
+      rivers.push({
+        id: `river_${index}`,
+        points,
+        widthMeters: 10 + random() * 18,
+        depthMeters: 1.2 + random() * 2.8,
+        bankFalloffMeters: 8 + random() * 16,
+        waterLevelMeters: -6 + random() * 8,
+      })
+    }
+
+    return rivers
+  }
+
   private _lakeIntersectsBounds(lake: LakeFeature, bounds: WorldBounds): boolean {
     return (
       lake.centerX + lake.radiusX + lake.shoreFalloffMeters > bounds.minX &&
@@ -125,6 +239,71 @@ export class WorldFeatureGenerator {
       lake.centerZ + lake.radiusZ + lake.shoreFalloffMeters > bounds.minZ &&
       lake.centerZ - lake.radiusZ - lake.shoreFalloffMeters < bounds.maxZ
     )
+  }
+
+  private _riverIntersectsBounds(river: RiverFeature, bounds: WorldBounds): boolean {
+    const margin = river.widthMeters / 2 + river.bankFalloffMeters
+
+    for (let index = 1; index < river.points.length; index += 1) {
+      const [x0, z0] = river.points[index - 1]!
+      const [x1, z1] = river.points[index]!
+      const minX = Math.min(x0, x1) - margin
+      const maxX = Math.max(x0, x1) + margin
+      const minZ = Math.min(z0, z1) - margin
+      const maxZ = Math.max(z0, z1) + margin
+
+      if (
+        maxX > bounds.minX &&
+        minX < bounds.maxX &&
+        maxZ > bounds.minZ &&
+        minZ < bounds.maxZ
+      ) {
+        return true
+      }
+    }
+
+    return false
+  }
+
+  private _getDistanceToRiverCenterMeters(
+    river: RiverFeature,
+    worldX: number,
+    worldZ: number,
+  ): number {
+    let nearestDistance = Number.POSITIVE_INFINITY
+
+    for (let index = 1; index < river.points.length; index += 1) {
+      const [x0, z0] = river.points[index - 1]!
+      const [x1, z1] = river.points[index]!
+      const distance = this._getDistanceToSegmentMeters(worldX, worldZ, x0, z0, x1, z1)
+
+      nearestDistance = Math.min(nearestDistance, distance)
+    }
+
+    return nearestDistance
+  }
+
+  private _getDistanceToSegmentMeters(
+    worldX: number,
+    worldZ: number,
+    x0: number,
+    z0: number,
+    x1: number,
+    z1: number,
+  ): number {
+    const dx = x1 - x0
+    const dz = z1 - z0
+    const lengthSquared = dx * dx + dz * dz
+
+    if (lengthSquared === 0) {
+      return Math.hypot(worldX - x0, worldZ - z0)
+    }
+
+    const t = Math.min(Math.max(((worldX - x0) * dx + (worldZ - z0) * dz) / lengthSquared, 0), 1)
+    const closestX = x0 + dx * t
+    const closestZ = z0 + dz * t
+
+    return Math.hypot(worldX - closestX, worldZ - closestZ)
   }
 
   private _getLakeNormalizedDistance(lake: LakeFeature, worldX: number, worldZ: number): number {

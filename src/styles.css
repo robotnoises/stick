@@ -308,6 +308,13 @@ body {
   stroke-width: 1.5;
 }
 
+.debug-map-river {
+  fill: none;
+  stroke: rgb(88 165 196 / 82%);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .debug-map-origin {
   fill: #f0d36b;
   stroke: #141812;
