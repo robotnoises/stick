@@ -3,7 +3,7 @@ import type { GameSystem } from "../app/GameSystem"
 import type { ChunkRepository } from "../data/ChunkRepository"
 import type { PlayerController } from "../player/PlayerController"
 import { ChunkCoord } from "./ChunkCoord"
-import { ChunkManager } from "./ChunkManager"
+import { ChunkManager, type TerrainStreamingDebugStats } from "./ChunkManager"
 import { TerrainGenerator } from "./generation/TerrainGenerator"
 import type { WorldFeatureGenerator } from "./generation/WorldFeatureGenerator"
 
@@ -65,6 +65,10 @@ export class ProgressiveTerrainSystem implements GameSystem {
 
   public getHeightAt(worldX: number, worldZ: number): number {
     return this._chunkManager.getHeightAt(worldX, worldZ)
+  }
+
+  public getStreamingDebugStats(): TerrainStreamingDebugStats {
+    return this._chunkManager.getDebugStats()
   }
 
   public dispose(): void {

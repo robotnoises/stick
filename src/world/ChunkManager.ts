@@ -31,6 +31,14 @@ interface CachedChunkData {
   lastUsed: number
 }
 
+export interface TerrainStreamingDebugStats {
+  readonly activeChunkCount: number
+  readonly queuedChunkCount: number
+  readonly inFlightChunkCount: number
+  readonly cachedChunkDataCount: number
+  readonly maxChunkLoadsPerFrame: number | null
+}
+
 export class ChunkManager {
   private static readonly _persistedVersion = 1
 
@@ -57,6 +65,16 @@ export class ChunkManager {
 
   public get hasPendingWork(): boolean {
     return this._queuedCoords.size > 0 || this._inFlightLoads.size > 0
+  }
+
+  public getDebugStats(): TerrainStreamingDebugStats {
+    return {
+      activeChunkCount: this._activeChunks.size,
+      queuedChunkCount: this._queuedCoords.size,
+      inFlightChunkCount: this._inFlightLoads.size,
+      cachedChunkDataCount: this._dataCache.size,
+      maxChunkLoadsPerFrame: this._options.maxChunkLoadsPerFrame ?? null,
+    }
   }
 
   public async updateAround(center: ChunkCoord): Promise<void> {

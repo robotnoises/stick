@@ -269,6 +269,13 @@ describe("player, compass, debug overlay, and time", () => {
           },
         ],
       }),
+      getTerrainStreamingStats: () => ({
+        activeChunkCount: 3,
+        queuedChunkCount: 2,
+        inFlightChunkCount: 1,
+        cachedChunkDataCount: 4,
+        maxChunkLoadsPerFrame: 1,
+      }),
       getWorldSeed: () => 1337,
       resetTerrainCache,
       setWorldSeed,
@@ -278,6 +285,12 @@ describe("player, compass, debug overlay, and time", () => {
     expect(document.querySelector("#debug-overlay")?.textContent).toContain("elevation: 2.9m")
     expect(document.querySelector("#debug-overlay")?.textContent).toContain("heading: 123°")
     expect(document.querySelector("#debug-overlay")?.textContent).toContain("day: 1")
+    expect(document.querySelector("#debug-overlay")?.textContent).toContain(
+      "chunks: active 3, queued 2, loading 1",
+    )
+    expect(document.querySelector("#debug-overlay")?.textContent).toContain(
+      "chunk cache: 4, budget: 1/frame",
+    )
 
     document.querySelector<HTMLElement>("#debug-overlay")?.click()
     document.querySelector<HTMLElement>("#debug-overlay")?.click()
@@ -418,7 +431,25 @@ describe("player, compass, debug overlay, and time", () => {
     document
       .querySelector<HTMLFormElement>("#debug-overlay-editor")
       ?.dispatchEvent(new SubmitEvent("submit", { bubbles: true, cancelable: true }))
+    overlayWithoutActions.update(0.016)
+    expect(document.querySelector("#debug-overlay")?.textContent).not.toContain("chunks: active")
     overlayWithoutActions.dispose()
+
+    const unlimitedBudgetOverlay = new DebugOverlay(player as any, time, {
+      getTerrainStreamingStats: () => ({
+        activeChunkCount: 0,
+        queuedChunkCount: 0,
+        inFlightChunkCount: 0,
+        cachedChunkDataCount: 0,
+        maxChunkLoadsPerFrame: null,
+      }),
+    })
+
+    unlimitedBudgetOverlay.update(0.016)
+    expect(document.querySelector("#debug-overlay")?.textContent).toContain(
+      "budget: unlimited/frame",
+    )
+    unlimitedBudgetOverlay.dispose()
   })
 })
 
@@ -905,6 +936,8 @@ describe("chunk manager", () => {
       memoryRadiusChunks: 0,
     })
 
+    expect(manager.getDebugStats().maxChunkLoadsPerFrame).toBeNull()
+
     await manager.updateAround(new ChunkCoord(0, 0))
     await manager.updateAround(new ChunkCoord(0, 0))
     expect(repository.savedKeys).toContain("chunk_0_0")
@@ -941,9 +974,19 @@ describe("chunk manager", () => {
       maxChunkLoadsPerFrame: 1,
     })
 
+    expect(manager.getDebugStats()).toEqual({
+      activeChunkCount: 0,
+      queuedChunkCount: 0,
+      inFlightChunkCount: 0,
+      cachedChunkDataCount: 0,
+      maxChunkLoadsPerFrame: 1,
+    })
+
     await manager.updateStreaming(new ChunkCoord(0, 0))
     expect(repository.savedKeys).toHaveLength(1)
     expect(manager.hasPendingWork).toBe(true)
+    expect(manager.getDebugStats().activeChunkCount).toBe(1)
+    expect(manager.getDebugStats().queuedChunkCount).toBe(8)
 
     await manager.updateStreaming(new ChunkCoord(5, 5))
     expect(repository.savedKeys).toHaveLength(2)
@@ -1107,6 +1150,7 @@ describe("terrain systems", () => {
 
     await terrain.initialize()
     expect(terrain.getHeightAt(0, 0)).toBeTypeOf("number")
+    expect(terrain.getStreamingDebugStats().maxChunkLoadsPerFrame).toBe(1)
 
     ;(terrain as any)._isRefreshing = true
     await (terrain as any)._refreshChunks()
@@ -1278,8 +1322,10 @@ describe("game runtime", () => {
     expect(newWorldConfig?.worldId.startsWith("world_1000000000_")).toBe(true)
     expect(newWorldConfig?.worldSeed).toBe(1_000_000_000)
 
+    document.querySelectorAll<HTMLButtonElement>("#debug-overlay-editor button")[1]?.click()
     window.dispatchEvent(new Event("resize"))
     ;((game as any)._context.engine.renderLoop as () => void)()
+    expect(document.querySelector("#debug-overlay")?.textContent).toContain("chunks: active")
     game.dispose()
 
     expect((game as any)._context).toBeNull()

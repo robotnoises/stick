@@ -114,6 +114,7 @@
   - [x] Show lake basins and shore falloff on the revealed debug world map.
   - [x] Show river paths, water width, and bank falloff on the revealed debug world map.
   - [ ] Add terrain material / biome mask visualization.
+  - [x] Show terrain streaming stats in the debug overlay.
   - [ ] Add in-world debug overlays for nearby chunk boundaries and water masks.
 - [ ] Remove or fully retire `TestTerrainSystem` once progressive terrain is the only terrain path.
 

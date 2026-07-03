@@ -35,9 +35,18 @@ export interface DebugMapData {
   readonly rivers: readonly DebugMapRiverData[]
 }
 
+export interface DebugTerrainStreamingStats {
+  readonly activeChunkCount: number
+  readonly queuedChunkCount: number
+  readonly inFlightChunkCount: number
+  readonly cachedChunkDataCount: number
+  readonly maxChunkLoadsPerFrame: number | null
+}
+
 export interface DebugOverlayActions {
   createNewWorld?(): Promise<void> | void
   getDebugMapData?(): DebugMapData
+  getTerrainStreamingStats?(): DebugTerrainStreamingStats
   getWorldSeed?(): number
   resetTerrainCache?(): Promise<void> | void
   setWorldSeed?(seed: number): Promise<void> | void
@@ -85,7 +94,23 @@ export class DebugOverlay implements GameSystem {
       `heading: ${this._player.headingDegrees.toFixed(0)}°`,
       `day: ${this._time.day}`,
       `time: ${this._time.timeOfDayHours.toFixed(2)}h`,
+      ...this._getTerrainStreamingDebugLines(),
     ].join("\n")
+  }
+
+  private _getTerrainStreamingDebugLines(): string[] {
+    const stats = this._actions.getTerrainStreamingStats?.()
+
+    if (!stats) {
+      return []
+    }
+
+    const maxLoads = stats.maxChunkLoadsPerFrame ?? "unlimited"
+
+    return [
+      `chunks: active ${stats.activeChunkCount}, queued ${stats.queuedChunkCount}, loading ${stats.inFlightChunkCount}`,
+      `chunk cache: ${stats.cachedChunkDataCount}, budget: ${maxLoads}/frame`,
+    ]
   }
 
   private _renderEditor(): void {

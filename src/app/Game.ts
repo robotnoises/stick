@@ -88,6 +88,7 @@ export class Game {
           bankFalloffMeters: river.bankFalloffMeters,
         })),
       }),
+      getTerrainStreamingStats: () => terrain.getStreamingDebugStats(),
       getWorldSeed: () => this._config.worldSeed,
       resetTerrainCache: () => this._resetTerrainCache(chunkRepository),
       setWorldSeed: (seed) => this._setWorldSeed(seed, chunkRepository),

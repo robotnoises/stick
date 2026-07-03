@@ -220,8 +220,11 @@ Status: implemented.
 
 ### Phase 2: Debug Metrics
 
-- Expose streaming debug stats from `ChunkManager` or `ProgressiveTerrainSystem`.
-- Show active / queued / in-flight counts in `DebugOverlay`.
+Status: implemented.
+
+- [x] Expose streaming debug stats from `ChunkManager` and `ProgressiveTerrainSystem`.
+- [x] Show active / queued / in-flight counts in `DebugOverlay`.
+- [x] Show raw chunk cache size and current chunk load budget in `DebugOverlay`.
 
 ### Phase 3: Time Budget
 
