@@ -14,6 +14,15 @@ export interface TerrainGeneratorOptions {
   readonly worldFeatures?: WorldFeatureGenerator
 }
 
+interface ForestComposition {
+  readonly density: number
+  readonly pineWeightMultiplier: number
+  readonly deadPineWeightMultiplier: number
+  readonly logWeightMultiplier: number
+  readonly rockWeightMultiplier: number
+  readonly scaleMultiplier: number
+}
+
 export class TerrainGenerator {
   public static readonly version = 2
 
@@ -135,7 +144,7 @@ export class TerrainGenerator {
 
   private _generateProps(coord: ChunkCoord): GeneratedPropData[] {
     const random = this._createRandom(this._hash(coord.x, coord.z, 97))
-    const candidateCount = 12
+    const candidateCount = 16
     const props: GeneratedPropData[] = []
 
     for (let index = 0; index < candidateCount; index += 1) {
@@ -151,7 +160,13 @@ export class TerrainGenerator {
       }
 
       const material = this.getTerrainMaterial(worldX, worldZ, height)
-      const propType = this._choosePropType(material, random())
+      const composition = this._getForestComposition(worldX, worldZ, material)
+
+      if (random() > composition.density) {
+        continue
+      }
+
+      const propType = this._choosePropType(material, random(), composition)
 
       if (!propType) {
         continue
@@ -162,7 +177,7 @@ export class TerrainGenerator {
         type: propType,
         position: [worldX, height, worldZ],
         rotationY: random() * Math.PI * 2,
-        scale: this._getPropScale(propType, random()),
+        scale: this._getPropScale(propType, random(), composition),
       })
     }
 
@@ -205,7 +220,94 @@ export class TerrainGenerator {
     return Math.min(baseHeight, shoreHeight)
   }
 
+  private _getForestComposition(
+    worldX: number,
+    worldZ: number,
+    material: TerrainMaterialId,
+  ): ForestComposition {
+    const forestPatch = this._normalizedValueNoise(worldX * 0.0032, worldZ * 0.0032, 101)
+    const clearingPatch = this._normalizedValueNoise(worldX * 0.0065, worldZ * 0.0065, 103)
+    const deadfallPatch = this._normalizedValueNoise(worldX * 0.0044, worldZ * 0.0044, 107)
+    const agePatch = this._normalizedValueNoise(worldX * 0.0027, worldZ * 0.0027, 109)
+    const clearingAmount =
+      clearingPatch > 0.72
+        ? this._smooth(Math.min(Math.max((clearingPatch - 0.72) / 0.28, 0), 1))
+        : 0
+    const deadfallAmount = this._smooth(Math.min(Math.max((deadfallPatch - 0.55) / 0.45, 0), 1))
+    const youngStandAmount = forestPatch > 0.68 && agePatch < 0.38 ? 1 : 0
+    const baseDensity = this._getBasePropDensity(material)
+    const forestFactor = this._lerp(0.42, 1.35, forestPatch)
+    const clearingFactor = this._lerp(1, 0.16, clearingAmount)
+    const youngStandFactor = youngStandAmount > 0 ? 1.16 : 1
+    const density = Math.min(
+      Math.max(baseDensity * forestFactor * clearingFactor * youngStandFactor, 0.02),
+      0.96,
+    )
+    const ageScale = this._lerp(0.82, 1.18, agePatch)
+
+    return {
+      density,
+      pineWeightMultiplier:
+        clearingFactor * (youngStandAmount > 0 ? 1.22 : this._lerp(0.88, 1.08, agePatch)),
+      deadPineWeightMultiplier: this._lerp(0.62, 2.25, deadfallAmount),
+      logWeightMultiplier: this._lerp(0.55, 2.8, deadfallAmount),
+      rockWeightMultiplier: this._lerp(1.08, 0.82, forestPatch),
+      scaleMultiplier: youngStandAmount > 0 ? 0.78 : ageScale,
+    }
+  }
+
+  private _getBasePropDensity(material: TerrainMaterialId): number {
+    switch (material) {
+      case TerrainMaterial.Sand:
+        return 0.08
+      case TerrainMaterial.Dirt:
+        return 0.28
+      case TerrainMaterial.PineNeedles:
+        return 0.82
+      case TerrainMaterial.Grass:
+      default:
+        return 0.48
+    }
+  }
+
   private _choosePropType(
+    material: TerrainMaterialId,
+    roll: number,
+    composition: ForestComposition | null = null,
+  ): GeneratedPropData["type"] | null {
+    if (!composition) {
+      return this._chooseLegacyPropType(material, roll)
+    }
+
+    const weights = this._getComposedPropWeights(material, composition)
+    const totalWeight = weights.pine + weights.deadPine + weights.log + weights.rock
+
+    if (totalWeight <= 0) {
+      return null
+    }
+
+    let cursor = roll * totalWeight
+
+    if (cursor < weights.pine) {
+      return "pine"
+    }
+
+    cursor -= weights.pine
+
+    if (cursor < weights.deadPine) {
+      return "deadPine"
+    }
+
+    cursor -= weights.deadPine
+
+    if (cursor < weights.log) {
+      return "log"
+    }
+
+    return "rock"
+  }
+
+  private _chooseLegacyPropType(
     material: TerrainMaterialId,
     roll: number,
   ): GeneratedPropData["type"] | null {
@@ -242,16 +344,68 @@ export class TerrainGenerator {
     }
   }
 
-  private _getPropScale(type: GeneratedPropData["type"], roll: number): number {
+  private _getComposedPropWeights(
+    material: TerrainMaterialId,
+    composition: ForestComposition,
+  ): {
+    readonly pine: number
+    readonly deadPine: number
+    readonly log: number
+    readonly rock: number
+  } {
+    let pine = 0
+    let deadPine = 0
+    let log = 0
+    let rock = 0
+
+    switch (material) {
+      case TerrainMaterial.Sand:
+        rock = 1
+        break
+      case TerrainMaterial.Dirt:
+        pine = 0.35
+        deadPine = 0.04
+        log = 0.06
+        rock = 0.55
+        break
+      case TerrainMaterial.PineNeedles:
+        pine = 0.6
+        deadPine = 0.12
+        log = 0.28
+        break
+      case TerrainMaterial.Grass:
+      default:
+        pine = 0.6
+        deadPine = 0.08
+        log = 0.02
+        rock = 0.3
+        break
+    }
+
+    return {
+      pine: pine * composition.pineWeightMultiplier,
+      deadPine: deadPine * composition.deadPineWeightMultiplier,
+      log: log * composition.logWeightMultiplier,
+      rock: rock * composition.rockWeightMultiplier,
+    }
+  }
+
+  private _getPropScale(
+    type: GeneratedPropData["type"],
+    roll: number,
+    composition: ForestComposition | null = null,
+  ): number {
+    const scaleMultiplier = composition?.scaleMultiplier ?? 1
+
     switch (type) {
       case "rock":
         return 0.45 + roll * 1.1
       case "log":
-        return 0.7 + roll * 0.8
+        return (0.7 + roll * 0.8) * scaleMultiplier
       case "deadPine":
-        return 0.7 + roll * 0.65
+        return (0.7 + roll * 0.65) * scaleMultiplier
       case "pine":
-        return 0.75 + roll * 0.75
+        return (0.75 + roll * 0.75) * scaleMultiplier
     }
   }
 
@@ -259,6 +413,10 @@ export class TerrainGenerator {
     const step = this._options.chunkSizeMeters / this._options.resolution
 
     return chunkAxis * this._options.chunkSizeMeters + vertexAxis * step
+  }
+
+  private _normalizedValueNoise(x: number, z: number, salt: number): number {
+    return (this._valueNoise(x, z, salt) + 1) / 2
   }
 
   private _valueNoise(x: number, z: number, salt: number): number {

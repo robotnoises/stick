@@ -86,7 +86,11 @@
   - [x] Add deterministic pine branch generation.
   - [x] Add secondary branch nodes/twigs.
   - [x] Add textured pine needle/foliage cards.
+  - [x] Add pine profile variants.
+  - [x] Polish dead pine branch generation.
+  - [x] Add fallen log branch stubs.
   - [ ] Tune performance and silhouette readability.
+- [x] Add deterministic forest composition patches for dense stands, sparse clearings, deadfall zones, and mixed tree ages.
 - [ ] Add more tree types.
 - [ ] Add animals.
 - [ ] Add more flora; this should be a major investment area.

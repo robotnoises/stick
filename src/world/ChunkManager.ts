@@ -721,6 +721,7 @@ export class ChunkManager {
     pineFoliage.backFaceCulling = false
     pineFoliage.twoSidedLighting = true
     pineFoliage.useAlphaFromDiffuseTexture = true
+    pineFoliage.alphaCutOff = 0.36
     pineFoliage.transparencyMode = Material.MATERIAL_ALPHATEST
 
     const waterTexture = new Texture(waterColorUrl, this._context.scene)

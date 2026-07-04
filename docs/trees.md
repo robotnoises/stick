@@ -233,7 +233,7 @@ Performance notes:
 - [x] Add a `pineFoliage` or `foliage` material to `TerrainChunkMaterials`.
 - [x] Wire the material in `src/world/ChunkManager.ts`.
 - [x] Apply the texture to foliage cards.
-- [ ] Tune alpha mode, color tint, card scale, and card orientation.
+- [x] Tune alpha mode, color tint, card scale, and card orientation.
 
 ### Phase 5 — Performance Pass
 
@@ -244,10 +244,24 @@ Performance notes:
 
 ### Phase 6 — Dead Pine Reuse
 
-- [ ] Reuse branch generation helpers for `deadPine`.
-- [ ] Generate fewer, broken-looking bare branches.
-- [ ] Remove foliage card generation for dead pines.
-- [ ] Add small variation in missing/broken branch whorls.
+- [x] Reuse branch generation helpers for `deadPine`.
+- [x] Generate fewer, broken-looking bare branches.
+- [x] Remove foliage card generation for dead pines.
+- [x] Add small variation in missing/broken branch whorls.
+
+### Phase 6.5 — Fallen Log Polish
+
+- [x] Add deterministic length/diameter variation to logs.
+- [x] Add small broken branch stubs to logs.
+- [ ] Add exposed cut/sawn end texture or separate end-cap material later.
+
+### Phase 6.75 — Forest Composition
+
+- [x] Add deterministic forest density patches.
+- [x] Add sparse clearing patches.
+- [x] Add deadfall zones that bias toward logs and dead pines.
+- [x] Add stand-age patches that influence pine scale.
+- [ ] Add ground litter cards using `assets/exported/textures/props/pine-needle-litter.png`.
 
 ### Phase 7 — Future Tree Variety
 

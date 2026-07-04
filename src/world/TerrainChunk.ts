@@ -593,15 +593,17 @@ export class TerrainChunk {
     const positions: number[] = []
     const indices: number[] = []
     const normals: number[] = []
+    const uvs: number[] = []
 
     for (const segment of segments) {
-      this._appendBranchSegment(positions, indices, segment)
+      this._appendBranchSegment(positions, indices, uvs, segment)
     }
 
     VertexData.ComputeNormals(positions, indices, normals)
     vertexData.positions = positions
     vertexData.indices = indices
     vertexData.normals = normals
+    vertexData.uvs = uvs
     vertexData.applyToMesh(mesh)
 
     mesh.material = material
@@ -612,6 +614,7 @@ export class TerrainChunk {
   private _appendBranchSegment(
     positions: number[],
     indices: number[],
+    uvs: number[],
     segment: PineBranchSegment,
   ): void {
     const sides = 5
@@ -627,8 +630,12 @@ export class TerrainChunk {
       const start = segment.start.add(ringDirection.scale(segment.radiusStart))
       const end = segment.end.add(ringDirection.scale(segment.radiusEnd))
 
+      const u = side / sides
+
       positions.push(start.x, start.y, start.z)
       positions.push(end.x, end.y, end.z)
+      uvs.push(u, 0)
+      uvs.push(u, 1)
     }
 
     for (let side = 0; side < sides; side += 1) {
@@ -809,43 +816,92 @@ export class TerrainChunk {
 
   private _createDeadPineProp(prop: GeneratedPropData): void {
     const position = new Vector3(prop.position[0], prop.position[1], prop.position[2])
-    const trunkHeight = 10.4 * prop.scale
+    const random = this._createRandom(this._hashString(`${prop.id}_dead`))
+    const trunkHeight = (8.8 + random() * 3.4) * prop.scale
     const trunk = MeshBuilder.CreateCylinder(
       `${prop.id}_trunk`,
       {
         height: trunkHeight,
-        diameterTop: 0.25 * prop.scale,
-        diameterBottom: 0.7 * prop.scale,
+        diameterTop: (0.09 + random() * 0.12) * prop.scale,
+        diameterBottom: 0.68 * prop.scale,
         tessellation: 6,
       },
       this._context.scene,
     )
+    const branchSegments: PineBranchSegment[] = []
+    const whorlCount = 5 + Math.floor(random() * 4)
 
     trunk.position = position.add(new Vector3(0, trunkHeight / 2, 0))
     trunk.rotation.y = prop.rotationY
     trunk.material = this._materials.deadWood
     this._props.push(trunk)
 
-    for (let branchIndex = 0; branchIndex < 3; branchIndex += 1) {
-      const branchHeight = trunkHeight * (0.38 + branchIndex * 0.17)
-      const branchLength = (2.1 - branchIndex * 0.32) * prop.scale
-      const branch = MeshBuilder.CreateCylinder(
-        `${prop.id}_branch_${branchIndex}`,
-        {
-          height: branchLength,
-          diameterTop: 0.06 * prop.scale,
-          diameterBottom: 0.12 * prop.scale,
-          tessellation: 5,
-        },
-        this._context.scene,
+    for (let whorlIndex = 0; whorlIndex < whorlCount; whorlIndex += 1) {
+      const heightT = 0.2 + (whorlIndex / Math.max(whorlCount - 1, 1)) * 0.68
+      const branchCount = 1 + Math.floor(random() * 3)
+      const whorlRotation = prop.rotationY + whorlIndex * 1.76 + random() * 0.5
+
+      for (let branchIndex = 0; branchIndex < branchCount; branchIndex += 1) {
+        if (random() < 0.34) {
+          continue
+        }
+
+        const angle =
+          whorlRotation + branchIndex * ((Math.PI * 2) / branchCount) + (random() - 0.5) * 0.55
+        const length = (0.85 + random() * 1.65) * prop.scale * (1 - heightT * 0.35)
+        const droop = (0.08 + random() * 0.34) * prop.scale
+        const start = position.add(new Vector3(0, trunkHeight * heightT, 0))
+        const mid = position.add(
+          new Vector3(
+            Math.sin(angle) * length * 0.52,
+            trunkHeight * heightT - droop * 0.35,
+            Math.cos(angle) * length * 0.52,
+          ),
+        )
+        const end = position.add(
+          new Vector3(
+            Math.sin(angle) * length,
+            trunkHeight * heightT - droop,
+            Math.cos(angle) * length,
+          ),
+        )
+        const radius = (0.035 + length * 0.018) * prop.scale
+
+        branchSegments.push({
+          start,
+          end: mid,
+          radiusStart: radius,
+          radiusEnd: radius * 0.62,
+        })
+        branchSegments.push({
+          start: mid,
+          end,
+          radiusStart: radius * 0.62,
+          radiusEnd: Math.max(0.012 * prop.scale, radius * 0.24),
+        })
+      }
+    }
+
+    if (random() > 0.45) {
+      const snagBase = position.add(new Vector3(0, trunkHeight - 0.5 * prop.scale, 0))
+      const snagAngle = prop.rotationY + random() * Math.PI * 2
+      const snagTip = snagBase.add(
+        new Vector3(
+          Math.sin(snagAngle) * 0.22 * prop.scale,
+          0.72 * prop.scale,
+          Math.cos(snagAngle) * 0.22 * prop.scale,
+        ),
       )
 
-      branch.position = position.add(new Vector3(0, branchHeight, 0))
-      branch.rotation.y = prop.rotationY + branchIndex * ((Math.PI * 2) / 3)
-      branch.rotation.z = Math.PI / 2.8
-      branch.material = this._materials.deadWood
-      this._props.push(branch)
+      branchSegments.push({
+        start: snagBase,
+        end: snagTip,
+        radiusStart: 0.07 * prop.scale,
+        radiusEnd: 0.01 * prop.scale,
+      })
     }
+
+    this._createPineBranchMesh(`${prop.id}_dead_branches`, branchSegments, this._materials.deadWood)
   }
 
   private _createRockProp(prop: GeneratedPropData): void {
@@ -870,28 +926,59 @@ export class TerrainChunk {
   }
 
   private _createLogProp(prop: GeneratedPropData): void {
-    const logLength = 3.2 * prop.scale
-    const logDiameter = 0.45 * prop.scale
+    const random = this._createRandom(this._hashString(`${prop.id}_log`))
+    const logLength = (3.0 + random() * 0.9) * prop.scale
+    const logDiameter = (0.38 + random() * 0.16) * prop.scale
     const log = MeshBuilder.CreateCylinder(
       prop.id,
       {
         height: logLength,
-        diameterTop: logDiameter,
+        diameterTop: logDiameter * (0.86 + random() * 0.12),
         diameterBottom: logDiameter,
         tessellation: 8,
       },
       this._context.scene,
     )
-
-    log.position = new Vector3(
+    const center = new Vector3(
       prop.position[0],
       prop.position[1] + logDiameter / 2,
       prop.position[2],
     )
+    const branchSegments: PineBranchSegment[] = []
+
+    log.position = center
     log.rotation.y = prop.rotationY
     log.rotation.z = Math.PI / 2
     log.material = this._materials.deadWood
 
     this._props.push(log)
+
+    const axis = new Vector3(Math.cos(prop.rotationY), 0, -Math.sin(prop.rotationY))
+    const side = new Vector3(Math.sin(prop.rotationY), 0, Math.cos(prop.rotationY))
+    const stubCount = 2 + Math.floor(random() * 3)
+
+    for (let stubIndex = 0; stubIndex < stubCount; stubIndex += 1) {
+      const along = (random() - 0.5) * logLength * 0.76
+      const sideSign = random() > 0.5 ? -1 : 1
+      const stubLength = (0.28 + random() * 0.42) * prop.scale
+      const start = center
+        .add(axis.scale(along))
+        .add(side.scale(sideSign * logDiameter * 0.34))
+        .add(new Vector3(0, logDiameter * (0.08 + random() * 0.22), 0))
+      const end = start
+        .add(side.scale(sideSign * stubLength))
+        .add(axis.scale((random() - 0.5) * stubLength * 0.32))
+        .add(new Vector3(0, (random() - 0.35) * stubLength * 0.35, 0))
+      const radius = (0.035 + random() * 0.025) * prop.scale
+
+      branchSegments.push({
+        start,
+        end,
+        radiusStart: radius,
+        radiusEnd: radius * 0.28,
+      })
+    }
+
+    this._createPineBranchMesh(`${prop.id}_stubs`, branchSegments, this._materials.deadWood)
   }
 }
