@@ -42,6 +42,7 @@ interface CachedChunkData {
 
 interface RiverWaterStation {
   readonly x: number
+  readonly y: number
   readonly z: number
   readonly distanceMeters: number
 }
@@ -201,6 +202,7 @@ export class ChunkManager {
     this._waterFlowObserver?.remove()
     this._waterFlowObserver = null
     this._materials.water.diffuseTexture?.dispose()
+    this._materials.water.emissiveTexture?.dispose()
     this._materials.water.dispose()
     this._chunkDataGenerator.dispose?.()
   }
@@ -556,7 +558,6 @@ export class ChunkManager {
     const normals: number[] = []
     const uvs: number[] = []
     const halfWidthMeters = river.widthMeters / 2 + 1.25
-    const waterY = river.waterLevelMeters + 0.08
     const uvLengthScaleMeters = 48
 
     for (let stationIndex = 0; stationIndex < stations.length; stationIndex += 1) {
@@ -575,7 +576,7 @@ export class ChunkManager {
       const vertexStart = stationIndex * 2
       const riverV = station.distanceMeters / uvLengthScaleMeters
 
-      positions.push(leftX, waterY, leftZ, rightX, waterY, rightZ)
+      positions.push(leftX, station.y, leftZ, rightX, station.y, rightZ)
       normals.push(0, 1, 0, 0, 1, 0)
       uvs.push(0, riverV, 1, riverV)
 
@@ -627,9 +628,13 @@ export class ChunkManager {
 
         const t = subdivision / subdivisions
 
+        const x = this._lerp(startX, endX, t)
+        const z = this._lerp(startZ, endZ, t)
+
         stations.push({
-          x: this._lerp(startX, endX, t),
-          z: this._lerp(startZ, endZ, t),
+          x,
+          y: this._getRiverWaterHeight(river, x, z),
+          z,
           distanceMeters: riverDistanceMeters + segmentLength * t,
         })
       }
@@ -638,6 +643,14 @@ export class ChunkManager {
     }
 
     return stations
+  }
+
+  private _getRiverWaterHeight(river: RiverFeature, worldX: number, worldZ: number): number {
+    const nominalWaterY = river.waterLevelMeters + 0.08
+    const terrainY = this._generator.getHeight(worldX, worldZ)
+    const visibleDepthMeters = Math.min(Math.max(river.depthMeters * 0.55, 0.55), 1.15)
+
+    return Math.min(nominalWaterY, terrainY + visibleDepthMeters)
   }
 
   private _disposeRiverWaterMeshes(): void {
@@ -700,11 +713,11 @@ export class ChunkManager {
 
     waterTexture.uScale = 1.2
     waterTexture.vScale = 1.2
-    waterTexture.level = 0.22
+    waterTexture.level = 0.24
 
-    water.diffuseTexture = waterTexture
-    water.diffuseColor = new Color3(0.22, 0.64, 0.9)
-    water.emissiveColor = new Color3(0.04, 0.13, 0.18)
+    water.emissiveTexture = waterTexture
+    water.diffuseColor = new Color3(0.12, 0.42, 0.58)
+    water.emissiveColor = new Color3(0.035, 0.1, 0.14)
     water.specularColor = new Color3(1.35, 1.3, 1.12)
     water.specularPower = 48
     water.roughness = 0.08
