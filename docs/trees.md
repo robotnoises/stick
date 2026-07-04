@@ -251,8 +251,9 @@ Performance notes:
 
 ### Phase 7 — Future Tree Variety
 
-- [ ] Add small/medium/large pine profiles.
-- [ ] Add young pine/sapling variant.
+- [x] Add small/medium/large pine profiles.
+- [x] Add young pine/sapling-like profile.
+- [x] Add sparse/stressed pine profile.
 - [ ] Add burned or snapped dead tree variants.
 - [ ] Add additional Idaho forest species after pine is solid.
 

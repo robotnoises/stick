@@ -715,7 +715,8 @@ export class ChunkManager {
 
     pineFoliageTexture.hasAlpha = true
     pineFoliage.diffuseTexture = pineFoliageTexture
-    pineFoliage.diffuseColor = new Color3(0.68, 0.9, 0.58)
+    pineFoliage.diffuseColor = new Color3(0.82, 1, 0.7)
+    pineFoliage.emissiveColor = new Color3(0.018, 0.045, 0.018)
     pineFoliage.specularColor = Color3.Black()
     pineFoliage.backFaceCulling = false
     pineFoliage.twoSidedLighting = true

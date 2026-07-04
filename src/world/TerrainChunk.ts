@@ -36,6 +36,24 @@ interface PineFoliageCard {
   readonly variant: number
 }
 
+interface PineProfile {
+  readonly heightMeters: number
+  readonly crownBaseFactor: number
+  readonly maxBranchLength: number
+  readonly whorlCount: number
+  readonly lowerBranchCount: number
+  readonly middleBranchCount: number
+  readonly upperBranchCount: number
+  readonly lowerBranchAngle: number
+  readonly upperBranchAngle: number
+  readonly branchSag: number
+  readonly missingBranchChance: number
+  readonly twigChance: number
+  readonly foliageScale: number
+  readonly topBranchCount: number
+  readonly topLeaderHeight: number
+}
+
 export class TerrainChunk {
   private readonly _terrainMesh: Mesh
   private readonly _props: Mesh[] = []
@@ -270,11 +288,12 @@ export class TerrainChunk {
   private _createPineProp(prop: GeneratedPropData): void {
     const position = new Vector3(prop.position[0], prop.position[1], prop.position[2])
     const random = this._createRandom(this._hashString(prop.id))
-    const trunkHeight = (9.5 + random() * 2.8) * prop.scale
-    const crownBaseHeight = trunkHeight * (0.28 + random() * 0.08)
+    const profile = this._createPineProfile(prop.scale, random)
+    const trunkHeight = profile.heightMeters
+    const crownBaseHeight = trunkHeight * profile.crownBaseFactor
     const crownHeight = trunkHeight - crownBaseHeight
-    const maxBranchLength = (2.05 + random() * 0.65) * prop.scale
-    const whorlCount = Math.max(9, Math.round(9 + prop.scale * 4.5))
+    const maxBranchLength = profile.maxBranchLength
+    const whorlCount = profile.whorlCount
     const branchSegments: PineBranchSegment[] = []
     const foliageCards: PineFoliageCard[] = []
     const trunk = MeshBuilder.CreateCylinder(
@@ -296,19 +315,22 @@ export class TerrainChunk {
     for (let whorlIndex = 0; whorlIndex < whorlCount; whorlIndex += 1) {
       const crownT = (whorlIndex + 0.15) / whorlCount
       const branchHeight = crownBaseHeight + crownHeight * crownT
-      const branchesInWhorl = crownT > 0.82 ? 4 : crownT > 0.16 ? 5 : 4
+      const branchesInWhorl = this._getPineBranchesInWhorl(profile, crownT)
       const whorlRotation = prop.rotationY + whorlIndex * 1.48 + (random() - 0.5) * 0.28
 
       for (let branchIndex = 0; branchIndex < branchesInWhorl; branchIndex += 1) {
         const angle =
           whorlRotation + branchIndex * ((Math.PI * 2) / branchesInWhorl) + (random() - 0.5) * 0.28
         const branchLength = this._getPineBranchLength(maxBranchLength, crownT, random())
+        const missingBranchChance = profile.missingBranchChance * this._lerp(0.65, 1.25, crownT)
 
-        if (branchLength < 0.3 * prop.scale) {
+        if (random() < missingBranchChance || branchLength < 0.3 * prop.scale) {
           continue
         }
 
-        const verticalAngle = this._lerp(-0.2, 0.34, crownT) + (random() - 0.5) * 0.12
+        const verticalAngle =
+          this._lerp(profile.lowerBranchAngle, profile.upperBranchAngle, crownT) +
+          (random() - 0.5) * 0.12
         const start = position.add(new Vector3(0, branchHeight, 0))
         const horizontalLength = Math.cos(verticalAngle) * branchLength
         const end = position.add(
@@ -319,31 +341,41 @@ export class TerrainChunk {
           ),
         )
         const branchRadius = this._getPineBranchRadius(branchLength, prop.scale, crownT)
+        const branchTipRadius = Math.max(0.012 * prop.scale, branchRadius * 0.28)
+        const branchSag = profile.branchSag * (0.35 + (1 - crownT) * 0.85)
+        const branchMid = this._lerpVector(start, end, 0.48).add(new Vector3(0, -branchSag, 0))
 
         branchSegments.push({
           start,
-          end,
+          end: branchMid,
           radiusStart: branchRadius,
-          radiusEnd: Math.max(0.012 * prop.scale, branchRadius * 0.28),
+          radiusEnd: branchRadius * 0.62,
+        })
+        branchSegments.push({
+          start: branchMid,
+          end,
+          radiusStart: branchRadius * 0.62,
+          radiusEnd: branchTipRadius,
         })
         foliageCards.push({
           center: this._lerpVector(start, end, 0.66 + random() * 0.12),
           angle: angle + (random() - 0.5) * 0.16,
           verticalAngle,
-          width: (0.48 + random() * 0.16) * prop.scale * (1 - crownT * 0.18),
-          length: (1.35 + random() * 0.4) * prop.scale * (1 - crownT * 0.24),
+          width: (0.48 + random() * 0.16) * prop.scale * profile.foliageScale * (1 - crownT * 0.18),
+          length: (1.35 + random() * 0.4) * prop.scale * profile.foliageScale * (1 - crownT * 0.24),
           variant: Math.floor(random() * 3),
         })
         foliageCards.push({
           center: this._lerpVector(start, end, 0.86 + random() * 0.1),
           angle: angle + (random() - 0.5) * 0.24,
           verticalAngle: verticalAngle + 0.05,
-          width: (0.42 + random() * 0.12) * prop.scale * (1 - crownT * 0.18),
-          length: (1.05 + random() * 0.28) * prop.scale * (1 - crownT * 0.28),
+          width: (0.42 + random() * 0.12) * prop.scale * profile.foliageScale * (1 - crownT * 0.18),
+          length:
+            (1.05 + random() * 0.28) * prop.scale * profile.foliageScale * (1 - crownT * 0.28),
           variant: Math.floor(random() * 3),
         })
 
-        if (random() > 0.38 && crownT < 0.86) {
+        if (random() < profile.twigChance && crownT < 0.88) {
           const side = random() > 0.5 ? -1 : 1
           const twigAngle = angle + side * (0.48 + random() * 0.32)
           const twigLength = branchLength * (0.16 + random() * 0.08)
@@ -366,8 +398,10 @@ export class TerrainChunk {
             center: twigEnd,
             angle: twigAngle,
             verticalAngle: verticalAngle + 0.08,
-            width: (0.36 + random() * 0.12) * prop.scale * (1 - crownT * 0.18),
-            length: (0.86 + random() * 0.24) * prop.scale * (1 - crownT * 0.28),
+            width:
+              (0.36 + random() * 0.12) * prop.scale * profile.foliageScale * (1 - crownT * 0.18),
+            length:
+              (0.86 + random() * 0.24) * prop.scale * profile.foliageScale * (1 - crownT * 0.28),
             variant: Math.floor(random() * 3),
           })
         }
@@ -380,11 +414,106 @@ export class TerrainChunk {
       prop.rotationY,
       prop.scale,
       random,
+      profile,
       branchSegments,
       foliageCards,
     )
     this._createPineBranchMesh(`${prop.id}_branches`, branchSegments, this._materials.trunk)
     this._createPineFoliageMesh(`${prop.id}_foliage`, foliageCards)
+  }
+
+  private _createPineProfile(scale: number, random: () => number): PineProfile {
+    const roll = random()
+
+    if (roll < 0.18) {
+      return {
+        heightMeters: (8.2 + random() * 2.2) * scale,
+        crownBaseFactor: 0.16 + random() * 0.06,
+        maxBranchLength: (1.85 + random() * 0.55) * scale,
+        whorlCount: Math.max(9, Math.round(10 + scale * 4.8)),
+        lowerBranchCount: 5,
+        middleBranchCount: 5,
+        upperBranchCount: 4,
+        lowerBranchAngle: -0.12,
+        upperBranchAngle: 0.5,
+        branchSag: 0.09 * scale,
+        missingBranchChance: 0.03,
+        twigChance: 0.78,
+        foliageScale: 1.12,
+        topBranchCount: 7,
+        topLeaderHeight: 0.82 * scale,
+      }
+    }
+
+    if (roll < 0.72) {
+      return {
+        heightMeters: (9.8 + random() * 2.7) * scale,
+        crownBaseFactor: 0.24 + random() * 0.08,
+        maxBranchLength: (2.2 + random() * 0.7) * scale,
+        whorlCount: Math.max(9, Math.round(9 + scale * 4.5)),
+        lowerBranchCount: 4,
+        middleBranchCount: 5,
+        upperBranchCount: 4,
+        lowerBranchAngle: -0.28,
+        upperBranchAngle: 0.42,
+        branchSag: 0.16 * scale,
+        missingBranchChance: 0.06,
+        twigChance: 0.66,
+        foliageScale: 1,
+        topBranchCount: 6,
+        topLeaderHeight: 0.68 * scale,
+      }
+    }
+
+    if (roll < 0.9) {
+      return {
+        heightMeters: (11.6 + random() * 3.2) * scale,
+        crownBaseFactor: 0.36 + random() * 0.12,
+        maxBranchLength: (2.35 + random() * 0.85) * scale,
+        whorlCount: Math.max(8, Math.round(8 + scale * 3.8)),
+        lowerBranchCount: 3,
+        middleBranchCount: 4,
+        upperBranchCount: 4,
+        lowerBranchAngle: -0.36,
+        upperBranchAngle: 0.36,
+        branchSag: 0.22 * scale,
+        missingBranchChance: 0.1,
+        twigChance: 0.54,
+        foliageScale: 0.96,
+        topBranchCount: 5,
+        topLeaderHeight: 0.78 * scale,
+      }
+    }
+
+    return {
+      heightMeters: (10.4 + random() * 2.8) * scale,
+      crownBaseFactor: 0.3 + random() * 0.13,
+      maxBranchLength: (1.9 + random() * 0.6) * scale,
+      whorlCount: Math.max(7, Math.round(7 + scale * 3.4)),
+      lowerBranchCount: 3,
+      middleBranchCount: 4,
+      upperBranchCount: 3,
+      lowerBranchAngle: -0.32,
+      upperBranchAngle: 0.32,
+      branchSag: 0.19 * scale,
+      missingBranchChance: 0.2,
+      twigChance: 0.42,
+      foliageScale: 0.78,
+      topBranchCount: 4,
+      topLeaderHeight: 0.58 * scale,
+    }
+  }
+
+  private _getPineBranchesInWhorl(profile: PineProfile, crownT: number): number {
+    if (crownT < 0.16) {
+      return profile.lowerBranchCount
+    }
+
+    if (crownT > 0.82) {
+      return profile.upperBranchCount
+    }
+
+    return profile.middleBranchCount
   }
 
   private _addPineTopLeader(
@@ -393,11 +522,12 @@ export class TerrainChunk {
     rotationY: number,
     scale: number,
     random: () => number,
+    profile: PineProfile,
     branchSegments: PineBranchSegment[],
     foliageCards: PineFoliageCard[],
   ): void {
     const leaderBase = position.add(new Vector3(0, trunkHeight - 0.7 * scale, 0))
-    const leaderTip = position.add(new Vector3(0, trunkHeight + 0.65 * scale, 0))
+    const leaderTip = position.add(new Vector3(0, trunkHeight + profile.topLeaderHeight, 0))
 
     branchSegments.push({
       start: leaderBase,
@@ -406,8 +536,8 @@ export class TerrainChunk {
       radiusEnd: 0.006 * scale,
     })
 
-    for (let index = 0; index < 6; index += 1) {
-      const topT = index / 5
+    for (let index = 0; index < profile.topBranchCount; index += 1) {
+      const topT = index / Math.max(profile.topBranchCount - 1, 1)
       const angle = rotationY + index * 2.399 + (random() - 0.5) * 0.32
       const height = trunkHeight - 0.55 * scale + topT * 0.82 * scale
       const reach = (0.58 - topT * 0.28) * scale
@@ -608,7 +738,7 @@ export class TerrainChunk {
 
     indices.push(vertexStart, vertexStart + 1, vertexStart + 2)
     indices.push(vertexStart, vertexStart + 2, vertexStart + 3)
-    uvs.push(rect.u0, rect.v1, rect.u1, rect.v1, rect.u1, rect.v0, rect.u0, rect.v0)
+    uvs.push(rect.u1, rect.v1, rect.u0, rect.v1, rect.u0, rect.v0, rect.u1, rect.v0)
   }
 
   private _getPineFoliageUvRect(variant: number): {
