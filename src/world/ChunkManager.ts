@@ -14,6 +14,7 @@ import grass004ColorUrl from "../../assets/exported/textures/terrain/grass004-co
 import ground048ColorUrl from "../../assets/exported/textures/terrain/ground048-color.png?url"
 import rock058ColorUrl from "../../assets/exported/textures/terrain/rock058-color.png?url"
 import pineNeedleClusterUrl from "../../assets/exported/textures/props/pine-needle-cluster.png?url"
+import pineNeedleLitterUrl from "../../assets/exported/textures/props/pine-needle-litter.png?url"
 import waterColorUrl from "../../assets/exported/textures/terrain/water.jpg?url"
 import type { Scene } from "@babylonjs/core/scene"
 import type { EngineContext } from "../app/EngineContext"
@@ -199,6 +200,8 @@ export class ChunkManager {
     this._materials.trunk.dispose()
     this._materials.deadWood.dispose()
     this._materials.needles.dispose()
+    this._materials.pineFoliage.dispose()
+    this._materials.pineNeedleLitter.dispose()
     this._materials.rock.dispose()
     this._waterFlowObserver?.remove()
     this._waterFlowObserver = null
@@ -683,6 +686,10 @@ export class ChunkManager {
       "progressive-pine-foliage-material",
       this._context.scene,
     )
+    const pineNeedleLitter = new StandardMaterial(
+      "progressive-pine-needle-litter-material",
+      this._context.scene,
+    )
     const rock = new StandardMaterial("progressive-rock-material", this._context.scene)
     const water = new StandardMaterial("progressive-water-material", this._context.scene)
 
@@ -715,14 +722,26 @@ export class ChunkManager {
 
     pineFoliageTexture.hasAlpha = true
     pineFoliage.diffuseTexture = pineFoliageTexture
-    pineFoliage.diffuseColor = new Color3(0.82, 1, 0.7)
-    pineFoliage.emissiveColor = new Color3(0.018, 0.045, 0.018)
+    pineFoliage.diffuseColor = new Color3(0.5, 0.78, 0.44)
+    pineFoliage.emissiveColor = new Color3(0.012, 0.034, 0.014)
     pineFoliage.specularColor = Color3.Black()
     pineFoliage.backFaceCulling = false
     pineFoliage.twoSidedLighting = true
     pineFoliage.useAlphaFromDiffuseTexture = true
     pineFoliage.alphaCutOff = 0.36
     pineFoliage.transparencyMode = Material.MATERIAL_ALPHATEST
+
+    const pineNeedleLitterTexture = new Texture(pineNeedleLitterUrl, this._context.scene)
+
+    pineNeedleLitterTexture.hasAlpha = true
+    pineNeedleLitter.diffuseTexture = pineNeedleLitterTexture
+    pineNeedleLitter.diffuseColor = new Color3(0.42, 0.32, 0.2)
+    pineNeedleLitter.specularColor = Color3.Black()
+    pineNeedleLitter.backFaceCulling = false
+    pineNeedleLitter.twoSidedLighting = true
+    pineNeedleLitter.useAlphaFromDiffuseTexture = true
+    pineNeedleLitter.alphaCutOff = 0.32
+    pineNeedleLitter.transparencyMode = Material.MATERIAL_ALPHATEST
 
     const waterTexture = new Texture(waterColorUrl, this._context.scene)
 
@@ -756,6 +775,7 @@ export class ChunkManager {
       deadWood,
       needles,
       pineFoliage,
+      pineNeedleLitter,
       rock,
       water,
     }

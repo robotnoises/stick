@@ -261,7 +261,7 @@ Performance notes:
 - [x] Add sparse clearing patches.
 - [x] Add deadfall zones that bias toward logs and dead pines.
 - [x] Add stand-age patches that influence pine scale.
-- [ ] Add ground litter cards using `assets/exported/textures/props/pine-needle-litter.png`.
+- [x] Add ground litter cards using `assets/exported/textures/props/pine-needle-litter.png`.
 
 ### Phase 7 — Future Tree Variety
 

@@ -89,6 +89,7 @@
   - [x] Add pine profile variants.
   - [x] Polish dead pine branch generation.
   - [x] Add fallen log branch stubs.
+  - [x] Add pine needle ground litter cards.
   - [ ] Tune performance and silhouette readability.
 - [x] Add deterministic forest composition patches for dense stands, sparse clearings, deadfall zones, and mixed tree ages.
 - [ ] Add more tree types.
