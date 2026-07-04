@@ -133,6 +133,12 @@ class FakeMesh {
     this.enabled = enabled
   }
 
+  public updateVerticesData(kind: string, data: number[]): void {
+    if (this.vertexData && typeof this.vertexData === "object") {
+      ;(this.vertexData as Record<string, unknown>)[kind] = data
+    }
+  }
+
   public dispose(): void {
     this.disposed = true
   }

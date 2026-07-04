@@ -158,6 +158,8 @@
 - [ ] Add trail/path generation and trail material masks.
 - [ ] Add weather placeholder systems and connect weather to exposure/body temperature later.
 - [ ] Expand day/night lighting with moonlight and night readability tuning.
+  - [x] Add gradient sky dome for dawn/dusk/day/night.
+  - [x] Add deterministic batched star field.
 
 ## Assets and Art Pipeline
 
