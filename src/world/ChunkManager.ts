@@ -201,8 +201,8 @@ export class ChunkManager {
     this._materials.rock.dispose()
     this._waterFlowObserver?.remove()
     this._waterFlowObserver = null
-    this._materials.water.diffuseTexture?.dispose()
-    this._materials.water.emissiveTexture?.dispose()
+    this._materials.water.diffuseTexture?.dispose?.()
+    this._materials.water.emissiveTexture?.dispose?.()
     this._materials.water.dispose()
     this._chunkDataGenerator.dispose?.()
   }
@@ -440,6 +440,7 @@ export class ChunkManager {
   private _isCompatiblePersistedChunk(chunk: PersistedChunkData): boolean {
     return (
       chunk.worldSeed === this._generator.seed &&
+      chunk.generatorVersion === TerrainGenerator.version &&
       chunk.chunkSizeMeters === this._generator.chunkSizeMeters &&
       chunk.resolution === this._generator.resolution
     )
@@ -646,11 +647,7 @@ export class ChunkManager {
   }
 
   private _getRiverWaterHeight(river: RiverFeature, worldX: number, worldZ: number): number {
-    const nominalWaterY = river.waterLevelMeters + 0.08
-    const terrainY = this._generator.getHeight(worldX, worldZ)
-    const visibleDepthMeters = Math.min(Math.max(river.depthMeters * 0.55, 0.55), 1.15)
-
-    return Math.min(nominalWaterY, terrainY + visibleDepthMeters)
+    return this._worldFeatures.getRiverWaterLevelAtPosition(river, worldX, worldZ) + 0.08
   }
 
   private _disposeRiverWaterMeshes(): void {
@@ -721,18 +718,19 @@ export class ChunkManager {
     water.specularColor = new Color3(1.35, 1.3, 1.12)
     water.specularPower = 48
     water.roughness = 0.08
-    water.alpha = 0.72
+    water.alpha = 0.58
     water.useSpecularOverAlpha = true
     water.transparencyMode = Material.MATERIAL_ALPHABLEND
     water.backFaceCulling = false
     water.twoSidedLighting = true
 
-    this._waterFlowObserver = this._context.scene.onBeforeRenderObservable.add(() => {
-      const deltaSeconds = this._context.engine.getDeltaTime() / 1000
+    this._waterFlowObserver =
+      this._context.scene.onBeforeRenderObservable?.add(() => {
+        const deltaSeconds = this._context.engine.getDeltaTime() / 1000
 
-      waterTexture.uOffset += deltaSeconds * 0.004
-      waterTexture.vOffset += deltaSeconds * 0.018
-    })
+        waterTexture.uOffset += deltaSeconds * 0.004
+        waterTexture.vOffset += deltaSeconds * 0.018
+      }) ?? null
 
     return {
       terrain: [grassTerrain, dirtTerrain, sandTerrain, pineNeedlesTerrain],

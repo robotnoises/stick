@@ -1,5 +1,10 @@
 import { ChunkCoord } from "../ChunkCoord"
-import { TerrainMaterial, type ChunkTerrainData, type GeneratedPropData, type TerrainMaterialId } from "../TerrainTypes"
+import {
+  TerrainMaterial,
+  type ChunkTerrainData,
+  type GeneratedPropData,
+  type TerrainMaterialId,
+} from "../TerrainTypes"
 import type { WorldFeatureGenerator, WaterFeatureSample } from "./WorldFeatureGenerator"
 
 export interface TerrainGeneratorOptions {
@@ -10,7 +15,7 @@ export interface TerrainGeneratorOptions {
 }
 
 export class TerrainGenerator {
-  public static readonly version = 1
+  public static readonly version = 2
 
   public constructor(private readonly _options: TerrainGeneratorOptions) {}
 
@@ -67,7 +72,11 @@ export class TerrainGenerator {
     return this._applyWaterFeatures(baseHeight, worldX, worldZ)
   }
 
-  public getTerrainMaterial(worldX: number, worldZ: number, height = this.getHeight(worldX, worldZ)): TerrainMaterialId {
+  public getTerrainMaterial(
+    worldX: number,
+    worldZ: number,
+    height = this.getHeight(worldX, worldZ),
+  ): TerrainMaterialId {
     const water = this._options.worldFeatures?.sample(worldX, worldZ).water
 
     if (water?.isUnderWater || water?.isShore) {
@@ -181,16 +190,17 @@ export class TerrainGenerator {
   private _getLakeBedHeight(baseHeight: number, water: WaterFeatureSample): number {
     const feature = water.feature
     const depthFactor = 1 - Math.min(Math.max(water.normalizedDistance, 0), 1)
-    const bedHeight = feature.waterLevelMeters - feature.depthMeters * (0.35 + depthFactor * 0.65)
+    const bedHeight = water.waterLevelMeters - feature.depthMeters * (0.35 + depthFactor * 0.65)
 
     return Math.min(baseHeight, bedHeight)
   }
 
   private _getShoreHeight(baseHeight: number, water: WaterFeatureSample): number {
     const feature = water.feature
-    const falloffMeters = "shoreFalloffMeters" in feature ? feature.shoreFalloffMeters : feature.bankFalloffMeters
+    const falloffMeters =
+      "shoreFalloffMeters" in feature ? feature.shoreFalloffMeters : feature.bankFalloffMeters
     const shoreT = Math.min(Math.max(water.distanceToShoreMeters / falloffMeters, 0), 1)
-    const shoreHeight = this._lerp(feature.waterLevelMeters + 0.2, baseHeight, shoreT)
+    const shoreHeight = this._lerp(water.waterLevelMeters + 0.2, baseHeight, shoreT)
 
     return Math.min(baseHeight, shoreHeight)
   }
