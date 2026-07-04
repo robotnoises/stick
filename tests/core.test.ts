@@ -1090,6 +1090,7 @@ describe("chunk coordinates and generation", () => {
       trunk: { diffuseColor: new FakeColor3(), dispose: vi.fn() } as any,
       deadWood: { diffuseColor: new FakeColor3(), dispose: vi.fn() } as any,
       needles: { diffuseColor: new FakeColor3(), dispose: vi.fn() } as any,
+      pineFoliage: { diffuseColor: new FakeColor3(), dispose: vi.fn() } as any,
       rock: { diffuseColor: new FakeColor3(), dispose: vi.fn() } as any,
       water: { diffuseColor: new FakeColor3(), dispose: vi.fn() } as any,
     }

@@ -81,6 +81,12 @@
   - [x] dirt
   - [x] sand
   - [x] pine needles / forest floor
+- [ ] Improve tree rendering; see [Tree Rendering and Pine Improvement Plan](trees.md).
+  - [x] Document procedural pine branch/node/foliage card plan.
+  - [x] Add deterministic pine branch generation.
+  - [x] Add secondary branch nodes/twigs.
+  - [x] Add textured pine needle/foliage cards.
+  - [ ] Tune performance and silhouette readability.
 - [ ] Add more tree types.
 - [ ] Add animals.
 - [ ] Add more flora; this should be a major investment area.

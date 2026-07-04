@@ -13,6 +13,7 @@ import fineClumpySandBaseColorUrl from "../../assets/exported/textures/terrain/f
 import grass004ColorUrl from "../../assets/exported/textures/terrain/grass004-color.png?url"
 import ground048ColorUrl from "../../assets/exported/textures/terrain/ground048-color.png?url"
 import rock058ColorUrl from "../../assets/exported/textures/terrain/rock058-color.png?url"
+import pineNeedleClusterUrl from "../../assets/exported/textures/props/pine-needle-cluster.png?url"
 import waterColorUrl from "../../assets/exported/textures/terrain/water.jpg?url"
 import type { Scene } from "@babylonjs/core/scene"
 import type { EngineContext } from "../app/EngineContext"
@@ -678,6 +679,10 @@ export class ChunkManager {
     const trunk = new StandardMaterial("progressive-pine-trunk-material", this._context.scene)
     const deadWood = new StandardMaterial("progressive-dead-wood-material", this._context.scene)
     const needles = new StandardMaterial("progressive-pine-needles-material", this._context.scene)
+    const pineFoliage = new StandardMaterial(
+      "progressive-pine-foliage-material",
+      this._context.scene,
+    )
     const rock = new StandardMaterial("progressive-rock-material", this._context.scene)
     const water = new StandardMaterial("progressive-water-material", this._context.scene)
 
@@ -705,6 +710,17 @@ export class ChunkManager {
 
     needles.diffuseColor = new Color3(0.11, 0.27, 0.14)
     needles.specularColor = Color3.Black()
+
+    const pineFoliageTexture = new Texture(pineNeedleClusterUrl, this._context.scene)
+
+    pineFoliageTexture.hasAlpha = true
+    pineFoliage.diffuseTexture = pineFoliageTexture
+    pineFoliage.diffuseColor = new Color3(0.68, 0.9, 0.58)
+    pineFoliage.specularColor = Color3.Black()
+    pineFoliage.backFaceCulling = false
+    pineFoliage.twoSidedLighting = true
+    pineFoliage.useAlphaFromDiffuseTexture = true
+    pineFoliage.transparencyMode = Material.MATERIAL_ALPHATEST
 
     const waterTexture = new Texture(waterColorUrl, this._context.scene)
 
@@ -737,6 +753,7 @@ export class ChunkManager {
       trunk,
       deadWood,
       needles,
+      pineFoliage,
       rock,
       water,
     }

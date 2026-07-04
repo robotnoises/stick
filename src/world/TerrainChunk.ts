@@ -15,8 +15,25 @@ export interface TerrainChunkMaterials {
   readonly trunk: StandardMaterial
   readonly deadWood: StandardMaterial
   readonly needles: StandardMaterial
+  readonly pineFoliage: StandardMaterial
   readonly rock: StandardMaterial
   readonly water: StandardMaterial
+}
+
+interface PineBranchSegment {
+  readonly start: Vector3
+  readonly end: Vector3
+  readonly radiusStart: number
+  readonly radiusEnd: number
+}
+
+interface PineFoliageCard {
+  readonly center: Vector3
+  readonly angle: number
+  readonly verticalAngle: number
+  readonly width: number
+  readonly length: number
+  readonly variant: number
 }
 
 export class TerrainChunk {
@@ -252,15 +269,21 @@ export class TerrainChunk {
 
   private _createPineProp(prop: GeneratedPropData): void {
     const position = new Vector3(prop.position[0], prop.position[1], prop.position[2])
-    const trunkHeight = 9 * prop.scale
-    const needlesHeight = 12 * prop.scale
+    const random = this._createRandom(this._hashString(prop.id))
+    const trunkHeight = (9.5 + random() * 2.8) * prop.scale
+    const crownBaseHeight = trunkHeight * (0.28 + random() * 0.08)
+    const crownHeight = trunkHeight - crownBaseHeight
+    const maxBranchLength = (2.05 + random() * 0.65) * prop.scale
+    const whorlCount = Math.max(9, Math.round(9 + prop.scale * 4.5))
+    const branchSegments: PineBranchSegment[] = []
+    const foliageCards: PineFoliageCard[] = []
     const trunk = MeshBuilder.CreateCylinder(
       `${prop.id}_trunk`,
       {
         height: trunkHeight,
-        diameterTop: 0.32 * prop.scale,
-        diameterBottom: 0.65 * prop.scale,
-        tessellation: 6,
+        diameterTop: 0.09 * prop.scale,
+        diameterBottom: 0.62 * prop.scale,
+        tessellation: 7,
       },
       this._context.scene,
     )
@@ -268,23 +291,390 @@ export class TerrainChunk {
     trunk.position = position.add(new Vector3(0, trunkHeight / 2, 0))
     trunk.rotation.y = prop.rotationY
     trunk.material = this._materials.trunk
+    this._props.push(trunk)
 
-    const needles = MeshBuilder.CreateCylinder(
-      `${prop.id}_needles`,
-      {
-        height: needlesHeight,
-        diameterTop: 0.15 * prop.scale,
-        diameterBottom: 5.2 * prop.scale,
-        tessellation: 8,
-      },
-      this._context.scene,
+    for (let whorlIndex = 0; whorlIndex < whorlCount; whorlIndex += 1) {
+      const crownT = (whorlIndex + 0.15) / whorlCount
+      const branchHeight = crownBaseHeight + crownHeight * crownT
+      const branchesInWhorl = crownT > 0.82 ? 4 : crownT > 0.16 ? 5 : 4
+      const whorlRotation = prop.rotationY + whorlIndex * 1.48 + (random() - 0.5) * 0.28
+
+      for (let branchIndex = 0; branchIndex < branchesInWhorl; branchIndex += 1) {
+        const angle =
+          whorlRotation + branchIndex * ((Math.PI * 2) / branchesInWhorl) + (random() - 0.5) * 0.28
+        const branchLength = this._getPineBranchLength(maxBranchLength, crownT, random())
+
+        if (branchLength < 0.3 * prop.scale) {
+          continue
+        }
+
+        const verticalAngle = this._lerp(-0.2, 0.34, crownT) + (random() - 0.5) * 0.12
+        const start = position.add(new Vector3(0, branchHeight, 0))
+        const horizontalLength = Math.cos(verticalAngle) * branchLength
+        const end = position.add(
+          new Vector3(
+            Math.sin(angle) * horizontalLength,
+            branchHeight + Math.sin(verticalAngle) * branchLength,
+            Math.cos(angle) * horizontalLength,
+          ),
+        )
+        const branchRadius = this._getPineBranchRadius(branchLength, prop.scale, crownT)
+
+        branchSegments.push({
+          start,
+          end,
+          radiusStart: branchRadius,
+          radiusEnd: Math.max(0.012 * prop.scale, branchRadius * 0.28),
+        })
+        foliageCards.push({
+          center: this._lerpVector(start, end, 0.66 + random() * 0.12),
+          angle: angle + (random() - 0.5) * 0.16,
+          verticalAngle,
+          width: (0.48 + random() * 0.16) * prop.scale * (1 - crownT * 0.18),
+          length: (1.35 + random() * 0.4) * prop.scale * (1 - crownT * 0.24),
+          variant: Math.floor(random() * 3),
+        })
+        foliageCards.push({
+          center: this._lerpVector(start, end, 0.86 + random() * 0.1),
+          angle: angle + (random() - 0.5) * 0.24,
+          verticalAngle: verticalAngle + 0.05,
+          width: (0.42 + random() * 0.12) * prop.scale * (1 - crownT * 0.18),
+          length: (1.05 + random() * 0.28) * prop.scale * (1 - crownT * 0.28),
+          variant: Math.floor(random() * 3),
+        })
+
+        if (random() > 0.38 && crownT < 0.86) {
+          const side = random() > 0.5 ? -1 : 1
+          const twigAngle = angle + side * (0.48 + random() * 0.32)
+          const twigLength = branchLength * (0.16 + random() * 0.08)
+          const twigStart = this._lerpVector(start, end, 0.56 + random() * 0.26)
+          const twigEnd = twigStart.add(
+            new Vector3(
+              Math.sin(twigAngle) * twigLength,
+              (0.04 + random() * 0.12) * prop.scale,
+              Math.cos(twigAngle) * twigLength,
+            ),
+          )
+
+          branchSegments.push({
+            start: twigStart,
+            end: twigEnd,
+            radiusStart: branchRadius * 0.38,
+            radiusEnd: Math.max(0.008 * prop.scale, branchRadius * 0.14),
+          })
+          foliageCards.push({
+            center: twigEnd,
+            angle: twigAngle,
+            verticalAngle: verticalAngle + 0.08,
+            width: (0.36 + random() * 0.12) * prop.scale * (1 - crownT * 0.18),
+            length: (0.86 + random() * 0.24) * prop.scale * (1 - crownT * 0.28),
+            variant: Math.floor(random() * 3),
+          })
+        }
+      }
+    }
+
+    this._addPineTopLeader(
+      position,
+      trunkHeight,
+      prop.rotationY,
+      prop.scale,
+      random,
+      branchSegments,
+      foliageCards,
+    )
+    this._createPineBranchMesh(`${prop.id}_branches`, branchSegments, this._materials.trunk)
+    this._createPineFoliageMesh(`${prop.id}_foliage`, foliageCards)
+  }
+
+  private _addPineTopLeader(
+    position: Vector3,
+    trunkHeight: number,
+    rotationY: number,
+    scale: number,
+    random: () => number,
+    branchSegments: PineBranchSegment[],
+    foliageCards: PineFoliageCard[],
+  ): void {
+    const leaderBase = position.add(new Vector3(0, trunkHeight - 0.7 * scale, 0))
+    const leaderTip = position.add(new Vector3(0, trunkHeight + 0.65 * scale, 0))
+
+    branchSegments.push({
+      start: leaderBase,
+      end: leaderTip,
+      radiusStart: 0.05 * scale,
+      radiusEnd: 0.006 * scale,
+    })
+
+    for (let index = 0; index < 6; index += 1) {
+      const topT = index / 5
+      const angle = rotationY + index * 2.399 + (random() - 0.5) * 0.32
+      const height = trunkHeight - 0.55 * scale + topT * 0.82 * scale
+      const reach = (0.58 - topT * 0.28) * scale
+      const start = position.add(new Vector3(0, height, 0))
+      const end = position.add(
+        new Vector3(
+          Math.sin(angle) * reach,
+          height + (0.16 + topT * 0.18) * scale,
+          Math.cos(angle) * reach,
+        ),
+      )
+
+      branchSegments.push({
+        start,
+        end,
+        radiusStart: (0.028 - topT * 0.01) * scale,
+        radiusEnd: 0.006 * scale,
+      })
+      foliageCards.push({
+        center: this._lerpVector(start, end, 0.72),
+        angle,
+        verticalAngle: 0.42 + topT * 0.18,
+        width: (0.34 - topT * 0.06) * scale,
+        length: (0.78 - topT * 0.16) * scale,
+        variant: Math.floor(random() * 3),
+      })
+    }
+  }
+
+  private _getPineBranchLength(maxBranchLength: number, crownT: number, roll: number): number {
+    const lengthFactor = Math.max(0.14, Math.pow(1 - crownT, 0.85))
+    const bottomFade = Math.min(Math.max(crownT / 0.18, 0.58), 1)
+    const randomJitter = 0.84 + roll * 0.24
+
+    return maxBranchLength * lengthFactor * bottomFade * randomJitter
+  }
+
+  private _getPineBranchRadius(branchLength: number, scale: number, crownT: number): number {
+    return (0.026 * scale + branchLength * 0.006) * (1 - crownT * 0.24)
+  }
+
+  private _createPineBranchMesh(
+    name: string,
+    segments: readonly PineBranchSegment[],
+    material: StandardMaterial,
+  ): void {
+    if (segments.length === 0) {
+      return
+    }
+
+    const mesh = new Mesh(name, this._context.scene)
+    const vertexData = new VertexData()
+    const positions: number[] = []
+    const indices: number[] = []
+    const normals: number[] = []
+
+    for (const segment of segments) {
+      this._appendBranchSegment(positions, indices, segment)
+    }
+
+    VertexData.ComputeNormals(positions, indices, normals)
+    vertexData.positions = positions
+    vertexData.indices = indices
+    vertexData.normals = normals
+    vertexData.applyToMesh(mesh)
+
+    mesh.material = material
+    mesh.isPickable = false
+    this._props.push(mesh)
+  }
+
+  private _appendBranchSegment(
+    positions: number[],
+    indices: number[],
+    segment: PineBranchSegment,
+  ): void {
+    const sides = 5
+    const axis = this._normalizeVector(this._subtractVector(segment.end, segment.start))
+    const reference = Math.abs(axis.y) > 0.88 ? new Vector3(1, 0, 0) : new Vector3(0, 1, 0)
+    const normalA = this._normalizeVector(this._crossVector(reference, axis))
+    const normalB = this._normalizeVector(this._crossVector(axis, normalA))
+    const vertexStart = positions.length / 3
+
+    for (let side = 0; side < sides; side += 1) {
+      const angle = side * ((Math.PI * 2) / sides)
+      const ringDirection = normalA.scale(Math.cos(angle)).add(normalB.scale(Math.sin(angle)))
+      const start = segment.start.add(ringDirection.scale(segment.radiusStart))
+      const end = segment.end.add(ringDirection.scale(segment.radiusEnd))
+
+      positions.push(start.x, start.y, start.z)
+      positions.push(end.x, end.y, end.z)
+    }
+
+    for (let side = 0; side < sides; side += 1) {
+      const nextSide = (side + 1) % sides
+      const start0 = vertexStart + side * 2
+      const end0 = start0 + 1
+      const start1 = vertexStart + nextSide * 2
+      const end1 = start1 + 1
+
+      indices.push(start0, end0, start1)
+      indices.push(start1, end0, end1)
+    }
+  }
+
+  private _createPineFoliageMesh(name: string, cards: readonly PineFoliageCard[]): void {
+    if (cards.length === 0) {
+      return
+    }
+
+    const mesh = new Mesh(name, this._context.scene)
+    const vertexData = new VertexData()
+    const positions: number[] = []
+    const indices: number[] = []
+    const normals: number[] = []
+    const uvs: number[] = []
+
+    for (const card of cards) {
+      this._appendPineFoliageCard(positions, indices, uvs, card)
+    }
+
+    VertexData.ComputeNormals(positions, indices, normals)
+    vertexData.positions = positions
+    vertexData.indices = indices
+    vertexData.normals = normals
+    vertexData.uvs = uvs
+    vertexData.applyToMesh(mesh)
+
+    mesh.material = this._materials.pineFoliage
+    mesh.isPickable = false
+    this._props.push(mesh)
+  }
+
+  private _appendPineFoliageCard(
+    positions: number[],
+    indices: number[],
+    uvs: number[],
+    card: PineFoliageCard,
+  ): void {
+    const forward = this._normalizeVector(
+      new Vector3(
+        Math.sin(card.angle) * Math.cos(card.verticalAngle),
+        Math.sin(card.verticalAngle),
+        Math.cos(card.angle) * Math.cos(card.verticalAngle),
+      ),
+    )
+    const horizontalRight = this._normalizeVector(
+      new Vector3(Math.cos(card.angle), 0, -Math.sin(card.angle)),
+    )
+    const liftedCenter = card.center.add(new Vector3(0, card.width * 0.08, 0))
+    const slantedRight = this._normalizeVector(
+      horizontalRight.scale(0.58).add(new Vector3(0, 0.82, 0)),
     )
 
-    needles.position = position.add(new Vector3(0, trunkHeight + needlesHeight / 2 - 0.8, 0))
-    needles.rotation.y = prop.rotationY
-    needles.material = this._materials.needles
+    this._appendPineFoliagePlane(
+      positions,
+      indices,
+      uvs,
+      liftedCenter,
+      forward,
+      horizontalRight,
+      card,
+    )
+    this._appendPineFoliagePlane(
+      positions,
+      indices,
+      uvs,
+      liftedCenter.add(new Vector3(0, card.width * 0.05, 0)),
+      forward,
+      slantedRight,
+      card,
+    )
+  }
 
-    this._props.push(trunk, needles)
+  private _appendPineFoliagePlane(
+    positions: number[],
+    indices: number[],
+    uvs: number[],
+    center: Vector3,
+    forward: Vector3,
+    side: Vector3,
+    card: PineFoliageCard,
+  ): void {
+    const halfWidth = card.width / 2
+    const halfLength = card.length / 2
+    const vertexStart = positions.length / 3
+    const rect = this._getPineFoliageUvRect(card.variant)
+    const corners = [
+      center.add(forward.scale(-halfLength)).add(side.scale(-halfWidth)),
+      center.add(forward.scale(halfLength)).add(side.scale(-halfWidth)),
+      center.add(forward.scale(halfLength)).add(side.scale(halfWidth)),
+      center.add(forward.scale(-halfLength)).add(side.scale(halfWidth)),
+    ]
+
+    for (const corner of corners) {
+      positions.push(corner.x, corner.y, corner.z)
+    }
+
+    indices.push(vertexStart, vertexStart + 1, vertexStart + 2)
+    indices.push(vertexStart, vertexStart + 2, vertexStart + 3)
+    uvs.push(rect.u0, rect.v1, rect.u1, rect.v1, rect.u1, rect.v0, rect.u0, rect.v0)
+  }
+
+  private _getPineFoliageUvRect(variant: number): {
+    readonly u0: number
+    readonly u1: number
+    readonly v0: number
+    readonly v1: number
+  } {
+    switch (variant % 3) {
+      case 0:
+        return { u0: 0.25, u1: 0.9, v0: 0.69, v1: 0.91 }
+      case 1:
+        return { u0: 0.08, u1: 0.96, v0: 0.39, v1: 0.68 }
+      default:
+        return { u0: 0.08, u1: 0.96, v0: 0.1, v1: 0.39 }
+    }
+  }
+
+  private _subtractVector(from: Vector3, amount: Vector3): Vector3 {
+    return new Vector3(from.x - amount.x, from.y - amount.y, from.z - amount.z)
+  }
+
+  private _crossVector(a: Vector3, b: Vector3): Vector3 {
+    return new Vector3(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x)
+  }
+
+  private _normalizeVector(vector: Vector3): Vector3 {
+    const length = Math.hypot(vector.x, vector.y, vector.z)
+
+    return length > 0
+      ? new Vector3(vector.x / length, vector.y / length, vector.z / length)
+      : vector
+  }
+
+  private _lerpVector(from: Vector3, to: Vector3, amount: number): Vector3 {
+    return new Vector3(
+      this._lerp(from.x, to.x, amount),
+      this._lerp(from.y, to.y, amount),
+      this._lerp(from.z, to.z, amount),
+    )
+  }
+
+  private _hashString(value: string): number {
+    let hash = 2166136261
+
+    for (let index = 0; index < value.length; index += 1) {
+      hash ^= value.charCodeAt(index)
+      hash = Math.imul(hash, 16777619)
+    }
+
+    return hash >>> 0
+  }
+
+  private _createRandom(seed: number): () => number {
+    let state = seed >>> 0
+
+    return () => {
+      state = (state + 0x6d2b79f5) >>> 0
+
+      let value = state
+
+      value = Math.imul(value ^ (value >>> 15), value | 1)
+      value ^= value + Math.imul(value ^ (value >>> 7), value | 61)
+
+      return ((value ^ (value >>> 14)) >>> 0) / 4294967296
+    }
   }
 
   private _createDeadPineProp(prop: GeneratedPropData): void {

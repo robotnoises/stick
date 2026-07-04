@@ -167,15 +167,15 @@ These places become personal landmarks and return points.
 
 ## Technology Stack
 
-| Area | Technology | Notes |
-| :--- | :--- | :--- |
-| Language | TypeScript | Strict typing and class-based architecture |
-| Engine | Babylon.js | Standard Babylon.js API |
-| Graphics | WebGPU preferred | Use `WebGPUEngine`; document fallback decisions later |
-| Persistence | IndexedDB via `localForage` | Save player/session state and persisted terrain chunks |
-| Generation | Web Workers eventually | Terrain/noise generation should move off main thread after behavior is proven |
-| Build | Vite | Existing web app setup |
-| Tests | Vitest | Coverage target documented in `docs/coding-standards.md` |
+| Area        | Technology                  | Notes                                                                         |
+| :---------- | :-------------------------- | :---------------------------------------------------------------------------- |
+| Language    | TypeScript                  | Strict typing and class-based architecture                                    |
+| Engine      | Babylon.js                  | Standard Babylon.js API                                                       |
+| Graphics    | WebGPU preferred            | Use `WebGPUEngine`; document fallback decisions later                         |
+| Persistence | IndexedDB via `localForage` | Save player/session state and persisted terrain chunks                        |
+| Generation  | Web Workers eventually      | Terrain/noise generation should move off main thread after behavior is proven |
+| Build       | Vite                        | Existing web app setup                                                        |
+| Tests       | Vitest                      | Coverage target documented in `docs/coding-standards.md`                      |
 
 ---
 
@@ -267,6 +267,7 @@ See [`docs/data.md`](docs/data.md) and [`docs/progressive-terrain.md`](docs/prog
 - [`docs/terrain-streaming-budget.md`](docs/terrain-streaming-budget.md) — per-frame terrain streaming budget plan
 - [`docs/landforms.md`](docs/landforms.md) — large world feature generation
 - [`docs/water.md`](docs/water.md) — lake, pond, and river generation notes and polish backlog
+- [`docs/trees.md`](docs/trees.md) — procedural pine branch, foliage card, and tree improvement plan
 - [`docs/data.md`](docs/data.md) — persistence boundaries and repository contracts
 - [`docs/art-assets.md`](docs/art-assets.md) — art direction and asset pipeline
 - [`docs/tasks.md`](docs/tasks.md) — current task list
