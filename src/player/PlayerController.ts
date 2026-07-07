@@ -2,17 +2,33 @@ import { UniversalCamera } from "@babylonjs/core/Cameras/universalCamera"
 import { Vector3 } from "@babylonjs/core/Maths/math.vector"
 import type { EngineContext } from "../app/EngineContext"
 import type { GameSystem } from "../app/GameSystem"
+import type { WaterColumnSample } from "../world/water/WaterVolumeSampler"
 import { Compass } from "./Compass"
 
+export type PlayerWaterState = "grounded" | "wading" | "submerged"
+
+export interface PlayerWaterSampler {
+  sampleColumn(worldX: number, worldZ: number): WaterColumnSample
+}
+
 export class PlayerController implements GameSystem {
+  private static readonly _eyeHeightMeters = 1.7
   private static readonly _mouseSensitivity = 1 / 2800
   private static readonly _walkSpeed = 0.25
+  private static readonly _wadeSpeed = 0.16
+  private static readonly _waterSinkAccelerationMetersPerSecond = 0.35
+  private static readonly _waterTerminalSinkSpeedMetersPerSecond = 0.22
   // TODO: private static readonly _runSpeed = 0.55
 
   private readonly _camera: UniversalCamera
   private readonly _compass: Compass
   private _groundHeightProvider: ((worldX: number, worldZ: number) => number) | null = null
-  private _positionClampProvider: ((worldX: number, worldZ: number) => { readonly x: number; readonly z: number }) | null = null
+  private _positionClampProvider:
+    ((worldX: number, worldZ: number) => { readonly x: number; readonly z: number }) | null = null
+  private _waterSampler: PlayerWaterSampler | null = null
+  private _waterState: PlayerWaterState = "grounded"
+  private _waterDepthMeters = 0
+  private _verticalVelocityMetersPerSecond = 0
 
   public constructor(private readonly _context: EngineContext) {
     this._camera = new UniversalCamera(
@@ -47,6 +63,14 @@ export class PlayerController implements GameSystem {
     return this._camera.getForwardRay().direction.clone().normalize()
   }
 
+  public get waterState(): PlayerWaterState {
+    return this._waterState
+  }
+
+  public get waterDepthMeters(): number {
+    return this._waterDepthMeters
+  }
+
   public setInvertMouseY(invertMouseY: boolean): void {
     const pointerRotateEntries = this._camera.movement.input.getEntries("pointer", "rotate")
 
@@ -66,6 +90,10 @@ export class PlayerController implements GameSystem {
     this._positionClampProvider = provider
   }
 
+  public setWaterSampler(sampler: PlayerWaterSampler): void {
+    this._waterSampler = sampler
+  }
+
   public setPosition(x: number, y: number, z: number): void {
     this._camera.position.set(x, y, z)
   }
@@ -74,8 +102,11 @@ export class PlayerController implements GameSystem {
     this._camera.rotation.y = this._normalizeDegrees(headingDegrees) * (Math.PI / 180)
   }
 
-  public update(_deltaSeconds: number): void {
-    const clampedPosition = this._positionClampProvider?.(this._camera.position.x, this._camera.position.z)
+  public update(deltaSeconds: number): void {
+    const clampedPosition = this._positionClampProvider?.(
+      this._camera.position.x,
+      this._camera.position.z,
+    )
 
     if (clampedPosition) {
       this._camera.position.x = clampedPosition.x
@@ -84,8 +115,42 @@ export class PlayerController implements GameSystem {
 
     const groundHeight =
       this._groundHeightProvider?.(this._camera.position.x, this._camera.position.z) ?? 0
+    const waterColumn = this._waterSampler?.sampleColumn(
+      this._camera.position.x,
+      this._camera.position.z,
+    )
 
-    this._camera.position.y = groundHeight + 1.7
+    if (!waterColumn?.hasWater) {
+      this._waterState = "grounded"
+      this._waterDepthMeters = 0
+      this._verticalVelocityMetersPerSecond = 0
+      this._camera.speed = PlayerController._walkSpeed
+      this._camera.position.y = groundHeight + PlayerController._eyeHeightMeters
+      return
+    }
+
+    this._waterDepthMeters = waterColumn.depthMeters
+    this._camera.speed = PlayerController._wadeSpeed
+
+    if (waterColumn.depthMeters < 1.2) {
+      this._waterState = "wading"
+      this._verticalVelocityMetersPerSecond = 0
+      this._camera.position.y = groundHeight + PlayerController._eyeHeightMeters
+      return
+    }
+
+    this._waterState = "submerged"
+    this._verticalVelocityMetersPerSecond = Math.max(
+      this._verticalVelocityMetersPerSecond -
+        PlayerController._waterSinkAccelerationMetersPerSecond * deltaSeconds,
+      -PlayerController._waterTerminalSinkSpeedMetersPerSecond,
+    )
+
+    const minEyeY = waterColumn.bedY + 1
+    const maxEyeY = waterColumn.surfaceY + 0.25
+    const nextEyeY = this._camera.position.y + this._verticalVelocityMetersPerSecond * deltaSeconds
+
+    this._camera.position.y = Math.min(Math.max(nextEyeY, minEyeY), maxEyeY)
   }
 
   public dispose(): void {

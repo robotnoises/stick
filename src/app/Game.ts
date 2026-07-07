@@ -66,6 +66,9 @@ export class Game {
       waterFeatures: worldFeatures,
       terrainHeightProvider: (worldX, worldZ) => terrain.getHeightAt(worldX, worldZ),
     })
+
+    player.setWaterSampler(waterSampler)
+
     const animals = new AnimalSystem(this._context, player, waterSampler)
     const lighting = new LightingController(this._context, time)
     const flashlight = new FlashlightController(this._context, player)

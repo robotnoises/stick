@@ -115,6 +115,7 @@ export class DebugOverlay implements GameSystem {
     const rows: Array<readonly [string, string]> = [
       ["pos", `${position.x.toFixed(1)}, ${position.y.toFixed(1)}, ${position.z.toFixed(1)}`],
       ["elevation", `${elevationMeters.toFixed(1)}m`],
+      ["water", `${this._player.waterState}, depth ${this._player.waterDepthMeters.toFixed(1)}m`],
       ["heading", `${this._player.headingDegrees.toFixed(0)}°`],
       ["day", String(this._time.day)],
       ["time", `${this._time.timeOfDayHours.toFixed(2)}h`],

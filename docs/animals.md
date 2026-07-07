@@ -241,10 +241,10 @@ Helpful follow-up tasks:
 
 ### Phase 3: Player Water State
 
-- Add player water detection.
-- Add wading/submerged states.
-- Add simple drag and sinking behavior.
-- Add debug text for water depth and submerged state.
+- [x] Add player water detection.
+- [x] Add wading/submerged states.
+- [x] Add simple drag and sinking behavior.
+- [x] Add debug text for water depth and submerged state.
 
 ### Phase 4: Polish and Interaction
 

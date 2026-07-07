@@ -232,6 +232,65 @@ describe("player, compass, debug overlay, and time", () => {
     expect(player.position.x).toBe(5)
     expect(player.position.z).toBe(0)
     expect(player.position.y).toBeCloseTo(player.position.x + player.position.z + 1.7)
+    expect(player.waterState).toBe("grounded")
+    expect(player.waterDepthMeters).toBe(0)
+
+    const shallowWaterColumn: WaterColumnSample = {
+      hasWater: true,
+      featureId: "shallow_water",
+      type: "lake",
+      surfaceY: 1,
+      bedY: 0,
+      depthMeters: 1,
+      distanceToShoreMeters: -1,
+      flowDirectionX: 0,
+      flowDirectionZ: 0,
+      currentMetersPerSecond: 0,
+    }
+    const deepWaterColumn: WaterColumnSample = {
+      ...shallowWaterColumn,
+      featureId: "deep_water",
+      surfaceY: 4,
+      depthMeters: 4,
+    }
+    const dryWaterColumn: WaterColumnSample = {
+      hasWater: false,
+      featureId: null,
+      type: null,
+      surfaceY: 0,
+      bedY: 0,
+      depthMeters: 0,
+      distanceToShoreMeters: Number.POSITIVE_INFINITY,
+      flowDirectionX: 0,
+      flowDirectionZ: 0,
+      currentMetersPerSecond: 0,
+    }
+    const waterSampler = { sampleColumn: vi.fn(() => shallowWaterColumn) }
+
+    player.setWaterSampler(waterSampler)
+    player.setPosition(0, 10, 0)
+    player.setGroundHeightProvider(() => 0)
+    player.update(0.016)
+    expect(player.waterState).toBe("wading")
+    expect(player.waterDepthMeters).toBe(1)
+    expect(player.position.y).toBe(1.7)
+    expect((context.scene.activeCamera as unknown as { speed: number }).speed).toBe(0.16)
+
+    waterSampler.sampleColumn.mockReturnValue(deepWaterColumn)
+    player.setPosition(0, 3, 0)
+    player.update(1)
+    expect(player.waterState).toBe("submerged")
+    expect(player.waterDepthMeters).toBe(4)
+    expect(player.position.y).toBeCloseTo(2.78)
+    player.update(10)
+    expect(player.position.y).toBeGreaterThanOrEqual(1)
+
+    waterSampler.sampleColumn.mockReturnValue(dryWaterColumn)
+    player.update(0.016)
+    expect(player.waterState).toBe("grounded")
+    expect(player.waterDepthMeters).toBe(0)
+    expect((context.scene.activeCamera as unknown as { speed: number }).speed).toBe(0.25)
+
     expect(player.headingDegrees).toBe(0)
     expect(player.forwardDirection).toEqual(new FakeVector3(0, 0, 1))
     expect(context.scene.activeCamera).toBeTruthy()
@@ -245,6 +304,8 @@ describe("player, compass, debug overlay, and time", () => {
     const player = {
       position: new FakeVector3(1.23, 4.56, 7.89),
       headingDegrees: 123,
+      waterState: "grounded",
+      waterDepthMeters: 0,
       setPosition: vi.fn((x: number, y: number, z: number) => {
         player.position = new FakeVector3(x, y, z)
       }),
