@@ -30,6 +30,7 @@ import {
   initializeTerrainWorker,
 } from "../src/world/generation/terrain.worker"
 import { WorldFeatureGenerator } from "../src/world/generation/WorldFeatureGenerator"
+import { WaterVolumeSampler, type WaterFeatureSampler } from "../src/world/water/WaterVolumeSampler"
 import { LocalForageChunkRepository } from "../src/data/LocalForageChunkRepository"
 import { LocalForageSaveGameRepository } from "../src/data/LocalForageSaveGameRepository"
 import type { ChunkRepository, PersistedChunkData } from "../src/data/ChunkRepository"
@@ -814,6 +815,198 @@ describe("chunk coordinates and generation", () => {
     expect(a.lakes.length).toBe(0)
     expect(a.rivers.length).toBe(0)
     expect(a.sample(0, 0)).toEqual({ water: null })
+  })
+
+  it("samples gameplay water columns and submerged points", () => {
+    const bounds = { minX: -512, maxX: 512, minZ: -512, maxZ: 512 }
+    const waterFeatures = new WorldFeatureGenerator({ seed: 7, worldBounds: bounds })
+    const terrainGenerator = new TerrainGenerator({
+      seed: 7,
+      chunkSizeMeters: 64,
+      resolution: 4,
+      worldFeatures: waterFeatures,
+    })
+    const sampler = new WaterVolumeSampler({
+      waterFeatures,
+      terrainHeightProvider: (worldX, worldZ) => terrainGenerator.getHeight(worldX, worldZ),
+    })
+    const lake = waterFeatures.lakes[0]!
+    const lakeColumn = sampler.sampleColumn(lake.centerX, lake.centerZ)
+    const lakeMidpointY = (lakeColumn.bedY + lakeColumn.surfaceY) / 2
+    const lakePoint = sampler.samplePoint(lake.centerX, lakeMidpointY, lake.centerZ)
+    const aboveLakePoint = sampler.samplePoint(lake.centerX, lakeColumn.surfaceY + 1, lake.centerZ)
+    const belowLakePoint = sampler.samplePoint(lake.centerX, lakeColumn.bedY - 1, lake.centerZ)
+    const shoreColumn = sampler.sampleColumn(
+      lake.centerX + lake.radiusX + lake.shoreFalloffMeters / 2,
+      lake.centerZ,
+    )
+    const farColumn = sampler.sampleColumn(bounds.maxX, bounds.maxZ)
+
+    expect(lakeColumn.hasWater).toBe(true)
+    expect(lakeColumn.featureId).toBe(lake.id)
+    expect(lakeColumn.type).toBe("lake")
+    expect(lakeColumn.depthMeters).toBeGreaterThan(0)
+    expect(lakeColumn.distanceToShoreMeters).toBeLessThan(0)
+    expect(lakeColumn.flowDirectionX).toBe(0)
+    expect(lakeColumn.flowDirectionZ).toBe(0)
+    expect(lakeColumn.currentMetersPerSecond).toBe(0)
+    expect(lakePoint.isSubmerged).toBe(true)
+    expect(lakePoint.depthBelowSurfaceMeters).toBeCloseTo(lakeColumn.surfaceY - lakeMidpointY)
+    expect(lakePoint.heightAboveBedMeters).toBeCloseTo(lakeMidpointY - lakeColumn.bedY)
+    expect(aboveLakePoint.isSubmerged).toBe(false)
+    expect(aboveLakePoint.depthBelowSurfaceMeters).toBe(0)
+    expect(belowLakePoint.isSubmerged).toBe(false)
+    expect(belowLakePoint.heightAboveBedMeters).toBe(0)
+    expect(shoreColumn.hasWater).toBe(false)
+    expect(shoreColumn.featureId).toBe(lake.id)
+    expect(shoreColumn.type).toBe("lake")
+    expect(shoreColumn.distanceToShoreMeters).toBeGreaterThanOrEqual(0)
+    expect(farColumn.hasWater).toBe(false)
+    expect(farColumn.featureId).toBeNull()
+    expect(farColumn.type).toBeNull()
+    expect(farColumn.surfaceY).toBe(farColumn.bedY)
+    expect(farColumn.distanceToShoreMeters).toBe(Number.POSITIVE_INFINITY)
+  })
+
+  it("reports river water current and dry fallback samples", () => {
+    const riverFeature = {
+      id: "test_river",
+      points: [
+        [0, 0],
+        [0, -10],
+        [0, -10],
+        [10, -10],
+      ] as ReadonlyArray<readonly [number, number]>,
+      widthMeters: 4,
+      depthMeters: 2,
+      bankFalloffMeters: 3,
+      waterLevelMeters: 5,
+      waterProfile: [],
+    }
+    const riverFeatures: WaterFeatureSampler = {
+      sample: () => ({
+        water: {
+          feature: riverFeature,
+          type: "river",
+          normalizedDistance: 0,
+          distanceToShoreMeters: -2,
+          waterLevelMeters: 5,
+          isUnderWater: true,
+          isShore: false,
+        },
+      }),
+    }
+    const riverSampler = new WaterVolumeSampler({
+      waterFeatures: riverFeatures,
+      terrainHeightProvider: () => 3,
+    })
+    const riverColumn = riverSampler.sampleColumn(0, -5)
+
+    expect(riverColumn.hasWater).toBe(true)
+    expect(riverColumn.featureId).toBe("test_river")
+    expect(riverColumn.type).toBe("river")
+    expect(riverColumn.surfaceY).toBe(5)
+    expect(riverColumn.bedY).toBe(3)
+    expect(riverColumn.depthMeters).toBe(2)
+    expect(riverColumn.flowDirectionX).toBe(0)
+    expect(riverColumn.flowDirectionZ).toBe(-1)
+    expect(riverColumn.currentMetersPerSecond).toBe(0.35)
+    expect(riverSampler.samplePoint(0, 4, -5).isSubmerged).toBe(true)
+
+    const shallowFeatures: WaterFeatureSampler = {
+      sample: () => ({
+        water: {
+          feature: riverFeature,
+          type: "river",
+          normalizedDistance: 0,
+          distanceToShoreMeters: -1,
+          waterLevelMeters: 5,
+          isUnderWater: true,
+          isShore: false,
+        },
+      }),
+    }
+    const shallowSampler = new WaterVolumeSampler({
+      waterFeatures: shallowFeatures,
+      terrainHeightProvider: () => 6,
+    })
+    const shallowColumn = shallowSampler.sampleColumn(0, 0)
+
+    expect(shallowColumn.hasWater).toBe(false)
+    expect(shallowColumn.depthMeters).toBe(0)
+    expect(shallowColumn.currentMetersPerSecond).toBe(0)
+    expect(shallowSampler.samplePoint(0, 5, 0).isSubmerged).toBe(false)
+
+    const farLakeFeatures: WaterFeatureSampler = {
+      sample: () => ({
+        water: {
+          feature: {
+            id: "far_lake",
+            centerX: 0,
+            centerZ: 0,
+            radiusX: 1,
+            radiusZ: 1,
+            waterLevelMeters: 2,
+            depthMeters: 1,
+            shoreFalloffMeters: 1,
+          },
+          type: "lake",
+          normalizedDistance: 10,
+          distanceToShoreMeters: 9,
+          waterLevelMeters: 2,
+          isUnderWater: false,
+          isShore: false,
+        },
+      }),
+    }
+    const farLakeSampler = new WaterVolumeSampler({
+      waterFeatures: farLakeFeatures,
+      terrainHeightProvider: () => 11,
+    })
+    const emptyFeatures: WaterFeatureSampler = { sample: () => ({ water: null }) }
+    const emptySampler = new WaterVolumeSampler({
+      waterFeatures: emptyFeatures,
+      terrainHeightProvider: () => -3,
+    })
+    const degenerateRiverFeatures: WaterFeatureSampler = {
+      sample: () => ({
+        water: {
+          feature: {
+            ...riverFeature,
+            points: [
+              [0, 0],
+              [0, 0],
+            ],
+          },
+          type: "river",
+          normalizedDistance: 0,
+          distanceToShoreMeters: -1,
+          waterLevelMeters: 5,
+          isUnderWater: true,
+          isShore: false,
+        },
+      }),
+    }
+    const degenerateRiverSampler = new WaterVolumeSampler({
+      waterFeatures: degenerateRiverFeatures,
+      terrainHeightProvider: () => 3,
+    })
+
+    expect(farLakeSampler.sampleColumn(100, 100)).toEqual({
+      hasWater: false,
+      featureId: null,
+      type: null,
+      surfaceY: 11,
+      bedY: 11,
+      depthMeters: 0,
+      distanceToShoreMeters: Number.POSITIVE_INFINITY,
+      flowDirectionX: 0,
+      flowDirectionZ: 0,
+      currentMetersPerSecond: 0,
+    })
+    expect(emptySampler.samplePoint(0, -3, 0).isSubmerged).toBe(false)
+    expect(degenerateRiverSampler.sampleColumn(0, 0).flowDirectionX).toBe(0)
+    expect(degenerateRiverSampler.sampleColumn(0, 0).currentMetersPerSecond).toBe(0)
   })
 
   it("generates deterministic terrain data and props", () => {

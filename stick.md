@@ -267,6 +267,7 @@ See [`docs/data.md`](docs/data.md) and [`docs/progressive-terrain.md`](docs/prog
 - [`docs/terrain-streaming-budget.md`](docs/terrain-streaming-budget.md) — per-frame terrain streaming budget plan
 - [`docs/landforms.md`](docs/landforms.md) — large world feature generation
 - [`docs/water.md`](docs/water.md) — lake, pond, and river generation notes and polish backlog
+- [`docs/animals.md`](docs/animals.md) — animal system, fish prototype, and water gameplay volume plan
 - [`docs/trees.md`](docs/trees.md) — procedural pine branch, foliage card, and tree improvement plan
 - [`docs/data.md`](docs/data.md) — persistence boundaries and repository contracts
 - [`docs/art-assets.md`](docs/art-assets.md) — art direction and asset pipeline

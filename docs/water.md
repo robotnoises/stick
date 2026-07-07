@@ -64,6 +64,12 @@ Future improvements:
 9. Add river-specific prop rules: reeds, wet rocks, driftwood, gravel bars, fallen logs, and sparse vegetation.
 10. Add debug overlays for river centerlines, width, bank falloff, underwater cells, and generated water mesh patches.
 
+## Gameplay Water Volume
+
+Water rendering is not yet enough for animals or player physics. Fish and future swimming/wading behavior should query a gameplay water volume rather than testing against Babylon water meshes.
+
+The planned direction is to add a water query service that reports surface height, bed height, depth, shore distance, current direction, and whether a world-space point is submerged. See [Animals and Water Physics Plan](animals.md) for the fish-driven implementation plan.
+
 ## Design Notes
 
 Rivers should be important navigation features. They should be visible and memorable from a distance, useful for orientation, and risky or costly to cross depending on future survival mechanics.

@@ -28,15 +28,25 @@ export interface RiverFeature {
 
 export type WaterFeature = LakeFeature | RiverFeature
 
-export interface WaterFeatureSample {
-  readonly feature: WaterFeature
-  readonly type: "lake" | "river"
+interface BaseWaterFeatureSample {
   readonly normalizedDistance: number
   readonly distanceToShoreMeters: number
   readonly waterLevelMeters: number
   readonly isUnderWater: boolean
   readonly isShore: boolean
 }
+
+export interface LakeWaterFeatureSample extends BaseWaterFeatureSample {
+  readonly feature: LakeFeature
+  readonly type: "lake"
+}
+
+export interface RiverWaterFeatureSample extends BaseWaterFeatureSample {
+  readonly feature: RiverFeature
+  readonly type: "river"
+}
+
+export type WaterFeatureSample = LakeWaterFeatureSample | RiverWaterFeatureSample
 
 export interface WorldFeatureSample {
   readonly water: WaterFeatureSample | null
