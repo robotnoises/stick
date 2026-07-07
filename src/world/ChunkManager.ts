@@ -750,7 +750,7 @@ export class ChunkManager {
     waterTexture.level = 0.24
 
     water.emissiveTexture = waterTexture
-    water.diffuseColor = new Color3(0.12, 0.42, 0.58)
+    water.diffuseColor = new Color3(0.08, 0.22, 0.38)
     water.emissiveColor = new Color3(0.035, 0.1, 0.14)
     water.specularColor = new Color3(1.35, 1.3, 1.12)
     water.specularPower = 48
@@ -765,8 +765,8 @@ export class ChunkManager {
       this._context.scene.onBeforeRenderObservable?.add(() => {
         const deltaSeconds = this._context.engine.getDeltaTime() / 1000
 
-        waterTexture.uOffset += deltaSeconds * 0.004
-        waterTexture.vOffset += deltaSeconds * 0.018
+        waterTexture.uOffset += deltaSeconds * 0.0025
+        waterTexture.vOffset += deltaSeconds * 0.011
       }) ?? null
 
     return {

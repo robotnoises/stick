@@ -1,4 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { AnimalSystem } from "../src/animals/AnimalSystem"
+import { FishController } from "../src/animals/FishController"
+import { FishMeshFactory } from "../src/animals/FishMeshFactory"
 import { defaultGameConfig } from "../src/app/GameConfig"
 import { EngineContext } from "../src/app/EngineContext"
 import { defaultGameSettings, loadGameSettings, saveGameSettings } from "../src/app/GameSettings"
@@ -30,7 +33,11 @@ import {
   initializeTerrainWorker,
 } from "../src/world/generation/terrain.worker"
 import { WorldFeatureGenerator } from "../src/world/generation/WorldFeatureGenerator"
-import { WaterVolumeSampler, type WaterFeatureSampler } from "../src/world/water/WaterVolumeSampler"
+import {
+  WaterVolumeSampler,
+  type WaterColumnSample,
+  type WaterFeatureSampler,
+} from "../src/world/water/WaterVolumeSampler"
 import { LocalForageChunkRepository } from "../src/data/LocalForageChunkRepository"
 import { LocalForageSaveGameRepository } from "../src/data/LocalForageSaveGameRepository"
 import type { ChunkRepository, PersistedChunkData } from "../src/data/ChunkRepository"
@@ -686,6 +693,141 @@ describe("backpack and inventory", () => {
   })
 })
 
+describe("animals", () => {
+  it("spawns, updates, and disposes runtime fish without persisting spawn identity", () => {
+    const context = createContext()
+    const player = { position: new FakeVector3(0, 1, 0) }
+    const waterFeatures: WaterFeatureSampler = {
+      sample: (worldX, worldZ) => {
+        if (Math.hypot(worldX, worldZ) > 10) {
+          return { water: null }
+        }
+
+        return {
+          water: {
+            feature: {
+              id: "test_pond",
+              centerX: 0,
+              centerZ: 0,
+              radiusX: 10,
+              radiusZ: 10,
+              waterLevelMeters: 2,
+              depthMeters: 2,
+              shoreFalloffMeters: 2,
+            },
+            type: "lake",
+            normalizedDistance: 0,
+            distanceToShoreMeters: -2,
+            waterLevelMeters: 2,
+            isUnderWater: true,
+            isShore: false,
+          },
+        }
+      },
+    }
+    const waterSampler = new WaterVolumeSampler({
+      waterFeatures,
+      terrainHeightProvider: () => 0,
+    })
+    const animalSystem = new AnimalSystem(context, player as any, waterSampler, {
+      activeRadiusMeters: 8,
+      cellSizeMeters: 4,
+      maxFish: 2,
+      fishSpawnChance: 1,
+      random: () => 0.5,
+    })
+
+    animalSystem.update(0.016)
+    expect(animalSystem.activeFishCount).toBe(2)
+    expect((animalSystem as any)._fish.has("fish_runtime_0")).toBe(true)
+    expect((animalSystem as any)._fish.has("fish_runtime_1")).toBe(true)
+
+    ;(animalSystem as any)._maxFish = 3
+    animalSystem.update(0.016)
+    expect(animalSystem.activeFishCount).toBe(3)
+
+    const firstFish = [...(animalSystem as any)._fish.values()][0]
+    const firstFishBody = firstFish._body
+
+    animalSystem.update(0.5)
+    expect(firstFish.position.y).toBeGreaterThan(0)
+    expect(firstFishBody.position).toBeInstanceOf(FakeVector3)
+
+    player.position = new FakeVector3(100, 1, 100)
+    animalSystem.update(0.016)
+    expect(animalSystem.activeFishCount).toBe(0)
+    expect(firstFishBody.disposed).toBe(true)
+
+    ;(animalSystem as any)._maxFish = 2
+    player.position = new FakeVector3(0, 1, 0)
+    animalSystem.update(0.016)
+    expect(animalSystem.activeFishCount).toBe(2)
+    expect((animalSystem as any)._fish.has("fish_runtime_0")).toBe(false)
+    expect((animalSystem as any)._fish.has("fish_runtime_3")).toBe(true)
+
+    animalSystem.dispose()
+    expect(animalSystem.activeFishCount).toBe(0)
+  })
+
+  it("handles fish steering fallback branches", () => {
+    const context = createContext()
+    const factory = new FishMeshFactory(context)
+    const validColumn: WaterColumnSample = {
+      hasWater: true,
+      featureId: "test_water",
+      type: "lake" as const,
+      surfaceY: 2,
+      bedY: 0,
+      depthMeters: 2,
+      distanceToShoreMeters: -2,
+      flowDirectionX: 0,
+      flowDirectionZ: 0,
+      currentMetersPerSecond: 0,
+    }
+    const dryColumn: WaterColumnSample = {
+      hasWater: false,
+      featureId: null,
+      type: null,
+      surfaceY: 0,
+      bedY: 0,
+      depthMeters: 0,
+      distanceToShoreMeters: Number.POSITIVE_INFINITY,
+      flowDirectionX: 0,
+      flowDirectionZ: 0,
+      currentMetersPerSecond: 0,
+    }
+    const sampler = {
+      sampleColumn: vi.fn(() => validColumn),
+    }
+    const fish = new FishController({
+      id: "branch_fish",
+      visual: factory.createFish("branch_fish", new FakeVector3(0, 1, 0), 1),
+      initialPosition: new FakeVector3(0, 1, 0),
+      waterSampler: sampler as any,
+      player: { position: new FakeVector3(20, 1, 20) },
+      random: () => 0.5,
+    })
+
+    ;(fish as any)._target = { x: 0, y: 1, z: 0 }
+    fish.update(0.016)
+    expect(fish.id).toBe("branch_fish")
+    expect(fish.position).toBeInstanceOf(FakeVector3)
+
+    sampler.sampleColumn
+      .mockReturnValueOnce(validColumn)
+      .mockReturnValueOnce(validColumn)
+      .mockReturnValueOnce(dryColumn)
+    ;(fish as any)._target = { x: 3, y: 1, z: 0 }
+    fish.update(0.5)
+    expect(sampler.sampleColumn).toHaveBeenCalled()
+
+    sampler.sampleColumn.mockReturnValue(dryColumn)
+    ;(fish as any)._position = new FakeVector3(40, 1, 40)
+    fish.update(0.016)
+    fish.dispose()
+  })
+})
+
 describe("lighting", () => {
   it("updates sun, moon, sky, and disposes resources", () => {
     const context = createContext()
@@ -910,7 +1052,7 @@ describe("chunk coordinates and generation", () => {
     expect(riverColumn.depthMeters).toBe(2)
     expect(riverColumn.flowDirectionX).toBe(0)
     expect(riverColumn.flowDirectionZ).toBe(-1)
-    expect(riverColumn.currentMetersPerSecond).toBe(0.35)
+    expect(riverColumn.currentMetersPerSecond).toBe(0.2)
     expect(riverSampler.samplePoint(0, 4, -5).isSubmerged).toBe(true)
 
     const shallowFeatures: WaterFeatureSampler = {

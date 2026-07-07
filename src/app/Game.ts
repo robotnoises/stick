@@ -1,3 +1,4 @@
+import { AnimalSystem } from "../animals/AnimalSystem"
 import { BabylonBootstrap } from "../engine/BabylonBootstrap"
 import { LocalForageChunkRepository } from "../data/LocalForageChunkRepository"
 import type { SaveGameData, SaveGameRepository } from "../data/SaveGameRepository"
@@ -11,6 +12,7 @@ import { PlayerController } from "../player/PlayerController"
 import { ProgressiveTerrainSystem } from "../world/ProgressiveTerrainSystem"
 import { WorldBoundsHelper } from "../world/WorldBounds"
 import { WorldFeatureGenerator } from "../world/generation/WorldFeatureGenerator"
+import { WaterVolumeSampler } from "../world/water/WaterVolumeSampler"
 import { EngineContext } from "./EngineContext"
 import { defaultGameConfig, type GameConfig } from "./GameConfig"
 import { defaultGameSettings, type GameSettings } from "./GameSettings"
@@ -60,6 +62,11 @@ export class Game {
     await this._restoreSaveGame(player, time)
     this._player = player
 
+    const waterSampler = new WaterVolumeSampler({
+      waterFeatures: worldFeatures,
+      terrainHeightProvider: (worldX, worldZ) => terrain.getHeightAt(worldX, worldZ),
+    })
+    const animals = new AnimalSystem(this._context, player, waterSampler)
     const lighting = new LightingController(this._context, time)
     const flashlight = new FlashlightController(this._context, player)
     const inventory = new InventorySystem(createCoreBackpack(flashlight))
@@ -96,7 +103,7 @@ export class Game {
       setWorldSeed: (seed) => this._setWorldSeed(seed, chunkRepository),
     })
 
-    this._systems.push(time, player, terrain, lighting, flashlight, inventory, debug)
+    this._systems.push(time, player, terrain, animals, lighting, flashlight, inventory, debug)
 
     for (const system of this._systems) {
       await system.initialize?.()

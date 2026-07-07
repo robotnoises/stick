@@ -142,29 +142,35 @@ src/animals/
 
 Responsibilities:
 
-- deterministically choose nearby animal spawn candidates
+- choose nearby runtime animal spawn candidates
 - instantiate active animals near the player
 - update active animal behavior
 - dispose distant animal meshes
-- keep animal logic independent from persistence until animals can be interacted with or killed/moved permanently
+- keep animal logic independent from chunk persistence and terrain caches
+- treat animals as dynamic in-memory actors; when the player leaves and later returns, old disposed animals should not be reloaded from cache
 
 ## Fish MVP
 
-The first fish should be ambient and believable, not a major interaction system.
+The first fish should be ambient and believable, not a major interaction system. Fish should be uncommon: eventually the player may be able to find and catch them, so spotting one near shore should feel fortunate rather than routine.
+
+### Runtime / Persistence Rule
+
+Fish and other animals should be dynamic in-memory actors, not cached terrain content. They should not be serialized into chunk snapshots or rehydrated when a chunk reloads. Leaving an area may dispose the active fish; returning may create new runtime fish, but those are fresh actors rather than cached entities.
 
 ### Spawn Rules
 
 Spawn fish only where:
 
 - `WaterColumnSample.hasWater === true`
-- water depth is at least `0.5m` to `0.75m`
-- position is not too close to shore
+- water depth is at least about `0.75m`
+- position is inside the water volume, including occasional near-shore positions
 - position is within an active radius of the player
+- a low runtime spawn chance succeeds
 
 Recommended first pass:
 
-- Lakes: deterministic fish schools based on lake id and world seed.
-- Rivers: deterministic stations along river paths.
+- Lakes and rivers can provide spawn-eligible water areas.
+- Runtime spawning should occur near the player and remain independent from terrain chunk persistence.
 - Only instantiate/render fish near the player.
 
 ### Behavior
@@ -227,11 +233,11 @@ Helpful follow-up tasks:
 
 ### Phase 2: Fish Prototype
 
-- Add `AnimalSystem` and one fish type.
-- Add deterministic fish spawn candidates.
-- Add a procedural placeholder fish mesh.
-- Update fish movement inside valid water columns.
-- Despawn or sleep fish outside the active radius.
+- [x] Add `AnimalSystem` and one fish type.
+- [x] Add dynamic runtime fish spawn candidates.
+- [x] Add a procedural placeholder fish mesh.
+- [x] Update fish movement inside valid water columns.
+- [x] Despawn fish outside the active radius.
 
 ### Phase 3: Player Water State
 

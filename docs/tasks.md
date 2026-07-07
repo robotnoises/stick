@@ -95,7 +95,7 @@
 - [ ] Add more tree types.
 - [ ] Add animals; see [Animals and Water Physics Plan](animals.md).
   - [x] Add a water gameplay volume/query service for lakes and rivers.
-  - [ ] Add a deterministic fish prototype with simple swimming behavior.
+  - [x] Add a dynamic in-memory fish prototype with simple swimming behavior.
   - [ ] Add water-aware player state/physics for wading, submersion, drag, and slow sinking.
 - [ ] Add more flora; this should be a major investment area.
 - [ ] Add tree states:

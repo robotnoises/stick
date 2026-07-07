@@ -35,7 +35,7 @@ export interface WaterPointSample extends WaterColumnSample {
 }
 
 export class WaterVolumeSampler {
-  private static readonly _riverCurrentMetersPerSecond = 0.35
+  private static readonly _riverCurrentMetersPerSecond = 0.2
 
   public constructor(private readonly _options: WaterVolumeSamplerOptions) {}
 
