@@ -179,10 +179,10 @@ Use simple steering rather than complex AI.
 
 Fish should:
 
-- wander within valid water volume
+- wander slowly within valid water volume
 - maintain a target depth below surface and above bed
 - avoid shore/invalid water
-- avoid the player at close range
+- flee in short bursts when the player gets close
 - drift gently with river current
 - steer back into the water volume if close to the surface, bed, or shore
 
@@ -204,11 +204,11 @@ For rivers:
 
 Use a low-poly procedural placeholder first:
 
-- small ellipsoid body
+- elongated ellipsoid body large enough to spot in shallow/clear water
 - triangular tail fin
 - simple material
 - yaw aligned to velocity
-- subtle tail wag from elapsed time
+- subtle tail wag from elapsed time, with faster wagging during flee bursts
 
 Imported fish assets can wait until behavior and water volume logic are proven.
 
@@ -248,10 +248,10 @@ Helpful follow-up tasks:
 
 ### Phase 4: Polish and Interaction
 
-- Improve lake water mesh shape.
-- Improve river current direction and speed.
-- Add fish flee behavior and small schools.
-- Decide whether fishing, catching, or observation-only wildlife belongs in the survival loop.
+- [ ] Improve lake water mesh shape.
+- [ ] Improve river current direction and speed.
+- [ ] Add fish flee behavior and small schools.
+- [ ] Decide whether fishing, catching, or observation-only wildlife belongs in the survival loop.
 
 ## Open Questions
 

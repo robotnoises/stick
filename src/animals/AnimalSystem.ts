@@ -86,8 +86,8 @@ export class AnimalSystem implements GameSystem {
       }
 
       const fishId = `fish_runtime_${this._nextFishId}`
-      const y = column.bedY + column.depthMeters * (0.3 + this._random() * 0.35)
-      const scale = 0.75 + this._random() * 0.65
+      const y = column.bedY + column.depthMeters * (0.35 + this._random() * 0.3)
+      const scale = 1.1 + this._random() * 1.15
       const position = new Vector3(candidate.x, y, candidate.z)
       const visual = this._fishMeshFactory.createFish(fishId, position, scale)
       const fish = new FishController({
