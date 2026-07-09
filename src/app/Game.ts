@@ -3,6 +3,7 @@ import { BabylonBootstrap } from "../engine/BabylonBootstrap"
 import { LocalForageChunkRepository } from "../data/LocalForageChunkRepository"
 import type { SaveGameData, SaveGameRepository } from "../data/SaveGameRepository"
 import { DebugOverlay } from "../debug/DebugOverlay"
+import { DistantBackdropSystem } from "../environment/DistantBackdropSystem"
 import { LightingController } from "../environment/LightingController"
 import { TimeOfDaySystem } from "../environment/TimeOfDaySystem"
 import { createCoreBackpack } from "../items/CoreItems"
@@ -72,6 +73,7 @@ export class Game {
     const animals = new AnimalSystem(this._context, player, waterSampler, {
       terrainHeightProvider: (worldX, worldZ) => terrain.getHeightAt(worldX, worldZ),
     })
+    const backdrop = new DistantBackdropSystem(this._context, player)
     const lighting = new LightingController(this._context, time)
     const flashlight = new FlashlightController(this._context, player)
     const inventory = new InventorySystem(createCoreBackpack(flashlight))
@@ -108,7 +110,17 @@ export class Game {
       setWorldSeed: (seed) => this._setWorldSeed(seed, chunkRepository),
     })
 
-    this._systems.push(time, player, terrain, animals, lighting, flashlight, inventory, debug)
+    this._systems.push(
+      time,
+      player,
+      terrain,
+      animals,
+      backdrop,
+      lighting,
+      flashlight,
+      inventory,
+      debug,
+    )
 
     for (const system of this._systems) {
       await system.initialize?.()

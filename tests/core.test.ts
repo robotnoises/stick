@@ -8,6 +8,7 @@ import { defaultGameSettings, loadGameSettings, saveGameSettings } from "../src/
 import { DebugOverlay } from "../src/debug/DebugOverlay"
 import { BabylonBootstrap } from "../src/engine/BabylonBootstrap"
 import { LightingController } from "../src/environment/LightingController"
+import { DistantBackdropSystem } from "../src/environment/DistantBackdropSystem"
 import { TimeOfDaySystem } from "../src/environment/TimeOfDaySystem"
 import { createCoreBackpack } from "../src/items/CoreItems"
 import { FlashlightController } from "../src/items/FlashlightController"
@@ -922,6 +923,37 @@ describe("animals", () => {
     ;(fish as any)._position = new FakeVector3(40, 1, 40)
     fish.update(0.016)
     fish.dispose()
+  })
+})
+
+describe("environment backdrop", () => {
+  it("creates a distant mountain ring that follows the player", () => {
+    const context = createContext()
+    const player = { position: new FakeVector3(10, 2, 20) }
+    const backdrop = new DistantBackdropSystem(context, player as any)
+
+    backdrop.update(0.016)
+
+    const mesh = (backdrop as any)._mountainMesh
+    const material = (backdrop as any)._mountainMaterial
+
+    expect(mesh.name).toBe("distant-mountain-backdrop")
+    expect(mesh.position.x).toBe(10)
+    expect(mesh.position.z).toBe(20)
+    expect(mesh.isPickable).toBe(false)
+    expect(mesh.alwaysSelectAsActiveMesh).toBe(true)
+    expect(mesh.vertexData.positions.length).toBeGreaterThan(0)
+    expect((backdrop as any)._ridgeNoise(0.25)).toBeGreaterThanOrEqual(0)
+    expect((backdrop as any)._ridgeNoise(0.25)).toBeLessThanOrEqual(1)
+
+    player.position = new FakeVector3(-5, 2, 7)
+    backdrop.update(0.016)
+    expect(mesh.position.x).toBe(-5)
+    expect(mesh.position.z).toBe(7)
+
+    backdrop.dispose()
+    expect(mesh.disposed).toBe(true)
+    expect(material.disposed).toBe(true)
   })
 })
 
