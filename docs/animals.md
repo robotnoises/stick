@@ -204,11 +204,11 @@ For rivers:
 
 Use a low-poly procedural placeholder first:
 
-- elongated ellipsoid body large enough to spot in shallow/clear water
-- triangular tail fin
+- flattened, elongated body large enough to spot in shallow/clear water
+- forked tail fin, dorsal fin, and pectoral fins
 - simple material
 - yaw aligned to velocity
-- subtle tail wag from elapsed time, with faster wagging during flee bursts
+- subtle body sway and tail wag from elapsed time, with faster wagging during flee bursts
 
 Imported fish assets can wait until behavior and water volume logic are proven.
 
@@ -250,7 +250,8 @@ Helpful follow-up tasks:
 
 - [ ] Improve lake water mesh shape.
 - [ ] Improve river current direction and speed.
-- [ ] Add fish flee behavior and small schools.
+- [x] Add fish flee behavior.
+- [ ] Add small fish schools.
 - [ ] Decide whether fishing, catching, or observation-only wildlife belongs in the survival loop.
 
 ## Open Questions

@@ -1,7 +1,7 @@
 import { Vector3 } from "@babylonjs/core/Maths/math.vector"
 import type { EngineContext } from "../app/EngineContext"
 import type { GameSystem } from "../app/GameSystem"
-import type { WaterVolumeSampler } from "../world/water/WaterVolumeSampler"
+import type { WaterColumnSample, WaterVolumeSampler } from "../world/water/WaterVolumeSampler"
 import type { AnimalPositionProvider, FishSpawnCandidate } from "./AnimalTypes"
 import { FishController } from "./FishController"
 import { FishMeshFactory } from "./FishMeshFactory"
@@ -75,19 +75,19 @@ export class AnimalSystem implements GameSystem {
         continue
       }
 
-      if (this._random() > this._fishSpawnChance) {
-        continue
-      }
-
       const column = this._waterSampler.sampleColumn(candidate.x, candidate.z)
 
       if (!column.hasWater || column.depthMeters < 0.75 || column.distanceToShoreMeters > -0.5) {
         continue
       }
 
+      if (this._random() > this._getFishSpawnChance(column)) {
+        continue
+      }
+
       const fishId = `fish_runtime_${this._nextFishId}`
       const y = column.bedY + column.depthMeters * (0.35 + this._random() * 0.3)
-      const scale = 1.1 + this._random() * 1.15
+      const scale = 0.55 + this._random() * 0.55
       const position = new Vector3(candidate.x, y, candidate.z)
       const visual = this._fishMeshFactory.createFish(fishId, position, scale)
       const fish = new FishController({
@@ -103,6 +103,19 @@ export class AnimalSystem implements GameSystem {
       this._fish.set(fishId, fish)
       this._fishCells.set(fishId, candidate.cellId)
     }
+  }
+
+  private _getFishSpawnChance(column: WaterColumnSample): number {
+    const isVisibleNearShore =
+      column.distanceToShoreMeters >= -6 &&
+      column.distanceToShoreMeters <= -0.5 &&
+      column.depthMeters <= 2.5
+
+    if (this._fishSpawnChance >= 1) {
+      return 1
+    }
+
+    return isVisibleNearShore ? Math.min(this._fishSpawnChance * 2.2, 0.22) : this._fishSpawnChance
   }
 
   private _disposeDistantFish(): void {

@@ -30,17 +30,21 @@ export class FishController {
 
   private readonly _body: Mesh
   private readonly _tail: Mesh
+  private readonly _fins: readonly Mesh[]
   private readonly _random: () => number
   private readonly _scale: number
   private readonly _cruiseSpeedMetersPerSecond: number
   private _position: Vector3
   private _target: FishTarget
+  private _fleeTarget: FishTarget | null = null
+  private _fleeTimeRemainingSeconds = 0
   private _elapsedSeconds = 0
   private _targetAgeSeconds = 0
 
   public constructor(private readonly _options: FishControllerOptions) {
     this._body = this._options.visual.body
     this._tail = this._options.visual.tail
+    this._fins = this._options.visual.fins
     this._random = this._options.random
     this._scale = this._options.visual.scale
     this._cruiseSpeedMetersPerSecond = 0.32 + this._random() * 0.34
@@ -60,6 +64,7 @@ export class FishController {
   public update(deltaSeconds: number): void {
     this._elapsedSeconds += deltaSeconds
     this._targetAgeSeconds += deltaSeconds
+    this._fleeTimeRemainingSeconds = Math.max(this._fleeTimeRemainingSeconds - deltaSeconds, 0)
 
     const column = this._options.waterSampler.sampleColumn(this._position.x, this._position.z)
 
@@ -109,6 +114,11 @@ export class FishController {
   public dispose(): void {
     this._body.dispose()
     this._tail.dispose()
+
+    for (const fin of this._fins) {
+      fin.dispose()
+    }
+
     this._options.visual.material.dispose()
   }
 
@@ -142,24 +152,37 @@ export class FishController {
     const dz = this._position.z - player.z
     const distance = Math.hypot(dx, dz)
 
+    if (this._fleeTarget && this._fleeTimeRemainingSeconds > 0) {
+      return {
+        target: this._fleeTarget,
+        speedMetersPerSecond: this._cruiseSpeedMetersPerSecond * 3.2,
+        isFleeing: true,
+      }
+    }
+
     if (distance > 0 && distance < FishController._playerAvoidanceRadiusMeters) {
-      const fleeDistance = 4 + this._random() * 2.5
+      const fleeDistance = 4.5 + this._random() * 3
       const targetX = this._position.x + (dx / distance) * fleeDistance
       const targetZ = this._position.z + (dz / distance) * fleeDistance
       const targetColumn = this._options.waterSampler.sampleColumn(targetX, targetZ)
 
       if (targetColumn.hasWater) {
+        this._fleeTarget = {
+          x: targetX,
+          y: targetColumn.bedY + targetColumn.depthMeters * 0.55,
+          z: targetZ,
+        }
+        this._fleeTimeRemainingSeconds = 1.4
+
         return {
-          target: {
-            x: targetX,
-            y: targetColumn.bedY + targetColumn.depthMeters * 0.55,
-            z: targetZ,
-          },
-          speedMetersPerSecond: this._cruiseSpeedMetersPerSecond * 2.7,
+          target: this._fleeTarget,
+          speedMetersPerSecond: this._cruiseSpeedMetersPerSecond * 3.2,
           isFleeing: true,
         }
       }
     }
+
+    this._fleeTarget = null
 
     return {
       target: this._target,
@@ -169,15 +192,45 @@ export class FishController {
   }
 
   private _applyTransform(yaw: number, speedMetersPerSecond: number): void {
-    const tailWagSpeed = speedMetersPerSecond > 0.8 ? 18 : 8
-    const tailWagAmount = speedMetersPerSecond > 0.8 ? 0.42 : 0.2
+    const isFast = speedMetersPerSecond > 0.8
+    const tailWagSpeed = isFast ? 18 : 8
+    const tailWagAmount = isFast ? 0.42 : 0.2
+    const bodySway = Math.sin(this._elapsedSeconds * (isFast ? 10 : 4.5)) * (isFast ? 0.055 : 0.035)
     const tailWag = Math.sin(this._elapsedSeconds * tailWagSpeed) * tailWagAmount
+    const forward = new Vector3(Math.sin(yaw), 0, Math.cos(yaw))
+    const right = new Vector3(Math.cos(yaw), 0, -Math.sin(yaw))
 
     this._body.position = this._position.clone()
-    this._tail.position = this._position.add(
-      new Vector3(-Math.sin(yaw) * 0.31 * this._scale, 0, -Math.cos(yaw) * 0.31 * this._scale),
-    )
-    this._body.rotation.y = yaw
+    this._tail.position = this._position.add(forward.scale(-0.31 * this._scale))
+    this._body.rotation.y = yaw + bodySway
     this._tail.rotation.y = yaw + tailWag
+    this._positionFins(yaw, right, forward, bodySway)
+  }
+
+  private _positionFins(yaw: number, right: Vector3, forward: Vector3, bodySway: number): void {
+    const dorsal = this._fins[0]
+    const leftPectoral = this._fins[1]
+    const rightPectoral = this._fins[2]
+
+    if (dorsal) {
+      dorsal.position = this._position.add(new Vector3(0, 0.14 * this._scale, 0))
+      dorsal.rotation.y = yaw + bodySway
+    }
+
+    if (leftPectoral) {
+      leftPectoral.position = this._position
+        .add(right.scale(-0.11 * this._scale))
+        .add(forward.scale(0.08 * this._scale))
+        .add(new Vector3(0, -0.04 * this._scale, 0))
+      leftPectoral.rotation.y = yaw + 0.35 + bodySway
+    }
+
+    if (rightPectoral) {
+      rightPectoral.position = this._position
+        .add(right.scale(0.11 * this._scale))
+        .add(forward.scale(0.08 * this._scale))
+        .add(new Vector3(0, -0.04 * this._scale, 0))
+      rightPectoral.rotation.y = yaw - 0.35 + bodySway
+    }
   }
 }

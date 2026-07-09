@@ -9,6 +9,7 @@ import type { EngineContext } from "../app/EngineContext"
 export interface FishVisual {
   readonly body: Mesh
   readonly tail: Mesh
+  readonly fins: readonly Mesh[]
   readonly material: StandardMaterial
   readonly scale: number
 }
@@ -32,6 +33,11 @@ export class FishMeshFactory {
       this._context.scene,
     )
     const tail = this._createTailMesh(`${id}_tail`, scale)
+    const fins = [
+      this._createDorsalFinMesh(`${id}_dorsal_fin`, scale),
+      this._createPectoralFinMesh(`${id}_left_pectoral_fin`, scale, -1),
+      this._createPectoralFinMesh(`${id}_right_pectoral_fin`, scale, 1),
+    ]
 
     body.scaling = new Vector3(0.32, 0.9, 1.9)
     body.material = material
@@ -41,7 +47,13 @@ export class FishMeshFactory {
     body.position = position.clone()
     tail.position = position.clone()
 
-    return { body, tail, material, scale }
+    for (const fin of fins) {
+      fin.material = material
+      fin.isPickable = false
+      fin.position = position.clone()
+    }
+
+    return { body, tail, fins, material, scale }
   }
 
   private _createTailMesh(name: string, scale: number): Mesh {
@@ -72,6 +84,46 @@ export class FishMeshFactory {
     vertexData.indices = [0, 1, 2, 1, 3, 2, 1, 4, 3]
     vertexData.normals = [1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0]
     vertexData.uvs = [0.98, 0.42, 0.98, 0.58, 0.05, 0, 0.36, 0.5, 0.05, 1]
+    vertexData.applyToMesh(mesh)
+
+    return mesh
+  }
+
+  private _createDorsalFinMesh(name: string, scale: number): Mesh {
+    const mesh = new Mesh(name, this._context.scene)
+    const vertexData = new VertexData()
+    const height = 0.14 * scale
+    const length = 0.24 * scale
+
+    vertexData.positions = [0, 0, length / 2, 0, height, 0, 0, 0, -length / 2]
+    vertexData.indices = [0, 1, 2]
+    vertexData.normals = [1, 0, 0, 1, 0, 0, 1, 0, 0]
+    vertexData.uvs = [0, 1, 0.5, 0, 1, 1]
+    vertexData.applyToMesh(mesh)
+
+    return mesh
+  }
+
+  private _createPectoralFinMesh(name: string, scale: number, side: -1 | 1): Mesh {
+    const mesh = new Mesh(name, this._context.scene)
+    const vertexData = new VertexData()
+    const length = 0.19 * scale
+    const width = 0.13 * scale
+
+    vertexData.positions = [
+      0,
+      0,
+      length / 2,
+      side * width,
+      -0.04 * scale,
+      -length * 0.15,
+      0,
+      0,
+      -length / 2,
+    ]
+    vertexData.indices = [0, 1, 2]
+    vertexData.normals = [0, 1, 0, 0, 1, 0, 0, 1, 0]
+    vertexData.uvs = [0, 1, 0.5, 0, 1, 1]
     vertexData.applyToMesh(mesh)
 
     return mesh

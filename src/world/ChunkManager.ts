@@ -755,7 +755,7 @@ export class ChunkManager {
     water.specularColor = new Color3(1.35, 1.3, 1.12)
     water.specularPower = 48
     water.roughness = 0.08
-    water.alpha = 0.58
+    water.alpha = 0.68
     water.useSpecularOverAlpha = true
     water.transparencyMode = Material.MATERIAL_ALPHABLEND
     water.backFaceCulling = false
