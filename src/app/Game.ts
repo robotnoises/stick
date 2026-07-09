@@ -3,6 +3,7 @@ import { BabylonBootstrap } from "../engine/BabylonBootstrap"
 import { LocalForageChunkRepository } from "../data/LocalForageChunkRepository"
 import type { SaveGameData, SaveGameRepository } from "../data/SaveGameRepository"
 import { DebugOverlay } from "../debug/DebugOverlay"
+import { CloudSystem } from "../environment/CloudSystem"
 import { DistantBackdropSystem } from "../environment/DistantBackdropSystem"
 import { LightingController } from "../environment/LightingController"
 import { TimeOfDaySystem } from "../environment/TimeOfDaySystem"
@@ -74,6 +75,7 @@ export class Game {
       terrainHeightProvider: (worldX, worldZ) => terrain.getHeightAt(worldX, worldZ),
     })
     const backdrop = new DistantBackdropSystem(this._context, player)
+    const clouds = new CloudSystem(this._context, time, player)
     const lighting = new LightingController(this._context, time)
     const flashlight = new FlashlightController(this._context, player)
     const inventory = new InventorySystem(createCoreBackpack(flashlight))
@@ -116,6 +118,7 @@ export class Game {
       terrain,
       animals,
       backdrop,
+      clouds,
       lighting,
       flashlight,
       inventory,

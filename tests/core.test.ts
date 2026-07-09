@@ -8,6 +8,7 @@ import { defaultGameSettings, loadGameSettings, saveGameSettings } from "../src/
 import { DebugOverlay } from "../src/debug/DebugOverlay"
 import { BabylonBootstrap } from "../src/engine/BabylonBootstrap"
 import { LightingController } from "../src/environment/LightingController"
+import { CloudSystem } from "../src/environment/CloudSystem"
 import { DistantBackdropSystem } from "../src/environment/DistantBackdropSystem"
 import { TimeOfDaySystem } from "../src/environment/TimeOfDaySystem"
 import { createCoreBackpack } from "../src/items/CoreItems"
@@ -50,6 +51,7 @@ const FakePointLight = (globalThis as any).FakePointLight
 const FakeSpotLight = (globalThis as any).FakeSpotLight
 const FakeVector3 = (globalThis as any).FakeVector3
 const FakeEngine = (globalThis as any).FakeEngine
+const FakeMesh = (globalThis as any).FakeMesh
 const FakeScene = (globalThis as any).FakeScene
 const FakeWebGPUEngine = (globalThis as any).FakeWebGPUEngine
 
@@ -927,6 +929,43 @@ describe("animals", () => {
 })
 
 describe("environment backdrop", () => {
+  it("creates day-only cloud layers that follow the player and fade at night", () => {
+    const context = createContext()
+    const time = new TimeOfDaySystem(12, 1)
+    const player = { position: new FakeVector3(10, 2, 20) }
+    const clouds = new CloudSystem(context, time, player as any)
+
+    clouds.update(1)
+
+    const layers = (clouds as any)._clouds as Array<{
+      readonly mesh: InstanceType<typeof FakeMesh>
+    }>
+    const material = (clouds as any)._cloudMaterial
+    const firstCloudMesh = layers[0]!.mesh
+
+    expect(layers.length).toBeGreaterThan(0)
+    expect(material.alpha).toBeGreaterThan(0)
+    expect(firstCloudMesh.position.x).not.toBe(0)
+    expect(firstCloudMesh.position.z).not.toBe(0)
+    expect(firstCloudMesh.vertexData.positions.length).toBeGreaterThan(0)
+    expect((clouds as any)._getCloudAlpha()).toBeGreaterThan(0)
+    expect((clouds as any)._smoothStep(0, 1, -1)).toBe(0)
+    expect((clouds as any)._smoothStep(0, 1, 2)).toBe(1)
+
+    time.setTimeOfDayHours(0)
+    clouds.update(1)
+    expect(material.alpha).toBe(0)
+
+    player.position = new FakeVector3(-5, 2, 7)
+    time.setTimeOfDayHours(12)
+    clouds.update(1)
+    expect(layers[0]!.mesh.position.x).toBeLessThan(500)
+
+    clouds.dispose()
+    expect(firstCloudMesh.disposed).toBe(true)
+    expect(material.disposed).toBe(true)
+  })
+
   it("creates a distant mountain ring that follows the player", () => {
     const context = createContext()
     const player = { position: new FakeVector3(10, 2, 20) }

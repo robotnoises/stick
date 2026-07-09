@@ -162,7 +162,7 @@
 - [ ] Add trail/path generation and trail material masks.
 - [ ] Add sky/backdrop depth:
   - [x] Add a distant mountain silhouette backdrop.
-  - [ ] Add day-only clouds that fade out for the starry night sky.
+  - [x] Add day-only clouds that fade out for the starry night sky.
 - [ ] Add weather placeholder systems and connect weather to exposure/body temperature later.
 - [ ] Expand day/night lighting with moonlight and night readability tuning.
   - [x] Add gradient sky dome for dawn/dusk/day/night.
