@@ -830,6 +830,42 @@ describe("animals", () => {
     expect(animalSystem.activeFishCount).toBe(0)
   })
 
+  it("spawns, updates, and disposes ambient runtime birds", () => {
+    const context = createContext()
+    const player = { position: new FakeVector3(0, 1, 0) }
+    const waterFeatures: WaterFeatureSampler = { sample: () => ({ water: null }) }
+    const waterSampler = new WaterVolumeSampler({
+      waterFeatures,
+      terrainHeightProvider: () => 0,
+    })
+    const animalSystem = new AnimalSystem(context, player as any, waterSampler, {
+      activeRadiusMeters: 20,
+      maxBirds: 1,
+      birdSpawnChance: 1,
+      terrainHeightProvider: (x, z) => x * 0.01 + z * 0.01,
+      random: () => 0.5,
+    })
+
+    animalSystem.update(0.5)
+    expect(animalSystem.activeBirdCount).toBe(1)
+    expect((animalSystem as any)._birds.has("bird_runtime_0")).toBe(true)
+
+    const bird = [...(animalSystem as any)._birds.values()][0]
+    const birdBody = bird._body
+
+    expect(bird.id).toBe("bird_runtime_0")
+    expect(bird.position.y).toBeGreaterThan(8)
+    animalSystem.update(1)
+    expect(birdBody.position).toBeInstanceOf(FakeVector3)
+
+    player.position = new FakeVector3(200, 1, 200)
+    animalSystem.update(0.016)
+    expect(animalSystem.activeBirdCount).toBe(0)
+    expect(birdBody.disposed).toBe(true)
+
+    animalSystem.dispose()
+  })
+
   it("handles fish steering fallback branches", () => {
     const context = createContext()
     const factory = new FishMeshFactory(context)

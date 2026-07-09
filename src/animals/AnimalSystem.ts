@@ -2,7 +2,9 @@ import { Vector3 } from "@babylonjs/core/Maths/math.vector"
 import type { EngineContext } from "../app/EngineContext"
 import type { GameSystem } from "../app/GameSystem"
 import type { WaterColumnSample, WaterVolumeSampler } from "../world/water/WaterVolumeSampler"
-import type { AnimalPositionProvider, FishSpawnCandidate } from "./AnimalTypes"
+import type { AnimalPositionProvider, BirdSpawnCandidate, FishSpawnCandidate } from "./AnimalTypes"
+import { BirdController } from "./BirdController"
+import { BirdMeshFactory } from "./BirdMeshFactory"
 import { FishController } from "./FishController"
 import { FishMeshFactory } from "./FishMeshFactory"
 
@@ -10,7 +12,10 @@ export interface AnimalSystemOptions {
   readonly activeRadiusMeters?: number
   readonly cellSizeMeters?: number
   readonly maxFish?: number
+  readonly maxBirds?: number
   readonly fishSpawnChance?: number
+  readonly birdSpawnChance?: number
+  readonly terrainHeightProvider?: (worldX: number, worldZ: number) => number
   readonly random?: () => number
 }
 
@@ -18,12 +23,18 @@ export class AnimalSystem implements GameSystem {
   private readonly _activeRadiusMeters: number
   private readonly _cellSizeMeters: number
   private readonly _maxFish: number
+  private readonly _maxBirds: number
   private readonly _fishSpawnChance: number
+  private readonly _birdSpawnChance: number
+  private readonly _terrainHeightProvider: (worldX: number, worldZ: number) => number
   private readonly _random: () => number
   private readonly _fish = new Map<string, FishController>()
   private readonly _fishCells = new Map<string, string>()
+  private readonly _birds = new Map<string, BirdController>()
   private readonly _fishMeshFactory: FishMeshFactory
+  private readonly _birdMeshFactory: BirdMeshFactory
   private _nextFishId = 0
+  private _nextBirdId = 0
 
   public constructor(
     private readonly _context: EngineContext,
@@ -34,21 +45,35 @@ export class AnimalSystem implements GameSystem {
     this._activeRadiusMeters = options.activeRadiusMeters ?? 70
     this._cellSizeMeters = options.cellSizeMeters ?? 28
     this._maxFish = options.maxFish ?? 6
+    this._maxBirds = options.maxBirds ?? 4
     this._fishSpawnChance = options.fishSpawnChance ?? 0.08
+    this._birdSpawnChance = options.birdSpawnChance ?? 0.018
+    this._terrainHeightProvider = options.terrainHeightProvider ?? (() => 0)
     this._random = options.random ?? Math.random
     this._fishMeshFactory = new FishMeshFactory(this._context)
+    this._birdMeshFactory = new BirdMeshFactory(this._context)
   }
 
   public get activeFishCount(): number {
     return this._fish.size
   }
 
+  public get activeBirdCount(): number {
+    return this._birds.size
+  }
+
   public update(deltaSeconds: number): void {
     this._spawnNearbyFish()
+    this._spawnNearbyBirds()
     this._disposeDistantFish()
+    this._disposeDistantBirds()
 
     for (const fish of this._fish.values()) {
       fish.update(deltaSeconds)
+    }
+
+    for (const bird of this._birds.values()) {
+      bird.update(deltaSeconds)
     }
   }
 
@@ -59,6 +84,12 @@ export class AnimalSystem implements GameSystem {
 
     this._fish.clear()
     this._fishCells.clear()
+
+    for (const bird of this._birds.values()) {
+      bird.dispose()
+    }
+
+    this._birds.clear()
   }
 
   private _spawnNearbyFish(): void {
@@ -118,6 +149,43 @@ export class AnimalSystem implements GameSystem {
     return isVisibleNearShore ? Math.min(this._fishSpawnChance * 2.2, 0.22) : this._fishSpawnChance
   }
 
+  private _spawnNearbyBirds(): void {
+    if (this._birds.size >= this._maxBirds || this._random() > this._birdSpawnChance) {
+      return
+    }
+
+    const candidate = this._getBirdSpawnCandidate()
+    const scale = 0.75 + this._random() * 0.6
+    const position = new Vector3(candidate.x, candidate.y, candidate.z)
+    const visual = this._birdMeshFactory.createBird(candidate.id, position, scale)
+
+    this._birds.set(
+      candidate.id,
+      new BirdController({
+        id: candidate.id,
+        visual,
+        initialPosition: position,
+        player: this._player,
+        terrainHeightProvider: this._terrainHeightProvider,
+        random: this._random,
+      }),
+    )
+  }
+
+  private _getBirdSpawnCandidate(): BirdSpawnCandidate {
+    const playerPosition = this._player.position
+    const angle = this._random() * Math.PI * 2
+    const distance = this._activeRadiusMeters * (0.65 + this._random() * 0.35)
+    const x = playerPosition.x + Math.sin(angle) * distance
+    const z = playerPosition.z + Math.cos(angle) * distance
+    const y = this._terrainHeightProvider(x, z) + 18 + this._random() * 28
+    const id = `bird_runtime_${this._nextBirdId}`
+
+    this._nextBirdId += 1
+
+    return { id, x, y, z }
+  }
+
   private _disposeDistantFish(): void {
     const playerPosition = this._player.position
     const disposeRadius = this._activeRadiusMeters + this._cellSizeMeters
@@ -133,6 +201,23 @@ export class AnimalSystem implements GameSystem {
       fish.dispose()
       this._fish.delete(id)
       this._fishCells.delete(id)
+    }
+  }
+
+  private _disposeDistantBirds(): void {
+    const playerPosition = this._player.position
+    const disposeRadius = this._activeRadiusMeters + 80
+
+    for (const [id, bird] of this._birds) {
+      const position = bird.position
+      const distance = Math.hypot(position.x - playerPosition.x, position.z - playerPosition.z)
+
+      if (distance <= disposeRadius) {
+        continue
+      }
+
+      bird.dispose()
+      this._birds.delete(id)
     }
   }
 

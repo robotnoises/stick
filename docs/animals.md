@@ -254,6 +254,21 @@ Helpful follow-up tasks:
 - [ ] Add small fish schools.
 - [ ] Decide whether fishing, catching, or observation-only wildlife belongs in the survival loop.
 
+## Birds Phase 1
+
+Birds start as distant ambient wildlife and do not require authored 3D models yet. The current first pass uses dynamic in-memory runtime actors, matching fish persistence rules.
+
+Implemented behavior:
+
+- rare ambient bird spawning near the player
+- procedural low-poly silhouette bird mesh
+- elongated body, wing cards, and tail card
+- simple flapping animation with occasional short glides
+- flight targets above terrain with smoothed turning arcs
+- despawn when far from the player
+
+Birds are currently visual ambience only. Perching, calls, landing/takeoff, species differences, and interaction can come later.
+
 ## Open Questions
 
 - Should fish be purely ambient at first, or eventually a food source?
