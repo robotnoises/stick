@@ -5,13 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "npm run lint && tsc && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "npm run lint && tsc --noEmit",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "lint": "eslint ."
   },
   "dependencies": {
     "@babylonjs/core": "latest",
@@ -19,10 +20,13 @@
     "localforage": "latest"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@vitest/coverage-v8": "^4.1.9",
+    "eslint": "^10.6.0",
     "jsdom": "^29.1.1",
     "prettier": "^3.9.4",
     "typescript": "latest",
+    "typescript-eslint": "^8.63.0",
     "vite": "latest",
     "vitest": "^4.1.9"
   }
