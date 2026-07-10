@@ -1,7 +1,7 @@
 import TerrainWorker from "./terrain.worker?worker"
 import type { WorldBounds } from "../../app/GameConfig"
 import { ChunkCoord } from "../ChunkCoord"
-import type { ChunkTerrainData } from "../TerrainTypes"
+import type { ChunkTerrainData } from "../terrain/TerrainTypes"
 import { TerrainGenerator } from "./TerrainGenerator"
 import type { TerrainGenerationRequest, TerrainGenerationResponse } from "./TerrainGenerationTypes"
 import { WorldFeatureGenerator } from "./WorldFeatureGenerator"

@@ -3,8 +3,8 @@ import { Mesh } from "@babylonjs/core/Meshes/mesh"
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData"
 import type { EngineContext } from "../../../app/EngineContext"
 import { DeterministicRandom } from "../../../utils/DeterministicRandom"
-import { TerrainMaterial, type ChunkTerrainData, type GeneratedPropData } from "../../TerrainTypes"
-import { ChunkHeightSampler } from "../../terrain/ChunkHeightSampler"
+import { TerrainMaterial, type ChunkTerrainData, type GeneratedPropData } from "../../terrain/TerrainTypes"
+import { TerrainChunkHeightSampler } from "../../terrain/TerrainChunkHeightSampler"
 import type { TerrainChunkMaterials } from "../../terrain/TerrainChunkMaterials"
 
 interface GroundLitterCard {
@@ -16,14 +16,14 @@ interface GroundLitterCard {
 }
 
 export class GroundLitterBuilder {
-  private readonly _heightSampler: ChunkHeightSampler
+  private readonly _heightSampler: TerrainChunkHeightSampler
 
   public constructor(
     private readonly _context: EngineContext,
     private readonly _data: ChunkTerrainData,
     private readonly _materials: TerrainChunkMaterials,
   ) {
-    this._heightSampler = new ChunkHeightSampler(this._data)
+    this._heightSampler = new TerrainChunkHeightSampler(this._data)
   }
 
   public create(): Mesh | null {

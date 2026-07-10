@@ -1,12 +1,12 @@
-import type { EngineContext } from "../app/EngineContext"
-import type { GameSystem } from "../app/GameSystem"
-import type { ChunkRepository } from "../data/ChunkRepository"
-import type { PlayerController } from "../player/PlayerController"
-import { ChunkCoord } from "./ChunkCoord"
-import { ChunkManager, type TerrainStreamingDebugStats } from "./ChunkManager"
-import { TerrainGenerator } from "./generation/TerrainGenerator"
-import { TerrainGeneratorWorkerClient } from "./generation/TerrainGeneratorWorkerClient"
-import type { WorldFeatureGenerator } from "./generation/WorldFeatureGenerator"
+import type { EngineContext } from "../../app/EngineContext"
+import type { GameSystem } from "../../app/GameSystem"
+import type { ChunkRepository } from "../../data/ChunkRepository"
+import type { PlayerController } from "../../player/PlayerController"
+import { ChunkCoord } from "../ChunkCoord"
+import { ChunkManager, type TerrainStreamingDebugStats } from "../ChunkManager"
+import { TerrainGenerator } from "../generation/TerrainGenerator"
+import { TerrainGeneratorWorkerClient } from "../generation/TerrainGeneratorWorkerClient"
+import type { WorldFeatureGenerator } from "../generation/WorldFeatureGenerator"
 
 export class ProgressiveTerrainSystem implements GameSystem {
   private readonly _generator: TerrainGenerator

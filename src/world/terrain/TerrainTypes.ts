@@ -1,4 +1,4 @@
-import type { ChunkCoord } from "./ChunkCoord"
+import type { ChunkCoord } from "../ChunkCoord"
 
 export const TerrainMaterial = {
   Grass: 0,

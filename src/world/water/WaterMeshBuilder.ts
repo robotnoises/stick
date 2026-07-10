@@ -3,7 +3,7 @@ import type { Mesh } from "@babylonjs/core/Meshes/mesh"
 import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder"
 import type { EngineContext } from "../../app/EngineContext"
 import type { WorldBounds } from "../../app/GameConfig"
-import type { ChunkTerrainData } from "../TerrainTypes"
+import type { ChunkTerrainData } from "../terrain/TerrainTypes"
 import type { TerrainChunkMaterials } from "../terrain/TerrainChunkMaterials"
 import type { WorldFeatureGenerator } from "../generation/WorldFeatureGenerator"
 

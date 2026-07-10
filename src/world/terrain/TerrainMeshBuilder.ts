@@ -3,7 +3,7 @@ import { Mesh } from "@babylonjs/core/Meshes/mesh"
 import { SubMesh } from "@babylonjs/core/Meshes/subMesh"
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData"
 import type { EngineContext } from "../../app/EngineContext"
-import { TerrainMaterial, type ChunkTerrainData } from "../TerrainTypes"
+import { TerrainMaterial, type ChunkTerrainData } from "./TerrainTypes"
 import type { TerrainChunkMaterials } from "./TerrainChunkMaterials"
 
 export class TerrainMeshBuilder {

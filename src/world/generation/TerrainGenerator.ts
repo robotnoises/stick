@@ -4,7 +4,7 @@ import {
   type ChunkTerrainData,
   type GeneratedPropData,
   type TerrainMaterialId,
-} from "../TerrainTypes"
+} from "../terrain/TerrainTypes"
 import type { WorldFeatureGenerator, WaterFeatureSample } from "./WorldFeatureGenerator"
 
 export interface TerrainGeneratorOptions {

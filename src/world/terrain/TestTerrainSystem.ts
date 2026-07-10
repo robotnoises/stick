@@ -1,8 +1,8 @@
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial"
 import { Vector3 } from "@babylonjs/core/Maths/math.vector"
 import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder"
-import type { EngineContext } from "../app/EngineContext"
-import type { GameSystem } from "../app/GameSystem"
+import type { EngineContext } from "../../app/EngineContext"
+import type { GameSystem } from "../../app/GameSystem"
 
 export class TestTerrainSystem implements GameSystem {
   public constructor(private readonly _context: EngineContext) {}

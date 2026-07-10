@@ -1,21 +1,21 @@
 import { Mesh } from "@babylonjs/core/Meshes/mesh"
-import type { EngineContext } from "../app/EngineContext"
+import type { EngineContext } from "../../app/EngineContext"
 import type { ChunkTerrainData, GeneratedPropData } from "./TerrainTypes"
-import type { WorldFeatureGenerator } from "./generation/WorldFeatureGenerator"
-import { DeadPinePropBuilder } from "./props/deadPine/DeadPinePropBuilder"
-import { GroundLitterBuilder } from "./props/groundLitter/GroundLitterBuilder"
-import { LogPropBuilder } from "./props/log/LogPropBuilder"
-import { PinePropBuilder } from "./props/pine/PinePropBuilder"
-import { RockPropBuilder } from "./props/rock/RockPropBuilder"
-import { ChunkHeightSampler } from "./terrain/ChunkHeightSampler"
-import { TerrainMeshBuilder } from "./terrain/TerrainMeshBuilder"
-import type { TerrainChunkMaterials } from "./terrain/TerrainChunkMaterials"
-import { WaterMeshBuilder } from "./water/WaterMeshBuilder"
+import type { WorldFeatureGenerator } from "../generation/WorldFeatureGenerator"
+import { DeadPinePropBuilder } from "../props/deadPine/DeadPinePropBuilder"
+import { GroundLitterBuilder } from "../props/groundLitter/GroundLitterBuilder"
+import { LogPropBuilder } from "../props/log/LogPropBuilder"
+import { PinePropBuilder } from "../props/pine/PinePropBuilder"
+import { RockPropBuilder } from "../props/rock/RockPropBuilder"
+import { TerrainChunkHeightSampler } from "./TerrainChunkHeightSampler"
+import { TerrainMeshBuilder } from "./TerrainMeshBuilder"
+import type { TerrainChunkMaterials } from "./TerrainChunkMaterials"
+import { WaterMeshBuilder } from "../water/WaterMeshBuilder"
 
-export type { TerrainChunkMaterials } from "./terrain/TerrainChunkMaterials"
+export type { TerrainChunkMaterials } from "./TerrainChunkMaterials"
 
 export class TerrainChunk {
-  private readonly _heightSampler: ChunkHeightSampler
+  private readonly _heightSampler: TerrainChunkHeightSampler
   private readonly _terrainMesh: Mesh
   private readonly _props: Mesh[] = []
 
@@ -25,7 +25,7 @@ export class TerrainChunk {
     private readonly _materials: TerrainChunkMaterials,
     private readonly _worldFeatures: WorldFeatureGenerator | null = null,
   ) {
-    this._heightSampler = new ChunkHeightSampler(this._data)
+    this._heightSampler = new TerrainChunkHeightSampler(this._data)
     this._terrainMesh = this._createTerrainMesh()
     this._props.push(...this._createWaterMeshes())
 

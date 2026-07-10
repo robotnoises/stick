@@ -1,6 +1,6 @@
-import type { ChunkTerrainData } from "../TerrainTypes"
+import type { ChunkTerrainData } from "./TerrainTypes"
 
-export class ChunkHeightSampler {
+export class TerrainChunkHeightSampler {
   public constructor(private readonly _data: ChunkTerrainData) {}
 
   public sample(worldX: number, worldZ: number): number {

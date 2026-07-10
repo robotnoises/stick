@@ -2,7 +2,7 @@ import { Vector3 } from "@babylonjs/core/Maths/math.vector"
 import type { Mesh } from "@babylonjs/core/Meshes/mesh"
 import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder"
 import type { EngineContext } from "../../../app/EngineContext"
-import type { GeneratedPropData } from "../../TerrainTypes"
+import type { GeneratedPropData } from "../../terrain/TerrainTypes"
 import type { TerrainChunkMaterials } from "../../terrain/TerrainChunkMaterials"
 
 export class RockPropBuilder {

@@ -1,4 +1,4 @@
-import type { GeneratedPropData } from "../world/TerrainTypes"
+import type { GeneratedPropData } from "../world/terrain/TerrainTypes"
 
 export interface ChunkRepository {
   getChunk(key: string): Promise<PersistedChunkData | null>

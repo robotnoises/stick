@@ -1,5 +1,5 @@
 import type { WorldBounds } from "../../app/GameConfig"
-import type { GeneratedPropData } from "../TerrainTypes"
+import type { GeneratedPropData } from "../terrain/TerrainTypes"
 
 export interface TerrainGenerationRequest {
   readonly requestId: number

@@ -21,9 +21,9 @@ import { Compass } from "../src/player/Compass"
 import { PlayerController } from "../src/player/PlayerController"
 import { ChunkCoord } from "../src/world/ChunkCoord"
 import { ChunkManager } from "../src/world/ChunkManager"
-import { ProgressiveTerrainSystem } from "../src/world/ProgressiveTerrainSystem"
-import { TerrainChunk } from "../src/world/TerrainChunk"
-import { TerrainMaterial, type ChunkTerrainData } from "../src/world/TerrainTypes"
+import { ProgressiveTerrainSystem } from "../src/world/terrain/ProgressiveTerrainSystem"
+import { TerrainChunk } from "../src/world/terrain/TerrainChunk"
+import { TerrainMaterial, type ChunkTerrainData } from "../src/world/terrain/TerrainTypes"
 import { WorldBoundsHelper } from "../src/world/WorldBounds"
 import { TerrainGenerator } from "../src/world/generation/TerrainGenerator"
 import { TerrainGeneratorWorkerClient } from "../src/world/generation/TerrainGeneratorWorkerClient"
@@ -44,7 +44,7 @@ import {
 import { LocalForageChunkRepository } from "../src/data/LocalForageChunkRepository"
 import { LocalForageSaveGameRepository } from "../src/data/LocalForageSaveGameRepository"
 import type { ChunkRepository, PersistedChunkData } from "../src/data/ChunkRepository"
-import { TestTerrainSystem } from "../src/world/TestTerrainSystem"
+import { TestTerrainSystem } from "../src/world/terrain/TestTerrainSystem"
 
 const FakeColor3 = (globalThis as unknown).FakeColor3
 const FakeColor4 = (globalThis as unknown).FakeColor4
