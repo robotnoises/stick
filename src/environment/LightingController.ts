@@ -155,9 +155,9 @@ export class LightingController implements GameSystem {
     this._moon.intensity = moonlight * 0.28
     this._ambient.intensity = 0.08 + daylight * 0.47 + moonlight * 0.1
 
-    const moonVisibility = this._smoothStep(-0.08, 0.12, -elevation)
+    const moonVisibility = this._getCelestialDiscVisibility(-elevation)
 
-    this._moonGlow.intensity = moonVisibility * 0.16
+    this._moonGlow.intensity = moonVisibility * 0.12
     this._updateSky(elevation)
     this._updateCelestialBody(this._sunDisc, sunSkyDirection, elevation)
     this._updateCelestialBody(this._moonDisc, moonSkyDirection, -elevation)
@@ -314,8 +314,12 @@ export class LightingController implements GameSystem {
     const cameraPosition = this._context.scene.activeCamera?.position ?? Vector3.Zero()
 
     mesh.position = cameraPosition.add(direction.scale(LightingController._celestialDistance))
-    mesh.visibility = this._smoothStep(-0.08, 0.12, elevation)
+    mesh.visibility = this._getCelestialDiscVisibility(elevation)
     mesh.setEnabled(mesh.visibility > 0.01)
+  }
+
+  private _getCelestialDiscVisibility(elevation: number): number {
+    return this._smoothStep(0.12, 0.26, elevation)
   }
 
   private _mixColor3(from: Color3, to: Color3, amount: number): Color3 {
