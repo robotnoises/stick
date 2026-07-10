@@ -84,7 +84,6 @@ export function GameUiApp({ commands, initialSettings }: GameUiAppProps) {
         isSaving={state.isSaving}
         onClose={() => setMenuOpen(false)}
         onDebugVisibleChanged={setDebugVisible}
-        onMenuOpenChanged={setMenuOpen}
         onSaveGame={saveGame}
         onSettingsChanged={setSettings}
         saveStatus={state.saveStatus}

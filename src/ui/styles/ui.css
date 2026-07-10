@@ -205,62 +205,28 @@
   }
 }
 
-.stick-menu-vignette {
+.stick-modal {
   position: fixed;
   inset: 0;
-  background:
-    radial-gradient(circle at center, rgb(0 0 0 / 8%), rgb(0 0 0 / 32%)),
-    linear-gradient(90deg, rgb(23 15 9 / 22%), transparent 30%, transparent 70%, rgb(23 15 9 / 22%));
-  pointer-events: none;
-}
-
-.stick-menu {
-  position: fixed;
-  top: 14px;
-  right: 14px;
-  color: var(--stick-ui-paper-light);
-  font:
-    14px/1.4 Georgia,
-    "Times New Roman",
-    serif;
+  display: grid;
+  place-items: center;
   pointer-events: auto;
 }
 
-.stick-menu-button {
-  float: right;
-  padding: 8px 15px;
-  border: 1px solid rgb(244 228 189 / 42%);
-  border-radius: 7px;
-  color: var(--stick-ui-paper-light);
+.stick-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
   background:
-    linear-gradient(180deg, rgb(107 67 40 / 72%), rgb(58 36 23 / 88%)),
-    url("../../../assets/exported/textures/ui/leather033a-color.png"),
-    var(--stick-ui-leather);
-  background-size: auto, 180px 180px, auto;
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 16%),
-    inset 0 -2px 0 rgb(0 0 0 / 26%),
-    0 3px 10px var(--stick-ui-shadow);
-  cursor: pointer;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  text-shadow: 0 1px 1px rgb(0 0 0 / 65%);
+    radial-gradient(circle at center, rgb(0 0 0 / 20%), rgb(0 0 0 / 46%)),
+    linear-gradient(90deg, rgb(23 15 9 / 26%), transparent 30%, transparent 70%, rgb(23 15 9 / 26%));
+  cursor: default;
 }
 
-.stick-menu-button:hover,
-.stick-menu-button:focus-visible {
-  border-color: rgb(244 228 189 / 72%);
-  background:
-    linear-gradient(180deg, rgb(128 79 46 / 72%), rgb(67 42 26 / 90%)),
-    url("../../../assets/exported/textures/ui/leather033a-color.png");
-  background-size: auto, 180px 180px;
-}
-
-.stick-menu-panel {
-  clear: both;
-  width: min(300px, calc(100vw - 28px));
-  margin-top: 42px;
-  padding: 0;
+.stick-modal-panel {
+  position: relative;
+  z-index: 1;
+  width: min(360px, calc(100vw - 32px));
   border: 2px solid var(--stick-ui-leather);
   border-radius: 10px;
   color: var(--stick-ui-ink);
@@ -273,10 +239,18 @@
     inset 0 0 0 1px rgb(255 255 255 / 28%),
     inset 0 -14px 28px rgb(80 45 18 / 10%),
     0 12px 28px var(--stick-ui-shadow);
+  font:
+    14px/1.4 Georgia,
+    "Times New Roman",
+    serif;
   overflow: hidden;
 }
 
-.stick-menu-panel-header {
+.stick-modal-header {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  justify-content: space-between;
   padding: 13px 15px 11px;
   border-bottom: 1px solid rgb(58 36 23 / 26%);
   background:
@@ -284,18 +258,68 @@
     rgb(255 246 219 / 35%);
 }
 
-.stick-menu-panel-header h2 {
+.stick-modal-header h2 {
   margin: 0;
-  font-size: 21px;
-  letter-spacing: 0.02em;
+  font-size: 22px;
+  line-height: 1.08;
+  letter-spacing: 0.01em;
+}
+
+.stick-modal-close {
+  position: relative;
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  margin-top: -8px;
+  border: 1px solid rgb(44 29 18 / 32%);
+  border-radius: 50%;
+  color: var(--stick-ui-ink);
+  background: rgb(255 246 219 / 28%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 28%);
+  cursor: pointer;
+  font-size: 0;
+}
+
+.stick-modal-close::before,
+.stick-modal-close::after {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 13px;
+  height: 2px;
+  border-radius: 999px;
+  background: currentcolor;
+  content: "";
+  transform-origin: center;
+}
+
+.stick-modal-close::before {
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.stick-modal-close::after {
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
+
+.stick-modal-close:hover,
+.stick-modal-close:focus-visible {
+  background: rgb(255 246 219 / 54%);
+  filter: brightness(1.04);
+}
+
+.stick-menu-panel {
+  padding: 0;
 }
 
 .stick-menu-kicker {
-  margin: 0 0 2px;
+  margin: 0 0 7px;
   color: var(--stick-ui-ink-soft);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.16em;
+  line-height: 1;
   text-transform: uppercase;
 }
 
@@ -330,7 +354,11 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 9px;
-  padding: 10px 15px 4px;
+  padding: 8px 15px 2px;
+}
+
+.stick-menu-actions-single {
+  grid-template-columns: 1fr;
 }
 
 .stick-button {
@@ -371,8 +399,8 @@
 }
 
 .stick-save-status {
-  min-height: 1.4em;
-  margin: 6px 15px 13px;
+  min-height: 1.2em;
+  margin: 4px 15px 8px;
   color: var(--stick-ui-ink-soft);
   font-size: 13px;
   font-style: italic;
