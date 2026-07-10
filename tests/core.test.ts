@@ -2028,18 +2028,14 @@ describe("main entrypoint", () => {
 
     vi.resetModules()
     document.body.innerHTML = `<canvas id="game-canvas"></canvas>`
-    await expect(import("../src/main")).rejects.toThrow("Missing options menu elements.")
+    await expect(import("../src/main")).rejects.toThrow("Missing #ui-root element.")
   })
 
   it("wires options UI and shutdown", async () => {
     vi.resetModules()
     document.body.innerHTML = `
       <canvas id="game-canvas"></canvas>
-      <button id="options-button" type="button">Options</button>
-      <section id="options-panel" hidden></section>
-      <input id="invert-mouse-y" type="checkbox" />
-      <button id="save-game-button" type="button">Save game</button>
-      <p id="save-game-status"></p>
+      <div id="ui-root"></div>
     `
 
     await import("../src/main")
@@ -2051,10 +2047,11 @@ describe("main entrypoint", () => {
     const saveGameStatus = document.querySelector<HTMLElement>("#save-game-status")
 
     optionsButton?.click()
+    await new Promise((resolve) => window.setTimeout(resolve, 0))
     expect(optionsPanel?.hidden).toBe(false)
 
     invertMouseInput!.checked = true
-    invertMouseInput?.dispatchEvent(new Event("change"))
+    invertMouseInput?.dispatchEvent(new Event("change", { bubbles: true }))
     expect(loadGameSettings()).toEqual({ invertMouseY: true })
 
     saveGameButton?.click()

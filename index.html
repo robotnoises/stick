@@ -8,19 +8,7 @@
   <body>
     <canvas id="game-canvas"></canvas>
     <div id="look-indicator" aria-hidden="true"></div>
-
-    <div id="options-ui" aria-label="Game menu">
-      <button id="options-button" type="button">Menu</button>
-      <section id="options-panel" hidden>
-        <h2>Menu</h2>
-        <label>
-          <input id="invert-mouse-y" type="checkbox" />
-          Invert mouse Y axis
-        </label>
-        <button id="save-game-button" type="button">Save game</button>
-        <p id="save-game-status" aria-live="polite"></p>
-      </section>
-    </div>
+    <div id="ui-root"></div>
 
     <script type="module" src="/src/main.ts"></script>
   </body>

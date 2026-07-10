@@ -1,0 +1,77 @@
+#ui-root {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  pointer-events: none;
+}
+
+.game-ui-menu {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  color: #f3ead8;
+  font:
+    14px/1.4 system-ui,
+    sans-serif;
+  pointer-events: auto;
+}
+
+.game-ui-menu-button {
+  float: right;
+  padding: 7px 10px;
+  border: 1px solid rgb(243 234 216 / 35%);
+  border-radius: 4px;
+  color: #f3ead8;
+  background: rgb(0 0 0 / 55%);
+  cursor: pointer;
+}
+
+.game-ui-menu-button:hover,
+.game-ui-menu-button:focus-visible {
+  background: rgb(38 45 32 / 85%);
+}
+
+.game-ui-menu-panel {
+  clear: both;
+  min-width: 240px;
+  margin-top: 38px;
+  padding: 12px;
+  border: 1px solid rgb(243 234 216 / 25%);
+  border-radius: 6px;
+  background: rgb(0 0 0 / 72%);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 30%);
+}
+
+.game-ui-menu-panel h2 {
+  margin: 0 0 10px;
+  font-size: 16px;
+}
+
+.game-ui-menu-panel label {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 10px;
+  cursor: pointer;
+}
+
+.game-ui-menu-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.game-ui-menu-actions button {
+  padding: 7px 10px;
+  border: 1px solid rgb(243 234 216 / 25%);
+  border-radius: 4px;
+  color: #f3ead8;
+  background: rgb(38 45 32 / 85%);
+  cursor: pointer;
+}
+
+.game-ui-menu-actions button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
