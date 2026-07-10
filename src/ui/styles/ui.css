@@ -14,6 +14,197 @@
   --stick-ui-shadow: rgb(0 0 0 / 45%);
 }
 
+.stick-hud {
+  position: fixed;
+  bottom: 18px;
+  left: 50%;
+  display: grid;
+  grid-template-columns: auto 108px auto;
+  gap: 8px;
+  align-items: center;
+  width: max-content;
+  max-width: calc(100vw - 28px);
+  min-height: 56px;
+  padding: 5px 12px;
+  border: 2px solid rgb(28 17 10 / 92%);
+  border-radius: 18px 18px 24px 24px;
+  color: var(--stick-ui-paper-light);
+  background:
+    linear-gradient(180deg, rgb(255 226 162 / 10%), rgb(0 0 0 / 22%)),
+    linear-gradient(90deg, rgb(34 20 12 / 92%), rgb(93 56 32 / 92%) 22%, rgb(64 38 23 / 94%) 50%, rgb(93 56 32 / 92%) 78%, rgb(34 20 12 / 92%)),
+    url("../../../assets/exported/textures/ui/leather033a-color.png"),
+    var(--stick-ui-leather);
+  background-size: auto, auto, 220px 220px, auto;
+  box-shadow:
+    inset 0 2px 0 rgb(255 236 184 / 16%),
+    inset 0 -8px 18px rgb(0 0 0 / 28%),
+    0 12px 30px rgb(0 0 0 / 42%);
+  font:
+    12px/1 Georgia,
+    "Times New Roman",
+    serif;
+  pointer-events: auto;
+  transform: translateX(-50%);
+}
+
+.stick-hud::before {
+  position: absolute;
+  inset: 6px;
+  z-index: 0;
+  border: 1px solid rgb(244 228 189 / 12%);
+  border-radius: 12px 12px 18px 18px;
+  box-shadow:
+    inset 0 0 12px rgb(0 0 0 / 42%),
+    inset 0 7px 14px rgb(16 9 5 / 46%),
+    inset 0 -9px 18px rgb(0 0 0 / 44%),
+    inset 10px 0 18px rgb(15 8 4 / 36%),
+    inset -10px 0 18px rgb(15 8 4 / 36%);
+  content: "";
+  pointer-events: none;
+}
+
+.stick-hud::after {
+  position: absolute;
+  inset: 11px 12px 10px;
+  z-index: 0;
+  border-radius: 9px 9px 15px 15px;
+  background:
+    repeating-linear-gradient(90deg, transparent 0 5px, rgb(230 202 145 / 42%) 5px 9px, transparent 9px 14px) left top / 14px 1px repeat-x,
+    repeating-linear-gradient(90deg, transparent 0 5px, rgb(94 55 31 / 36%) 5px 9px, transparent 9px 14px) 1px 2px / 14px 1px repeat-x,
+    repeating-linear-gradient(90deg, transparent 0 5px, rgb(230 202 145 / 36%) 5px 9px, transparent 9px 14px) left bottom / 14px 1px repeat-x,
+    repeating-linear-gradient(90deg, transparent 0 5px, rgb(94 55 31 / 34%) 5px 9px, transparent 9px 14px) 1px calc(100% - 2px) / 14px 1px repeat-x,
+    repeating-linear-gradient(180deg, transparent 0 5px, rgb(230 202 145 / 34%) 5px 9px, transparent 9px 14px) left top / 1px 14px repeat-y,
+    repeating-linear-gradient(180deg, transparent 0 5px, rgb(230 202 145 / 34%) 5px 9px, transparent 9px 14px) right top / 1px 14px repeat-y;
+  content: "";
+  filter: drop-shadow(0 1px 1px rgb(0 0 0 / 42%));
+  opacity: 0.52;
+  pointer-events: none;
+}
+
+.stick-hud-rail,
+.stick-hud-compass-well {
+  position: relative;
+  z-index: 1;
+}
+
+.stick-hud-rail {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+  padding: 0 12px;
+}
+
+.stick-hud-action {
+  min-height: 32px;
+  padding: 5px 10px;
+  border: 1px solid rgb(245 211 144 / 34%);
+  border-radius: 10px;
+  color: var(--stick-ui-paper-light);
+  background:
+    radial-gradient(circle at 50% 0, rgb(255 231 171 / 20%), transparent 54%),
+    linear-gradient(180deg, rgb(105 66 36 / 78%), rgb(43 25 14 / 94%)),
+    url("../../../assets/exported/textures/ui/wood051-color.png");
+  background-size: auto, auto, 210px 210px;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 17%),
+    inset 0 -3px 0 rgb(0 0 0 / 24%),
+    0 3px 8px rgb(0 0 0 / 22%);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 76%);
+  text-transform: uppercase;
+}
+
+.stick-hud-action:hover,
+.stick-hud-action:focus-visible {
+  border-color: rgb(245 211 144 / 68%);
+  filter: brightness(1.12);
+}
+
+.stick-hud-action:active {
+  box-shadow:
+    inset 0 2px 8px rgb(0 0 0 / 36%),
+    0 2px 5px rgb(0 0 0 / 18%);
+  transform: translateY(1px);
+}
+
+.stick-hud-compass-well {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 108px;
+  height: 108px;
+  margin: -34px auto 0;
+  border: 3px solid rgb(26 15 8 / 96%);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, rgb(17 10 6 / 96%) 0 58%, rgb(93 56 32 / 95%) 59% 70%, rgb(26 15 8 / 96%) 72%),
+    url("../../../assets/exported/textures/ui/leather033a-color.png");
+  background-size: auto, 180px 180px;
+  box-shadow:
+    inset 0 5px 16px rgb(0 0 0 / 62%),
+    inset 0 -2px 0 rgb(255 226 162 / 12%),
+    0 5px 12px rgb(0 0 0 / 34%);
+}
+
+.stick-hud-compass-well::after {
+  position: absolute;
+  inset: 10px;
+  border: 1px dashed rgb(244 228 189 / 18%);
+  border-radius: 50%;
+  content: "";
+}
+
+.stick-hud-compass-placeholder {
+  display: grid;
+  place-items: start center;
+  width: 76px;
+  height: 76px;
+  padding-top: 8px;
+  border: 2px solid rgb(214 153 66 / 46%);
+  border-radius: 50%;
+  color: rgb(244 228 189 / 82%);
+  background:
+    radial-gradient(circle at 50% 55%, rgb(226 200 149 / 13%), transparent 58%),
+    rgb(12 8 5 / 82%);
+  box-shadow: inset 0 0 18px rgb(0 0 0 / 56%);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 8%);
+}
+
+@media (width <= 620px) {
+  .stick-hud {
+    grid-template-columns: auto 86px auto;
+    gap: 6px;
+    padding-inline: 9px;
+  }
+
+  .stick-hud-rail {
+    gap: 6px;
+  }
+
+  .stick-hud-action {
+    min-height: 30px;
+    padding-inline: 6px;
+    font-size: 11px;
+  }
+
+  .stick-hud-compass-well {
+    width: 86px;
+    height: 86px;
+    margin-top: -28px;
+  }
+
+  .stick-hud-compass-placeholder {
+    width: 60px;
+    height: 60px;
+  }
+}
+
 .stick-menu-vignette {
   position: fixed;
   inset: 0;

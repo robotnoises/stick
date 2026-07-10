@@ -1,5 +1,6 @@
 import { useEffect, useState } from "preact/hooks"
 import type { GameSettings } from "../app/GameSettings"
+import { Hud } from "./components/Hud"
 import { InGameMenu } from "./components/InGameMenu"
 import type { GameUiCommands, GameUiState } from "./GameUiState"
 
@@ -75,17 +76,20 @@ export function GameUiApp({ commands, initialSettings }: GameUiAppProps) {
   }
 
   return (
-    <InGameMenu
-      isDebugVisible={state.isDebugVisible}
-      isMenuOpen={state.isMenuOpen}
-      isSaving={state.isSaving}
-      onClose={() => setMenuOpen(false)}
-      onDebugVisibleChanged={setDebugVisible}
-      onMenuOpenChanged={setMenuOpen}
-      onSaveGame={saveGame}
-      onSettingsChanged={setSettings}
-      saveStatus={state.saveStatus}
-      settings={state.settings}
-    />
+    <>
+      <Hud onMenuOpen={() => setMenuOpen(true)} />
+      <InGameMenu
+        isDebugVisible={state.isDebugVisible}
+        isMenuOpen={state.isMenuOpen}
+        isSaving={state.isSaving}
+        onClose={() => setMenuOpen(false)}
+        onDebugVisibleChanged={setDebugVisible}
+        onMenuOpenChanged={setMenuOpen}
+        onSaveGame={saveGame}
+        onSettingsChanged={setSettings}
+        saveStatus={state.saveStatus}
+        settings={state.settings}
+      />
+    </>
   )
 }
