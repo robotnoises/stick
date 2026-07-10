@@ -15,7 +15,7 @@ export interface BackdropTimeProvider {
 }
 
 export class DistantBackdropSystem implements GameSystem {
-  private static readonly _radiusMeters = 520
+  private static readonly _radiusMeters = 300
   private static readonly _segmentCount = 96
 
   private readonly _mountainMesh: Mesh
@@ -27,14 +27,14 @@ export class DistantBackdropSystem implements GameSystem {
     private readonly _timeProvider: BackdropTimeProvider | null = null,
   ) {
     this._mountainMaterial = new StandardMaterial("distant-mountain-material", this._context.scene)
-    this._mountainMaterial.diffuseColor = new Color3(0.82, 0.89, 0.95)
-    this._mountainMaterial.emissiveColor = new Color3(0.5, 0.6, 0.68)
+    this._mountainMaterial.diffuseColor = new Color3(0.42, 0.48, 0.54)
+    this._mountainMaterial.emissiveColor = new Color3(0.42, 0.48, 0.54)
     this._mountainMaterial.specularColor = Color3.Black()
-    this._mountainMaterial.alpha = 0.28
+    this._mountainMaterial.alpha = 1
     this._mountainMaterial.disableLighting = true
     this._mountainMaterial.fogEnabled = false
     this._mountainMaterial.backFaceCulling = false
-    this._mountainMaterial.disableDepthWrite = true
+    this._mountainMaterial.disableDepthWrite = false
 
     this._mountainMesh = this._createMountainMesh()
     this._mountainMesh.material = this._mountainMaterial
@@ -47,7 +47,7 @@ export class DistantBackdropSystem implements GameSystem {
 
     this._mountainMesh.position.x = position.x
     this._mountainMesh.position.z = position.z
-    this._updateMountainVisibility()
+    this._updateMountainAppearance()
   }
 
   public dispose(): void {
@@ -55,33 +55,46 @@ export class DistantBackdropSystem implements GameSystem {
     this._mountainMaterial.dispose()
   }
 
-  private _updateMountainVisibility(): void {
-    const daylight = this._getDaylightAmount()
-    const nightFade = 0.04 + daylight * 0.96
+  private _updateMountainAppearance(): void {
+    const elevation = this._getSolarElevation()
+    const skyHorizonColor = this._getSkyHorizonColor(elevation)
+    const mountainColor = this._mixColor3(skyHorizonColor, Color3.Black(), 0.22)
 
-    this._mountainMaterial.alpha = 0.035 + daylight * 0.245
-    this._mountainMaterial.diffuseColor = new Color3(
-      0.08 + nightFade * 0.74,
-      0.1 + nightFade * 0.79,
-      0.13 + nightFade * 0.82,
-    )
-    this._mountainMaterial.emissiveColor = new Color3(
-      0.02 + nightFade * 0.48,
-      0.025 + nightFade * 0.575,
-      0.035 + nightFade * 0.645,
-    )
+    this._mountainMaterial.alpha = 1
+    this._mountainMaterial.diffuseColor = mountainColor
+    this._mountainMaterial.emissiveColor = mountainColor
   }
 
-  private _getDaylightAmount(): number {
+  private _getSolarElevation(): number {
     if (!this._timeProvider) {
       return 1
     }
 
     const normalizedDay = this._timeProvider.timeOfDayHours / 24
     const angle = normalizedDay * Math.PI * 2 - Math.PI / 2
-    const elevation = Math.sin(angle)
 
-    return this._smoothStep(-0.04, 0.22, elevation)
+    return Math.sin(angle)
+  }
+
+  private _getSkyHorizonColor(elevation: number): Color3 {
+    const daylight = this._smoothStep(-0.05, 0.45, elevation)
+    const twilightAmount = Math.max(0, 1 - Math.abs(elevation) / 0.34)
+    const nightHorizon = new Color3(0.018, 0.024, 0.052)
+    const dayHorizon = new Color3(0.72, 0.84, 0.96)
+    const twilightHorizon = new Color3(0.9, 0.36, 0.18)
+    const baseHorizon = this._mixColor3(nightHorizon, dayHorizon, daylight)
+
+    return this._mixColor3(baseHorizon, twilightHorizon, twilightAmount * 0.88)
+  }
+
+  private _mixColor3(from: Color3, to: Color3, amount: number): Color3 {
+    const t = Math.min(Math.max(amount, 0), 1)
+
+    return new Color3(
+      from.r + (to.r - from.r) * t,
+      from.g + (to.g - from.g) * t,
+      from.b + (to.b - from.b) * t,
+    )
   }
 
   private _smoothStep(edge0: number, edge1: number, value: number): number {
