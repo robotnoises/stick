@@ -1,8 +1,8 @@
 // @ts-nocheck
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { AnimalSystem } from "../src/animals/AnimalSystem"
-import { FishController } from "../src/animals/FishController"
-import { FishMeshFactory } from "../src/animals/FishMeshFactory"
+import { FishController } from "../src/animals/fish/FishController"
+import { FishMeshFactory } from "../src/animals/fish/FishMeshFactory"
 import { defaultGameConfig } from "../src/app/GameConfig"
 import { EngineContext } from "../src/app/EngineContext"
 import { defaultGameSettings, loadGameSettings, saveGameSettings } from "../src/app/GameSettings"
