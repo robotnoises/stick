@@ -23,6 +23,7 @@ export class FireflyController {
   private static readonly _flightSpeedMetersPerSecond = 0.9
 
   private readonly _body: Mesh
+  private readonly _halo: Mesh
   private readonly _light: PointLight
   private readonly _random: () => number
   private readonly _scale: number
@@ -34,6 +35,7 @@ export class FireflyController {
 
   public constructor(private readonly _options: FireflyControllerOptions) {
     this._body = this._options.visual.body
+    this._halo = this._options.visual.halo
     this._light = this._options.visual.light
     this._random = this._options.random
     this._scale = this._options.visual.scale
@@ -81,8 +83,10 @@ export class FireflyController {
 
   public dispose(): void {
     this._body.dispose()
+    this._halo.dispose()
     this._light.dispose()
-    this._options.visual.material.dispose()
+    this._options.visual.bodyMaterial.dispose()
+    this._options.visual.haloMaterial.dispose()
   }
 
   private _chooseTarget(): FireflyTarget {
@@ -98,14 +102,24 @@ export class FireflyController {
   }
 
   private _applyTransform(): void {
-    const pulse = 0.35 + Math.max(0, Math.sin(this._elapsedSeconds * 3.2 + this._phase)) * 0.65
+    const rawPulse = (Math.sin(this._elapsedSeconds * 3.2 + this._phase) + 1) * 0.5
+    const pulse = this._smoothStep(0.38, 1, rawPulse)
 
     this._body.position = this._position.clone()
-    this._body.visibility = 0.18 + pulse * 0.52
-    this._body.scaling = new Vector3(1 + pulse * 0.7, 1 + pulse * 0.7, 1 + pulse * 0.7).scale(
+    this._body.visibility = pulse * 0.5
+    this._body.scaling = new Vector3(0.75 + pulse * 0.8, 0.75 + pulse * 0.8, 0.75 + pulse * 0.8).scale(
       this._scale,
     )
+    this._halo.position = this._position.clone()
+    this._halo.visibility = pulse * 0.52
+    this._halo.scaling = new Vector3(0.8 + pulse * 0.45, 0.8 + pulse * 0.45, 0.8 + pulse * 0.45)
     this._light.position = this._position.clone()
-    this._light.intensity = 0.05 + pulse * 0.2
+    this._light.intensity = pulse * 0.38
+  }
+
+  private _smoothStep(edge0: number, edge1: number, value: number): number {
+    const t = Math.min(Math.max((value - edge0) / (edge1 - edge0), 0), 1)
+
+    return t * t * (3 - 2 * t)
   }
 }
