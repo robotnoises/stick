@@ -4,6 +4,10 @@ export interface AnimalPositionProvider {
   readonly position: Vector3
 }
 
+export interface AnimalTimeProvider {
+  readonly timeOfDayHours: number
+}
+
 export interface FishSpawnCandidate {
   readonly cellId: string
   readonly x: number
@@ -11,6 +15,13 @@ export interface FishSpawnCandidate {
 }
 
 export interface BirdSpawnCandidate {
+  readonly id: string
+  readonly x: number
+  readonly y: number
+  readonly z: number
+}
+
+export interface FireflySpawnCandidate {
   readonly id: string
   readonly x: number
   readonly y: number

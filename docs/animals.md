@@ -269,6 +269,20 @@ Implemented behavior:
 
 Birds are currently visual ambience only. Perching, calls, landing/takeoff, species differences, and interaction can come later.
 
+## Fireflies Phase 1
+
+Fireflies are close-range ambient wildlife for evening and night only. They use dynamic in-memory runtime actors, matching fish and bird persistence rules.
+
+Implemented behavior:
+
+- spawn only from 18:00 through before 04:00
+- disappear when the clock returns to daytime
+- small emissive procedural sphere mesh with pulsing visibility
+- slow drifting movement near terrain around the player
+- despawn when far from the player
+
+Fireflies are visual ambience only. Denser swarms, glow-layer tuning, sound, and interaction can come later.
+
 ## Open Questions
 
 - Should fish be purely ambient at first, or eventually a food source?

@@ -10,6 +10,10 @@ export interface BackdropPositionProvider {
   readonly position: Vector3
 }
 
+export interface BackdropTimeProvider {
+  readonly timeOfDayHours: number
+}
+
 export class DistantBackdropSystem implements GameSystem {
   private static readonly _radiusMeters = 520
   private static readonly _segmentCount = 96
@@ -20,6 +24,7 @@ export class DistantBackdropSystem implements GameSystem {
   public constructor(
     private readonly _context: EngineContext,
     private readonly _player: BackdropPositionProvider,
+    private readonly _timeProvider: BackdropTimeProvider | null = null,
   ) {
     this._mountainMaterial = new StandardMaterial("distant-mountain-material", this._context.scene)
     this._mountainMaterial.diffuseColor = new Color3(0.82, 0.89, 0.95)
@@ -42,11 +47,47 @@ export class DistantBackdropSystem implements GameSystem {
 
     this._mountainMesh.position.x = position.x
     this._mountainMesh.position.z = position.z
+    this._updateMountainVisibility()
   }
 
   public dispose(): void {
     this._mountainMesh.dispose()
     this._mountainMaterial.dispose()
+  }
+
+  private _updateMountainVisibility(): void {
+    const daylight = this._getDaylightAmount()
+    const nightFade = 0.04 + daylight * 0.96
+
+    this._mountainMaterial.alpha = 0.035 + daylight * 0.245
+    this._mountainMaterial.diffuseColor = new Color3(
+      0.08 + nightFade * 0.74,
+      0.1 + nightFade * 0.79,
+      0.13 + nightFade * 0.82,
+    )
+    this._mountainMaterial.emissiveColor = new Color3(
+      0.02 + nightFade * 0.48,
+      0.025 + nightFade * 0.575,
+      0.035 + nightFade * 0.645,
+    )
+  }
+
+  private _getDaylightAmount(): number {
+    if (!this._timeProvider) {
+      return 1
+    }
+
+    const normalizedDay = this._timeProvider.timeOfDayHours / 24
+    const angle = normalizedDay * Math.PI * 2 - Math.PI / 2
+    const elevation = Math.sin(angle)
+
+    return this._smoothStep(-0.04, 0.22, elevation)
+  }
+
+  private _smoothStep(edge0: number, edge1: number, value: number): number {
+    const t = Math.min(Math.max((value - edge0) / (edge1 - edge0), 0), 1)
+
+    return t * t * (3 - 2 * t)
   }
 
   private _createMountainMesh(): Mesh {

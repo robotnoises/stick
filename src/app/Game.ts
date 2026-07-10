@@ -73,8 +73,9 @@ export class Game {
 
     const animals = new AnimalSystem(this._context, player, waterSampler, {
       terrainHeightProvider: (worldX, worldZ) => terrain.getHeightAt(worldX, worldZ),
+      timeProvider: time,
     })
-    const backdrop = new DistantBackdropSystem(this._context, player)
+    const backdrop = new DistantBackdropSystem(this._context, player, time)
     const clouds = new CloudSystem(this._context, time, player)
     const lighting = new LightingController(this._context, time)
     const flashlight = new FlashlightController(this._context, player)

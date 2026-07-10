@@ -869,6 +869,48 @@ describe("animals", () => {
     animalSystem.dispose()
   })
 
+  it("spawns fireflies only during evening and night", () => {
+    const context = createContext()
+    const player = { position: new FakeVector3(0, 1, 0) }
+    const waterFeatures: WaterFeatureSampler = { sample: () => ({ water: null }) }
+    const waterSampler = new WaterVolumeSampler({
+      waterFeatures,
+      terrainHeightProvider: () => 0,
+    })
+    const time = { timeOfDayHours: 20 }
+    const animalSystem = new AnimalSystem(context, player as any, waterSampler, {
+      activeRadiusMeters: 20,
+      maxFireflies: 2,
+      fireflySpawnChance: 1,
+      terrainHeightProvider: (x, z) => x * 0.01 + z * 0.01,
+      timeProvider: time,
+      random: () => 0.5,
+    })
+
+    animalSystem.update(0.5)
+    expect(animalSystem.activeFireflyCount).toBe(1)
+    expect((animalSystem as any)._fireflies.has("firefly_runtime_0")).toBe(true)
+
+    const firefly = [...(animalSystem as any)._fireflies.values()][0]
+    const fireflyBody = firefly._body
+
+    expect(firefly.id).toBe("firefly_runtime_0")
+    expect(firefly.position.y).toBeGreaterThan(0.3)
+    animalSystem.update(1)
+    expect(fireflyBody.position).toBeInstanceOf(FakeVector3)
+
+    time.timeOfDayHours = 4
+    animalSystem.update(0.016)
+    expect(animalSystem.activeFireflyCount).toBe(0)
+    expect(fireflyBody.disposed).toBe(true)
+
+    time.timeOfDayHours = 12
+    animalSystem.update(0.016)
+    expect(animalSystem.activeFireflyCount).toBe(0)
+
+    animalSystem.dispose()
+  })
+
   it("handles fish steering fallback branches", () => {
     const context = createContext()
     const factory = new FishMeshFactory(context)
@@ -966,10 +1008,11 @@ describe("environment backdrop", () => {
     expect(material.disposed).toBe(true)
   })
 
-  it("creates a distant mountain ring that follows the player", () => {
+  it("creates a distant mountain ring that follows the player and fades at night", () => {
     const context = createContext()
     const player = { position: new FakeVector3(10, 2, 20) }
-    const backdrop = new DistantBackdropSystem(context, player as any)
+    const time = { timeOfDayHours: 12 }
+    const backdrop = new DistantBackdropSystem(context, player as any, time)
 
     backdrop.update(0.016)
 
@@ -982,13 +1025,16 @@ describe("environment backdrop", () => {
     expect(mesh.isPickable).toBe(false)
     expect(mesh.alwaysSelectAsActiveMesh).toBe(true)
     expect(mesh.vertexData.positions.length).toBeGreaterThan(0)
+    expect(material.alpha).toBeGreaterThan(0.2)
     expect((backdrop as any)._ridgeNoise(0.25)).toBeGreaterThanOrEqual(0)
     expect((backdrop as any)._ridgeNoise(0.25)).toBeLessThanOrEqual(1)
 
     player.position = new FakeVector3(-5, 2, 7)
+    time.timeOfDayHours = 0
     backdrop.update(0.016)
     expect(mesh.position.x).toBe(-5)
     expect(mesh.position.z).toBe(7)
+    expect(material.alpha).toBeLessThan(0.08)
 
     backdrop.dispose()
     expect(mesh.disposed).toBe(true)

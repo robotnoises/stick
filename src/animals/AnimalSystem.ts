@@ -2,9 +2,17 @@ import { Vector3 } from "@babylonjs/core/Maths/math.vector"
 import type { EngineContext } from "../app/EngineContext"
 import type { GameSystem } from "../app/GameSystem"
 import type { WaterColumnSample, WaterVolumeSampler } from "../world/water/WaterVolumeSampler"
-import type { AnimalPositionProvider, BirdSpawnCandidate, FishSpawnCandidate } from "./AnimalTypes"
+import type {
+  AnimalPositionProvider,
+  AnimalTimeProvider,
+  BirdSpawnCandidate,
+  FireflySpawnCandidate,
+  FishSpawnCandidate,
+} from "./AnimalTypes"
 import { BirdController } from "./BirdController"
 import { BirdMeshFactory } from "./BirdMeshFactory"
+import { FireflyController } from "./FireflyController"
+import { FireflyMeshFactory } from "./FireflyMeshFactory"
 import { FishController } from "./FishController"
 import { FishMeshFactory } from "./FishMeshFactory"
 
@@ -13,9 +21,12 @@ export interface AnimalSystemOptions {
   readonly cellSizeMeters?: number
   readonly maxFish?: number
   readonly maxBirds?: number
+  readonly maxFireflies?: number
   readonly fishSpawnChance?: number
   readonly birdSpawnChance?: number
+  readonly fireflySpawnChance?: number
   readonly terrainHeightProvider?: (worldX: number, worldZ: number) => number
+  readonly timeProvider?: AnimalTimeProvider
   readonly random?: () => number
 }
 
@@ -24,17 +35,23 @@ export class AnimalSystem implements GameSystem {
   private readonly _cellSizeMeters: number
   private readonly _maxFish: number
   private readonly _maxBirds: number
+  private readonly _maxFireflies: number
   private readonly _fishSpawnChance: number
   private readonly _birdSpawnChance: number
+  private readonly _fireflySpawnChance: number
   private readonly _terrainHeightProvider: (worldX: number, worldZ: number) => number
+  private readonly _timeProvider: AnimalTimeProvider
   private readonly _random: () => number
   private readonly _fish = new Map<string, FishController>()
   private readonly _fishCells = new Map<string, string>()
   private readonly _birds = new Map<string, BirdController>()
+  private readonly _fireflies = new Map<string, FireflyController>()
   private readonly _fishMeshFactory: FishMeshFactory
   private readonly _birdMeshFactory: BirdMeshFactory
+  private readonly _fireflyMeshFactory: FireflyMeshFactory
   private _nextFishId = 0
   private _nextBirdId = 0
+  private _nextFireflyId = 0
 
   public constructor(
     private readonly _context: EngineContext,
@@ -46,12 +63,16 @@ export class AnimalSystem implements GameSystem {
     this._cellSizeMeters = options.cellSizeMeters ?? 28
     this._maxFish = options.maxFish ?? 6
     this._maxBirds = options.maxBirds ?? 4
+    this._maxFireflies = options.maxFireflies ?? 18
     this._fishSpawnChance = options.fishSpawnChance ?? 0.08
     this._birdSpawnChance = options.birdSpawnChance ?? 0.018
+    this._fireflySpawnChance = options.fireflySpawnChance ?? 0.08
     this._terrainHeightProvider = options.terrainHeightProvider ?? (() => 0)
+    this._timeProvider = options.timeProvider ?? { timeOfDayHours: 12 }
     this._random = options.random ?? Math.random
     this._fishMeshFactory = new FishMeshFactory(this._context)
     this._birdMeshFactory = new BirdMeshFactory(this._context)
+    this._fireflyMeshFactory = new FireflyMeshFactory(this._context)
   }
 
   public get activeFishCount(): number {
@@ -62,11 +83,17 @@ export class AnimalSystem implements GameSystem {
     return this._birds.size
   }
 
+  public get activeFireflyCount(): number {
+    return this._fireflies.size
+  }
+
   public update(deltaSeconds: number): void {
     this._spawnNearbyFish()
     this._spawnNearbyBirds()
+    this._spawnNearbyFireflies()
     this._disposeDistantFish()
     this._disposeDistantBirds()
+    this._disposeDistantFireflies()
 
     for (const fish of this._fish.values()) {
       fish.update(deltaSeconds)
@@ -74,6 +101,10 @@ export class AnimalSystem implements GameSystem {
 
     for (const bird of this._birds.values()) {
       bird.update(deltaSeconds)
+    }
+
+    for (const firefly of this._fireflies.values()) {
+      firefly.update(deltaSeconds)
     }
   }
 
@@ -90,6 +121,12 @@ export class AnimalSystem implements GameSystem {
     }
 
     this._birds.clear()
+
+    for (const firefly of this._fireflies.values()) {
+      firefly.dispose()
+    }
+
+    this._fireflies.clear()
   }
 
   private _spawnNearbyFish(): void {
@@ -186,6 +223,54 @@ export class AnimalSystem implements GameSystem {
     return { id, x, y, z }
   }
 
+  private _spawnNearbyFireflies(): void {
+    if (!this._isEveningOrNight()) {
+      this._disposeAllFireflies()
+      return
+    }
+
+    if (this._fireflies.size >= this._maxFireflies || this._random() > this._fireflySpawnChance) {
+      return
+    }
+
+    const candidate = this._getFireflySpawnCandidate()
+    const scale = 0.75 + this._random() * 0.7
+    const position = new Vector3(candidate.x, candidate.y, candidate.z)
+    const visual = this._fireflyMeshFactory.createFirefly(candidate.id, position, scale)
+
+    this._fireflies.set(
+      candidate.id,
+      new FireflyController({
+        id: candidate.id,
+        visual,
+        initialPosition: position,
+        player: this._player,
+        terrainHeightProvider: this._terrainHeightProvider,
+        random: this._random,
+      }),
+    )
+  }
+
+  private _getFireflySpawnCandidate(): FireflySpawnCandidate {
+    const playerPosition = this._player.position
+    const angle = this._random() * Math.PI * 2
+    const distance = 6 + this._random() * Math.min(this._activeRadiusMeters * 0.65, 36)
+    const x = playerPosition.x + Math.sin(angle) * distance
+    const z = playerPosition.z + Math.cos(angle) * distance
+    const y = this._terrainHeightProvider(x, z) + 0.7 + this._random() * 2.1
+    const id = `firefly_runtime_${this._nextFireflyId}`
+
+    this._nextFireflyId += 1
+
+    return { id, x, y, z }
+  }
+
+  private _isEveningOrNight(): boolean {
+    const hour = ((this._timeProvider.timeOfDayHours % 24) + 24) % 24
+
+    return hour >= 18 || hour < 4
+  }
+
   private _disposeDistantFish(): void {
     const playerPosition = this._player.position
     const disposeRadius = this._activeRadiusMeters + this._cellSizeMeters
@@ -219,6 +304,31 @@ export class AnimalSystem implements GameSystem {
       bird.dispose()
       this._birds.delete(id)
     }
+  }
+
+  private _disposeDistantFireflies(): void {
+    const playerPosition = this._player.position
+    const disposeRadius = this._activeRadiusMeters + this._cellSizeMeters
+
+    for (const [id, firefly] of this._fireflies) {
+      const position = firefly.position
+      const distance = Math.hypot(position.x - playerPosition.x, position.z - playerPosition.z)
+
+      if (distance <= disposeRadius) {
+        continue
+      }
+
+      firefly.dispose()
+      this._fireflies.delete(id)
+    }
+  }
+
+  private _disposeAllFireflies(): void {
+    for (const firefly of this._fireflies.values()) {
+      firefly.dispose()
+    }
+
+    this._fireflies.clear()
   }
 
   private _getNearbyFishSpawnCandidates(): FishSpawnCandidate[] {
