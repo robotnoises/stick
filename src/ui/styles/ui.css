@@ -3,75 +3,186 @@
   inset: 0;
   z-index: 20;
   pointer-events: none;
+  --stick-ui-paper: #e2c895;
+  --stick-ui-paper-light: #f4e4bd;
+  --stick-ui-paper-dark: #b68f54;
+  --stick-ui-ink: #2c1d12;
+  --stick-ui-ink-soft: #604329;
+  --stick-ui-leather: #3a2417;
+  --stick-ui-leather-light: #6b4328;
+  --stick-ui-amber: #d99b42;
+  --stick-ui-shadow: rgb(0 0 0 / 45%);
 }
 
-.game-ui-menu {
+.stick-menu-vignette {
   position: fixed;
-  top: 12px;
-  right: 12px;
-  color: #f3ead8;
+  inset: 0;
+  background:
+    radial-gradient(circle at center, rgb(0 0 0 / 8%), rgb(0 0 0 / 32%)),
+    linear-gradient(90deg, rgb(23 15 9 / 22%), transparent 30%, transparent 70%, rgb(23 15 9 / 22%));
+  pointer-events: none;
+}
+
+.stick-menu {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  color: var(--stick-ui-paper-light);
   font:
-    14px/1.4 system-ui,
-    sans-serif;
+    14px/1.4 Georgia,
+    "Times New Roman",
+    serif;
   pointer-events: auto;
 }
 
-.game-ui-menu-button {
+.stick-menu-button {
   float: right;
-  padding: 7px 10px;
-  border: 1px solid rgb(243 234 216 / 35%);
-  border-radius: 4px;
-  color: #f3ead8;
-  background: rgb(0 0 0 / 55%);
+  padding: 8px 15px;
+  border: 1px solid rgb(244 228 189 / 42%);
+  border-radius: 7px;
+  color: var(--stick-ui-paper-light);
+  background:
+    linear-gradient(180deg, rgb(107 67 40 / 72%), rgb(58 36 23 / 88%)),
+    url("../../../assets/exported/textures/ui/leather033a-color.png"),
+    var(--stick-ui-leather);
+  background-size: auto, 180px 180px, auto;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 16%),
+    inset 0 -2px 0 rgb(0 0 0 / 26%),
+    0 3px 10px var(--stick-ui-shadow);
   cursor: pointer;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-shadow: 0 1px 1px rgb(0 0 0 / 65%);
 }
 
-.game-ui-menu-button:hover,
-.game-ui-menu-button:focus-visible {
-  background: rgb(38 45 32 / 85%);
+.stick-menu-button:hover,
+.stick-menu-button:focus-visible {
+  border-color: rgb(244 228 189 / 72%);
+  background:
+    linear-gradient(180deg, rgb(128 79 46 / 72%), rgb(67 42 26 / 90%)),
+    url("../../../assets/exported/textures/ui/leather033a-color.png");
+  background-size: auto, 180px 180px;
 }
 
-.game-ui-menu-panel {
+.stick-menu-panel {
   clear: both;
-  min-width: 240px;
-  margin-top: 38px;
-  padding: 12px;
-  border: 1px solid rgb(243 234 216 / 25%);
-  border-radius: 6px;
-  background: rgb(0 0 0 / 72%);
-  box-shadow: 0 6px 18px rgb(0 0 0 / 30%);
+  width: min(300px, calc(100vw - 28px));
+  margin-top: 42px;
+  padding: 0;
+  border: 2px solid var(--stick-ui-leather);
+  border-radius: 10px;
+  color: var(--stick-ui-ink);
+  background:
+    radial-gradient(circle at 20% 10%, rgb(255 255 255 / 24%), transparent 32%),
+    linear-gradient(180deg, rgb(244 228 189 / 78%), rgb(226 200 149 / 86%)),
+    url("../../../assets/exported/textures/ui/paper006-color.png");
+  background-size: auto, auto, 320px 320px;
+  box-shadow:
+    inset 0 0 0 1px rgb(255 255 255 / 28%),
+    inset 0 -14px 28px rgb(80 45 18 / 10%),
+    0 12px 28px var(--stick-ui-shadow);
+  overflow: hidden;
 }
 
-.game-ui-menu-panel h2 {
-  margin: 0 0 10px;
-  font-size: 16px;
+.stick-menu-panel-header {
+  padding: 13px 15px 11px;
+  border-bottom: 1px solid rgb(58 36 23 / 26%);
+  background:
+    linear-gradient(90deg, rgb(58 36 23 / 12%), transparent),
+    rgb(255 246 219 / 35%);
 }
 
-.game-ui-menu-panel label {
+.stick-menu-panel-header h2 {
+  margin: 0;
+  font-size: 21px;
+  letter-spacing: 0.02em;
+}
+
+.stick-menu-kicker {
+  margin: 0 0 2px;
+  color: var(--stick-ui-ink-soft);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.stick-menu-section {
+  padding: 12px 15px 4px;
+}
+
+.stick-menu-section h3 {
+  margin: 0 0 8px;
+  color: var(--stick-ui-ink-soft);
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.stick-checkbox-row {
   display: flex;
-  gap: 8px;
+  gap: 9px;
   align-items: center;
   margin-bottom: 10px;
   cursor: pointer;
+  user-select: none;
 }
 
-.game-ui-menu-actions {
+.stick-checkbox-row input {
+  width: 17px;
+  height: 17px;
+  accent-color: var(--stick-ui-leather-light);
+}
+
+.stick-menu-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin-top: 12px;
+  gap: 9px;
+  padding: 10px 15px 4px;
 }
 
-.game-ui-menu-actions button {
-  padding: 7px 10px;
-  border: 1px solid rgb(243 234 216 / 25%);
-  border-radius: 4px;
-  color: #f3ead8;
-  background: rgb(38 45 32 / 85%);
+.stick-button {
+  padding: 8px 10px;
+  border: 1px solid rgb(44 29 18 / 46%);
+  border-radius: 7px;
+  color: var(--stick-ui-paper-light);
+  background:
+    linear-gradient(180deg, rgb(122 78 45 / 74%), rgb(65 41 24 / 92%)),
+    url("../../../assets/exported/textures/ui/leather033a-color.png");
+  background-size: auto, 180px 180px;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 18%),
+    inset 0 -2px 0 rgb(0 0 0 / 26%);
   cursor: pointer;
+  font-weight: 700;
+  text-shadow: 0 1px 1px rgb(0 0 0 / 55%);
 }
 
-.game-ui-menu-actions button:disabled {
+.stick-button-secondary {
+  color: var(--stick-ui-ink);
+  background:
+    linear-gradient(180deg, rgb(242 221 176 / 76%), rgb(202 165 111 / 88%)),
+    url("../../../assets/exported/textures/ui/wood051-color.png");
+  background-size: auto, 220px 220px;
+  text-shadow: 0 1px 0 rgb(255 255 255 / 45%);
+}
+
+.stick-button:hover,
+.stick-button:focus-visible {
+  filter: brightness(1.08);
+}
+
+.stick-button:disabled {
   cursor: wait;
-  opacity: 0.7;
+  filter: saturate(0.6);
+  opacity: 0.74;
+}
+
+.stick-save-status {
+  min-height: 1.4em;
+  margin: 6px 15px 13px;
+  color: var(--stick-ui-ink-soft);
+  font-size: 13px;
+  font-style: italic;
 }

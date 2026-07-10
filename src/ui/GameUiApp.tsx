@@ -29,6 +29,21 @@ export function GameUiApp({ commands, initialSettings }: GameUiAppProps) {
     return () => window.clearInterval(interval)
   }, [commands])
 
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent): void => {
+      if (event.key !== "Escape") {
+        return
+      }
+
+      event.preventDefault()
+      setState((current) => ({ ...current, isMenuOpen: !current.isMenuOpen }))
+    }
+
+    window.addEventListener("keydown", handleKeyDown)
+
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [])
+
   const setMenuOpen = (isMenuOpen: boolean): void => {
     setState((current) => ({ ...current, isMenuOpen }))
   }
