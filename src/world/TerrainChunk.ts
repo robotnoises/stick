@@ -1,25 +1,17 @@
-import { MultiMaterial } from "@babylonjs/core/Materials/multiMaterial"
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial"
 import { Vector3 } from "@babylonjs/core/Maths/math.vector"
 import { Mesh } from "@babylonjs/core/Meshes/mesh"
 import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder"
-import { SubMesh } from "@babylonjs/core/Meshes/subMesh"
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData"
 import type { EngineContext } from "../app/EngineContext"
-import type { WorldBounds } from "../app/GameConfig"
 import { TerrainMaterial, type ChunkTerrainData, type GeneratedPropData } from "./TerrainTypes"
 import type { WorldFeatureGenerator } from "./generation/WorldFeatureGenerator"
+import { ChunkHeightSampler } from "./terrain/ChunkHeightSampler"
+import { TerrainMeshBuilder } from "./terrain/TerrainMeshBuilder"
+import type { TerrainChunkMaterials } from "./terrain/TerrainChunkMaterials"
+import { WaterMeshBuilder } from "./water/WaterMeshBuilder"
 
-export interface TerrainChunkMaterials {
-  readonly terrain: readonly StandardMaterial[]
-  readonly trunk: StandardMaterial
-  readonly deadWood: StandardMaterial
-  readonly needles: StandardMaterial
-  readonly pineFoliage: StandardMaterial
-  readonly pineNeedleLitter: StandardMaterial
-  readonly rock: StandardMaterial
-  readonly water: StandardMaterial
-}
+export type { TerrainChunkMaterials } from "./terrain/TerrainChunkMaterials"
 
 interface PineBranchSegment {
   readonly start: Vector3
@@ -64,6 +56,7 @@ interface PineProfile {
 }
 
 export class TerrainChunk {
+  private readonly _heightSampler: ChunkHeightSampler
   private readonly _terrainMesh: Mesh
   private readonly _props: Mesh[] = []
 
@@ -73,8 +66,9 @@ export class TerrainChunk {
     private readonly _materials: TerrainChunkMaterials,
     private readonly _worldFeatures: WorldFeatureGenerator | null = null,
   ) {
+    this._heightSampler = new ChunkHeightSampler(this._data)
     this._terrainMesh = this._createTerrainMesh()
-    this._createWaterMeshes()
+    this._props.push(...this._createWaterMeshes())
 
     for (const prop of this._data.props) {
       this._createProp(prop)
@@ -97,182 +91,15 @@ export class TerrainChunk {
   }
 
   private _createTerrainMesh(): Mesh {
-    const mesh = new Mesh(`terrain_${this._data.key}`, this._context.scene)
-    const vertexData = new VertexData()
-    const positions: number[] = []
-    const materialIndices: number[][] = [[], [], [], []]
-    const indices: number[] = []
-    const normals: number[] = []
-    const uvs: number[] = []
-    const colors: number[] = []
-    const gridSize = this._data.resolution + 1
-    const step = this._data.chunkSizeMeters / this._data.resolution
-    const baseX = this._data.coord.x * this._data.chunkSizeMeters
-    const baseZ = this._data.coord.z * this._data.chunkSizeMeters
-
-    for (let z = 0; z < gridSize; z += 1) {
-      for (let x = 0; x < gridSize; x += 1) {
-        const index = z * gridSize + x
-
-        positions.push(baseX + x * step, this._data.heights[index] ?? 0, baseZ + z * step)
-        uvs.push(x / this._data.resolution, z / this._data.resolution)
-        colors.push(
-          ...this._getTerrainColor(this._data.terrainMaterials[index] ?? TerrainMaterial.Grass),
-        )
-      }
-    }
-
-    for (let z = 0; z < this._data.resolution; z += 1) {
-      for (let x = 0; x < this._data.resolution; x += 1) {
-        const topLeft = z * gridSize + x
-        const topRight = topLeft + 1
-        const bottomLeft = topLeft + gridSize
-        const bottomRight = bottomLeft + 1
-
-        const material = this._getCellTerrainMaterial(topLeft, topRight, bottomLeft, bottomRight)
-
-        materialIndices[material]?.push(topLeft, bottomLeft, topRight)
-        materialIndices[material]?.push(topRight, bottomLeft, bottomRight)
-      }
-    }
-
-    for (const materialIndexGroup of materialIndices) {
-      indices.push(...materialIndexGroup)
-    }
-
-    VertexData.ComputeNormals(positions, indices, normals)
-
-    vertexData.positions = positions
-    vertexData.indices = indices
-    vertexData.normals = normals
-    vertexData.uvs = uvs
-    vertexData.colors = colors
-    vertexData.applyToMesh(mesh)
-
-    this._applyTerrainMaterials(mesh, materialIndices)
-    return mesh
+    return new TerrainMeshBuilder(this._context, this._data, this._materials).create()
   }
 
-  private _getCellTerrainMaterial(
-    topLeft: number,
-    topRight: number,
-    bottomLeft: number,
-    bottomRight: number,
-  ): number {
-    const counts = new Map<number, number>()
-
-    for (const material of [topLeft, topRight, bottomLeft, bottomRight].map(
-      (index) => this._data.terrainMaterials[index] ?? TerrainMaterial.Grass,
-    )) {
-      counts.set(material, (counts.get(material) ?? 0) + 1)
-    }
-
-    const sortedCounts = [...counts.entries()].sort((a, b) => b[1] - a[1])
-
-    return sortedCounts[0]![0]
-  }
-
-  private _applyTerrainMaterials(mesh: Mesh, materialIndices: readonly number[][]): void {
-    const multiMaterial = new MultiMaterial(
-      `terrain_materials_${this._data.key}`,
-      this._context.scene,
-    )
-    let indexStart = 0
-
-    multiMaterial.subMaterials.push(...this._materials.terrain)
-    mesh.material = multiMaterial
-    mesh.subMeshes = []
-
-    for (let materialIndex = 0; materialIndex < materialIndices.length; materialIndex += 1) {
-      const indexCount = materialIndices[materialIndex]!.length
-
-      if (indexCount === 0) {
-        continue
-      }
-
-      new SubMesh(materialIndex, 0, this._data.heights.length, indexStart, indexCount, mesh)
-      indexStart += indexCount
-    }
-  }
-
-  private _createWaterMeshes(): void {
-    if (!this._worldFeatures) {
-      return
-    }
-
-    const bounds = this._getChunkBounds()
-    const lakes = this._worldFeatures.getLakesIntersectingBounds(bounds)
-
-    for (const lake of lakes) {
-      const water = MeshBuilder.CreateGround(
-        `water_${this._data.key}_${lake.id}`,
-        {
-          width: this._data.chunkSizeMeters,
-          height: this._data.chunkSizeMeters,
-          subdivisions: 1,
-        },
-        this._context.scene,
-      )
-
-      water.position = new Vector3(
-        bounds.minX + this._data.chunkSizeMeters / 2,
-        lake.waterLevelMeters,
-        bounds.minZ + this._data.chunkSizeMeters / 2,
-      )
-      water.material = this._materials.water
-      water.isPickable = false
-
-      this._props.push(water)
-    }
+  private _createWaterMeshes(): Mesh[] {
+    return new WaterMeshBuilder(this._context, this._data, this._materials, this._worldFeatures).create()
   }
 
   public _sampleChunkHeight(worldX: number, worldZ: number): number {
-    const localX = worldX - this._data.coord.x * this._data.chunkSizeMeters
-    const localZ = worldZ - this._data.coord.z * this._data.chunkSizeMeters
-    const gridSize = this._data.resolution + 1
-    const step = this._data.chunkSizeMeters / this._data.resolution
-    const sampleX = Math.min(Math.max(localX / step, 0), this._data.resolution)
-    const sampleZ = Math.min(Math.max(localZ / step, 0), this._data.resolution)
-    const x0 = Math.floor(sampleX)
-    const z0 = Math.floor(sampleZ)
-    const x1 = Math.min(x0 + 1, this._data.resolution)
-    const z1 = Math.min(z0 + 1, this._data.resolution)
-    const tx = sampleX - x0
-    const tz = sampleZ - z0
-    const a = this._data.heights[z0 * gridSize + x0] ?? 0
-    const b = this._data.heights[z0 * gridSize + x1] ?? a
-    const c = this._data.heights[z1 * gridSize + x0] ?? a
-    const d = this._data.heights[z1 * gridSize + x1] ?? c
-    const xMix0 = this._lerp(a, b, tx)
-    const xMix1 = this._lerp(c, d, tx)
-
-    return this._lerp(xMix0, xMix1, tz)
-  }
-
-  private _getChunkBounds(): WorldBounds {
-    const minX = this._data.coord.x * this._data.chunkSizeMeters
-    const minZ = this._data.coord.z * this._data.chunkSizeMeters
-
-    return {
-      minX,
-      maxX: minX + this._data.chunkSizeMeters,
-      minZ,
-      maxZ: minZ + this._data.chunkSizeMeters,
-    }
-  }
-
-  private _getTerrainColor(material: number): [number, number, number, number] {
-    switch (material) {
-      case TerrainMaterial.Dirt:
-        return [0.42, 0.31, 0.2, 1]
-      case TerrainMaterial.Sand:
-        return [0.63, 0.56, 0.39, 1]
-      case TerrainMaterial.PineNeedles:
-        return [0.24, 0.21, 0.12, 1]
-      case TerrainMaterial.Grass:
-      default:
-        return [0.33, 0.44, 0.2, 1]
-    }
+    return this._heightSampler.sample(worldX, worldZ)
   }
 
   private _lerp(from: number, to: number, amount: number): number {
