@@ -303,6 +303,39 @@ Examples:
 - `TerrainChunkHeightSampler`
 - prop builders under `world/props/*`
 
+Props fall into two broad categories:
+
+- **Decorative props:** visual-only, deterministic, and safe to regenerate from seed. Examples: grass clumps, most flowers, pine needle litter, pebble clusters, non-interactive shrubs.
+- **Interactive props:** generated world objects with gameplay state. Examples: berry bushes, harvestable plants, mushrooms, removable branches, or any object that can be depleted, collected, damaged, or otherwise changed by the player.
+
+Interactive prop design rules:
+
+- Generated props need stable deterministic IDs.
+- Gameplay interaction metadata belongs in terrain/prop data, not in mesh internals.
+- Visual prop builders should create meshes only; they should not own long-lived gameplay state.
+- Runtime interaction systems should query prop metadata/state and apply mutations through chunk/world state services.
+- Persistent changes should be stored as chunk mutations or state overlays.
+
+Possible future mutation shape:
+
+```ts
+export type ChunkMutation =
+  | { type: "propRemoved"; propId: string }
+  | { type: "terrainDelta"; vertexIndex: number; deltaY: number }
+  | { type: "propStateChanged"; propId: string; state: Record<string, unknown> }
+```
+
+Example future forageable prop metadata:
+
+```ts
+export interface GeneratedPropInteraction {
+  readonly type: "forageable" | "harvestable" | "inspectable"
+  readonly resourceId?: string
+}
+```
+
+A berry bush can then be generated deterministically as a visible prop while its berry availability is persisted separately when the player harvests it.
+
 ### AnimalSystem
 
 `AnimalSystem` coordinates species populations. Species-specific details live under semantic subdirectories.
