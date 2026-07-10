@@ -5,6 +5,7 @@ export interface GameUiState {
   readonly isSaving: boolean
   readonly saveStatus: string
   readonly settings: GameSettings
+  readonly headingDegrees: number
   readonly isDebugVisible: boolean
 }
 
@@ -13,4 +14,5 @@ export interface GameUiCommands {
   readonly onSaveGame: () => Promise<void>
   readonly onDebugVisibleChanged: (visible: boolean) => void
   readonly getDebugVisible: () => boolean
+  readonly getHeadingDegrees: () => number
 }

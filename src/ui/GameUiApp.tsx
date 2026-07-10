@@ -15,17 +15,21 @@ export function GameUiApp({ commands, initialSettings }: GameUiAppProps) {
     isSaving: false,
     saveStatus: "",
     settings: initialSettings,
+    headingDegrees: commands.getHeadingDegrees(),
     isDebugVisible: commands.getDebugVisible(),
   })
 
   useEffect(() => {
     const interval = window.setInterval(() => {
       const visible = commands.getDebugVisible()
+      const headingDegrees = commands.getHeadingDegrees()
 
       setState((current) =>
-        current.isDebugVisible === visible ? current : { ...current, isDebugVisible: visible },
+        current.isDebugVisible === visible && Math.abs(current.headingDegrees - headingDegrees) < 0.1
+          ? current
+          : { ...current, headingDegrees, isDebugVisible: visible },
       )
-    }, 250)
+    }, 50)
 
     return () => window.clearInterval(interval)
   }, [commands])
@@ -77,7 +81,7 @@ export function GameUiApp({ commands, initialSettings }: GameUiAppProps) {
 
   return (
     <>
-      <Hud onMenuOpen={() => setMenuOpen(true)} />
+      <Hud headingDegrees={state.headingDegrees} onMenuOpen={() => setMenuOpen(true)} />
       <InGameMenu
         isDebugVisible={state.isDebugVisible}
         isMenuOpen={state.isMenuOpen}

@@ -157,6 +157,10 @@ export class Game {
     this._player?.setInvertMouseY(settings.invertMouseY)
   }
 
+  public getPlayerHeadingDegrees(): number {
+    return this._player?.headingDegrees ?? 0
+  }
+
   public async saveGame(): Promise<void> {
     if (!this._saveGameRepository || !this._player || !this._time) {
       return

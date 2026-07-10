@@ -28,6 +28,7 @@ await game.start()
 
 const ui = new GameUiController(uiRoot, settings, {
   getDebugVisible: () => window.stick?.debug.visible() ?? false,
+  getHeadingDegrees: () => game.getPlayerHeadingDegrees(),
   onDebugVisibleChanged: (visible) => window.stick?.debug.show(visible),
   onSaveGame: () => game.saveGame(),
   onSettingsChanged: (nextSettings) => {

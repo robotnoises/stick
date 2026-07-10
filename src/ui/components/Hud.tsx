@@ -1,8 +1,11 @@
+import { Compass } from "./Compass"
+
 export interface HudProps {
+  readonly headingDegrees: number
   readonly onMenuOpen: () => void
 }
 
-export function Hud({ onMenuOpen }: HudProps) {
+export function Hud({ headingDegrees, onMenuOpen }: HudProps) {
   const noopAction = (): void => undefined
 
   return (
@@ -16,10 +19,8 @@ export function Hud({ onMenuOpen }: HudProps) {
         </button>
       </div>
 
-      <div class="stick-hud-compass-well" aria-label="Compass placeholder">
-        <div class="stick-hud-compass-placeholder">
-          <span>N</span>
-        </div>
+      <div class="stick-hud-compass-well">
+        <Compass headingDegrees={headingDegrees} />
       </div>
 
       <div class="stick-hud-rail stick-hud-rail-right">
