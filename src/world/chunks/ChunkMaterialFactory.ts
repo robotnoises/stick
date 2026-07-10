@@ -7,9 +7,9 @@ import type { Scene } from "@babylonjs/core/scene"
 import bark006ColorUrl from "../../../assets/exported/textures/terrain/bark006-color.png?url"
 import bark014ColorUrl from "../../../assets/exported/textures/terrain/bark014-color.png?url"
 import fineClumpySandBaseColorUrl from "../../../assets/exported/textures/terrain/fine-clumpy-sand-basecolor.png?url"
-import grass004ColorUrl from "../../../assets/exported/textures/terrain/grass004-color.png?url"
+import grass005ColorUrl from "../../../assets/exported/textures/terrain/grass005-color.png?url"
 import ground048ColorUrl from "../../../assets/exported/textures/terrain/ground048-color.png?url"
-import rock058ColorUrl from "../../../assets/exported/textures/terrain/rock058-color.png?url"
+import rock064ColorUrl from "../../../assets/exported/textures/terrain/rock064-color.png?url"
 import pineNeedleClusterUrl from "../../../assets/exported/textures/props/pine-needle-cluster.png?url"
 import pineNeedleLitterUrl from "../../../assets/exported/textures/props/pine-needle-litter.png?url"
 import waterColorUrl from "../../../assets/exported/textures/terrain/water.jpg?url"
@@ -55,7 +55,7 @@ export class ChunkMaterialFactory {
     const rock = new StandardMaterial("progressive-rock-material", this._context.scene)
     const water = new StandardMaterial("progressive-water-material", this._context.scene)
 
-    this._configureTerrainMaterial(grassTerrain, grass004ColorUrl, new Color3(0.92, 1, 0.86))
+    this._configureTerrainMaterial(grassTerrain, grass005ColorUrl, new Color3(0.92, 1, 0.86))
     this._configureTerrainMaterial(dirtTerrain, ground048ColorUrl, new Color3(0.75, 0.58, 0.42))
     this._configureTerrainMaterial(
       sandTerrain,
@@ -69,7 +69,7 @@ export class ChunkMaterialFactory {
     )
     this._configureTexturedMaterial(trunk, bark014ColorUrl, 1, new Color3(0.8, 0.72, 0.62))
     this._configureTexturedMaterial(deadWood, bark006ColorUrl, 1.5, new Color3(0.6, 0.46, 0.32))
-    this._configureTexturedMaterial(rock, rock058ColorUrl, 2, new Color3(0.82, 0.86, 0.86))
+    this._configureTexturedMaterial(rock, rock064ColorUrl, 2, new Color3(0.82, 0.86, 0.86))
 
     trunk.backFaceCulling = false
     trunk.twoSidedLighting = true
