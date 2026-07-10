@@ -7,6 +7,7 @@ export interface TerrainChunkMaterials {
   readonly needles: StandardMaterial
   readonly pineFoliage: StandardMaterial
   readonly pineNeedleLitter: StandardMaterial
+  readonly grassFoliage: StandardMaterial
   readonly rock: StandardMaterial
   readonly water: StandardMaterial
 }

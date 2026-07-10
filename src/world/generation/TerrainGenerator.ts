@@ -181,7 +181,58 @@ export class TerrainGenerator {
       })
     }
 
+    props.push(...this._generateGrassProps(coord, random))
+
     return props
+  }
+
+  private _generateGrassProps(coord: ChunkCoord, random: () => number): GeneratedPropData[] {
+    const props: GeneratedPropData[] = []
+    const candidateCount = 48
+
+    for (let index = 0; index < candidateCount; index += 1) {
+      const localX = 2 + random() * (this._options.chunkSizeMeters - 4)
+      const localZ = 2 + random() * (this._options.chunkSizeMeters - 4)
+      const worldX = coord.x * this._options.chunkSizeMeters + localX
+      const worldZ = coord.z * this._options.chunkSizeMeters + localZ
+      const height = this.getHeight(worldX, worldZ)
+      const water = this._options.worldFeatures?.sample(worldX, worldZ).water
+
+      if (water?.isUnderWater || water?.isShore) {
+        continue
+      }
+
+      const material = this.getTerrainMaterial(worldX, worldZ, height)
+      const spawnChance = this._getGrassSpawnChance(material)
+
+      if (random() > spawnChance) {
+        continue
+      }
+
+      props.push({
+        id: `${coord.key}_grass_${index}`,
+        type: "grass",
+        position: [worldX, height, worldZ],
+        rotationY: random() * Math.PI * 2,
+        scale: this._getPropScale("grass", random()),
+      })
+    }
+
+    return props
+  }
+
+  private _getGrassSpawnChance(material: TerrainMaterialId): number {
+    switch (material) {
+      case TerrainMaterial.Grass:
+        return 0.68
+      case TerrainMaterial.Dirt:
+        return 0.26
+      case TerrainMaterial.PineNeedles:
+        return 0.12
+      case TerrainMaterial.Sand:
+      default:
+        return 0.03
+    }
   }
 
   private _applyWaterFeatures(baseHeight: number, worldX: number, worldZ: number): number {
@@ -400,6 +451,8 @@ export class TerrainGenerator {
     switch (type) {
       case "rock":
         return 0.45 + roll * 1.1
+      case "grass":
+        return 0.45 + roll * 0.55
       case "log":
         return (0.7 + roll * 0.8) * scaleMultiplier
       case "deadPine":

@@ -31,9 +31,18 @@ export class TerrainMeshBuilder {
       for (let x = 0; x < gridSize; x += 1) {
         const index = z * gridSize + x
 
-        positions.push(baseX + x * step, this._data.heights[index] ?? 0, baseZ + z * step)
+        const worldX = baseX + x * step
+        const worldZ = baseZ + z * step
+
+        positions.push(worldX, this._data.heights[index] ?? 0, worldZ)
         uvs.push(x / this._data.resolution, z / this._data.resolution)
-        colors.push(...this._getTerrainColor(this._data.terrainMaterials[index] ?? TerrainMaterial.Grass))
+        colors.push(
+          ...this._getTerrainColor(
+            this._data.terrainMaterials[index] ?? TerrainMaterial.Grass,
+            worldX,
+            worldZ,
+          ),
+        )
       }
     }
 
@@ -106,17 +115,90 @@ export class TerrainMeshBuilder {
     }
   }
 
-  private _getTerrainColor(material: number): [number, number, number, number] {
+  private _getTerrainColor(
+    material: number,
+    worldX: number,
+    worldZ: number,
+  ): [number, number, number, number] {
+    const patchNoise = this._valueNoise(worldX * 0.035, worldZ * 0.035, 17)
+    const fineNoise = this._valueNoise(worldX * 0.12, worldZ * 0.12, 23)
+    const noise = patchNoise * 0.78 + fineNoise * 0.22
+
     switch (material) {
       case TerrainMaterial.Dirt:
-        return [0.42, 0.31, 0.2, 1]
+        return this._varyColor([0.42, 0.31, 0.2], noise, 0.08)
       case TerrainMaterial.Sand:
-        return [0.63, 0.56, 0.39, 1]
+        return this._varyColor([0.63, 0.56, 0.39], noise, 0.045)
       case TerrainMaterial.PineNeedles:
-        return [0.24, 0.21, 0.12, 1]
+        return this._varyColor([0.24, 0.21, 0.12], noise, 0.1)
       case TerrainMaterial.Grass:
       default:
-        return [0.33, 0.44, 0.2, 1]
+        return this._varyGrassColor(noise)
     }
+  }
+
+  private _varyGrassColor(noise: number): [number, number, number, number] {
+    const brightness = 1 + noise * 0.12
+    const warmth = Math.max(noise, 0) * 0.035
+    const coolness = Math.max(-noise, 0) * 0.035
+
+    return [
+      this._clamp01(0.33 * brightness + warmth),
+      this._clamp01(0.44 * brightness + coolness),
+      this._clamp01(0.2 * brightness - warmth * 0.45),
+      1,
+    ]
+  }
+
+  private _varyColor(
+    color: readonly [number, number, number],
+    noise: number,
+    amount: number,
+  ): [number, number, number, number] {
+    const brightness = 1 + noise * amount
+
+    return [
+      this._clamp01(color[0] * brightness),
+      this._clamp01(color[1] * brightness),
+      this._clamp01(color[2] * brightness),
+      1,
+    ]
+  }
+
+  private _valueNoise(x: number, z: number, salt: number): number {
+    const x0 = Math.floor(x)
+    const z0 = Math.floor(z)
+    const x1 = x0 + 1
+    const z1 = z0 + 1
+    const tx = this._smooth(x - x0)
+    const tz = this._smooth(z - z0)
+    const a = this._hashNoise(x0, z0, salt)
+    const b = this._hashNoise(x1, z0, salt)
+    const c = this._hashNoise(x0, z1, salt)
+    const d = this._hashNoise(x1, z1, salt)
+    const xMix0 = this._lerp(a, b, tx)
+    const xMix1 = this._lerp(c, d, tx)
+
+    return this._lerp(xMix0, xMix1, tz)
+  }
+
+  private _hashNoise(x: number, z: number, salt: number): number {
+    let hash = Math.imul(x, 374761393) ^ Math.imul(z, 668265263) ^ Math.imul(salt, 2246822519)
+
+    hash = Math.imul(hash ^ (hash >>> 13), 1274126177)
+
+    return ((hash ^ (hash >>> 16)) >>> 0) / 2147483648 - 1
+  }
+
+  private _smooth(value: number): number {
+    return value * value * (3 - 2 * value)
+  }
+
+  private _lerp(from: number, to: number, amount: number): number {
+    return from + (to - from) * amount
+  }
+
+  private _clamp01(value: number): number {
+    return Math.min(Math.max(value, 0), 1)
   }
 }

@@ -7,6 +7,8 @@ import type { Scene } from "@babylonjs/core/scene"
 import bark006ColorUrl from "../../../assets/exported/textures/terrain/bark006-color.png?url"
 import bark014ColorUrl from "../../../assets/exported/textures/terrain/bark014-color.png?url"
 import fineClumpySandBaseColorUrl from "../../../assets/exported/textures/terrain/fine-clumpy-sand-basecolor.png?url"
+import foliage006ColorUrl from "../../../assets/exported/textures/terrain/foliage006-color.png?url"
+import foliage006OpacityUrl from "../../../assets/exported/textures/terrain/foliage006-opacity.png?url"
 import grass005ColorUrl from "../../../assets/exported/textures/terrain/grass005-color.png?url"
 import ground048ColorUrl from "../../../assets/exported/textures/terrain/ground048-color.png?url"
 import rock064ColorUrl from "../../../assets/exported/textures/terrain/rock064-color.png?url"
@@ -52,6 +54,7 @@ export class ChunkMaterialFactory {
       "progressive-pine-needle-litter-material",
       this._context.scene,
     )
+    const grassFoliage = new StandardMaterial("progressive-grass-foliage-material", this._context.scene)
     const rock = new StandardMaterial("progressive-rock-material", this._context.scene)
     const water = new StandardMaterial("progressive-water-material", this._context.scene)
 
@@ -105,6 +108,20 @@ export class ChunkMaterialFactory {
     pineNeedleLitter.alphaCutOff = 0.32
     pineNeedleLitter.transparencyMode = Material.MATERIAL_ALPHATEST
 
+    const grassFoliageTexture = new Texture(foliage006ColorUrl, this._context.scene)
+    const grassFoliageOpacityTexture = new Texture(foliage006OpacityUrl, this._context.scene)
+
+    grassFoliageOpacityTexture.getAlphaFromRGB = true
+    grassFoliage.diffuseTexture = grassFoliageTexture
+    grassFoliage.opacityTexture = grassFoliageOpacityTexture
+    grassFoliage.diffuseColor = new Color3(0.62, 0.86, 0.48)
+    grassFoliage.emissiveColor = new Color3(0.01, 0.025, 0.006)
+    grassFoliage.specularColor = Color3.Black()
+    grassFoliage.backFaceCulling = false
+    grassFoliage.twoSidedLighting = true
+    grassFoliage.alphaCutOff = 0.36
+    grassFoliage.transparencyMode = Material.MATERIAL_ALPHATEST
+
     const waterTexture = new Texture(waterColorUrl, this._context.scene)
 
     waterTexture.uScale = 1.2
@@ -139,6 +156,7 @@ export class ChunkMaterialFactory {
         needles,
         pineFoliage,
         pineNeedleLitter,
+        grassFoliage,
         rock,
         water,
       },

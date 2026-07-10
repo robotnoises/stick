@@ -42,21 +42,21 @@ export class LogPropBuilder {
 
     const axis = new Vector3(Math.cos(prop.rotationY), 0, -Math.sin(prop.rotationY))
     const side = new Vector3(Math.sin(prop.rotationY), 0, Math.cos(prop.rotationY))
-    const stubCount = 2 + Math.floor(random() * 3)
+    const stubCount = random() < 0.45 ? 0 : 1 + Math.floor(random() * 2)
 
     for (let stubIndex = 0; stubIndex < stubCount; stubIndex += 1) {
       const along = (random() - 0.5) * logLength * 0.76
       const sideSign = random() > 0.5 ? -1 : 1
-      const stubLength = (0.28 + random() * 0.42) * prop.scale
+      const stubLength = (0.1 + random() * 0.18) * prop.scale
       const start = center
         .add(axis.scale(along))
         .add(side.scale(sideSign * logDiameter * 0.34))
         .add(new Vector3(0, logDiameter * (0.08 + random() * 0.22), 0))
       const end = start
         .add(side.scale(sideSign * stubLength))
-        .add(axis.scale((random() - 0.5) * stubLength * 0.32))
-        .add(new Vector3(0, (random() - 0.35) * stubLength * 0.35, 0))
-      const radius = (0.035 + random() * 0.025) * prop.scale
+        .add(axis.scale((random() - 0.5) * stubLength * 0.18))
+        .add(new Vector3(0, (random() - 0.35) * stubLength * 0.18, 0))
+      const radius = (0.025 + random() * 0.018) * prop.scale
 
       branchSegments.push({
         start,

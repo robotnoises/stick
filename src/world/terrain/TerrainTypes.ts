@@ -9,7 +9,7 @@ export const TerrainMaterial = {
 
 export type TerrainMaterialId = (typeof TerrainMaterial)[keyof typeof TerrainMaterial]
 
-export type GeneratedPropType = "pine" | "deadPine" | "rock" | "log"
+export type GeneratedPropType = "pine" | "deadPine" | "rock" | "log" | "grass"
 
 export interface GeneratedPropData {
   readonly id: string

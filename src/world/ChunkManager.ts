@@ -189,6 +189,7 @@ export class ChunkManager {
     this._materials.needles.dispose()
     this._materials.pineFoliage.dispose()
     this._materials.pineNeedleLitter.dispose()
+    this._materials.grassFoliage.dispose()
     this._materials.rock.dispose()
     this._waterFlowObserver?.remove()
     this._waterFlowObserver = null

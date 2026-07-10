@@ -3,6 +3,7 @@ import type { EngineContext } from "../../app/EngineContext"
 import type { ChunkTerrainData, GeneratedPropData } from "./TerrainTypes"
 import type { WorldFeatureGenerator } from "../generation/WorldFeatureGenerator"
 import { DeadPinePropBuilder } from "../props/deadPine/DeadPinePropBuilder"
+import { GrassPropBuilder } from "../props/grass/GrassPropBuilder"
 import { GroundLitterBuilder } from "../props/groundLitter/GroundLitterBuilder"
 import { LogPropBuilder } from "../props/log/LogPropBuilder"
 import { PinePropBuilder } from "../props/pine/PinePropBuilder"
@@ -33,6 +34,7 @@ export class TerrainChunk {
       this._createProp(prop)
     }
 
+    this._createGrassProps()
     this._createGroundLitterMesh()
   }
 
@@ -75,6 +77,8 @@ export class TerrainChunk {
       case "log":
         this._createLogProp(prop)
         return
+      case "grass":
+        return
     }
   }
 
@@ -100,5 +104,17 @@ export class TerrainChunk {
 
   private _createLogProp(prop: GeneratedPropData): void {
     this._props.push(...new LogPropBuilder(this._context, this._materials).create(prop))
+  }
+
+  private _createGrassProps(): void {
+    const grassProps = this._data.props.filter((prop) => prop.type === "grass")
+    const mesh = new GrassPropBuilder(this._context, this._materials).createMany(
+      `grass_${this._data.key}`,
+      grassProps,
+    )
+
+    if (mesh) {
+      this._props.push(mesh)
+    }
   }
 }

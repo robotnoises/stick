@@ -41,6 +41,7 @@ export class GroundLitterBuilder {
           this._addLogCards(prop, cards)
           break
         case "rock":
+        case "grass":
           break
       }
     }
@@ -89,7 +90,7 @@ export class GroundLitterBuilder {
       const radius = (0.45 + random() * 2.15) * prop.scale
       const worldX = prop.position[0] + Math.sin(angle) * radius
       const worldZ = prop.position[2] + Math.cos(angle) * radius
-      const size = (0.62 + random() * 0.88) * prop.scale
+      const size = (0.12 + random() * 0.2) * prop.scale
 
       cards.push({
         center: new Vector3(worldX, this._heightSampler.sample(worldX, worldZ) + 0.035, worldZ),
@@ -113,7 +114,7 @@ export class GroundLitterBuilder {
       const offset = (random() > 0.5 ? -1 : 1) * (0.34 + random() * 0.55) * prop.scale
       const worldX = prop.position[0] + axis.x * along + side.x * offset
       const worldZ = prop.position[2] + axis.z * along + side.z * offset
-      const size = (0.54 + random() * 0.68) * prop.scale
+      const size = (0.11 + random() * 0.18) * prop.scale
 
       cards.push({
         center: new Vector3(worldX, this._heightSampler.sample(worldX, worldZ) + 0.035, worldZ),
@@ -145,7 +146,7 @@ export class GroundLitterBuilder {
         continue
       }
 
-      const size = 0.42 + random() * 0.82
+      const size = 0.08 + random() * 0.16
 
       cards.push({
         center: new Vector3(worldX, this._heightSampler.sample(worldX, worldZ) + 0.032, worldZ),
