@@ -381,6 +381,8 @@ describe("player, compass, debug overlay, and time", () => {
       setWorldSeed,
     })
 
+    expect(overlay.visible).toBe(false)
+    overlay.setVisible(true)
     overlay.update(0.016)
     expect(document.querySelector("#debug-overlay")?.textContent).toContain("elevation: 2.9m")
     expect(document.querySelector("#debug-overlay")?.textContent).toContain("heading: 123°")
@@ -600,6 +602,7 @@ describe("player, compass, debug overlay, and time", () => {
       }),
     })
 
+    unlimitedBudgetOverlay.setVisible(true)
     unlimitedBudgetOverlay.update(0.016)
     expect(document.querySelector("#debug-overlay")?.textContent).toContain(
       "budget: unlimited/frame",
@@ -2121,6 +2124,9 @@ describe("game runtime", () => {
     expect(savedGame?.world.timeOfDayHours).toBe(6.5)
     expect(savedGame?.world.elapsedWorldSeconds).toBe(1234)
 
+    expect(window.stick?.debug.visible()).toBe(false)
+    window.stick?.debug.show(true)
+    expect(window.stick?.debug.visible()).toBe(true)
     document.querySelector<HTMLElement>("#debug-overlay")?.click()
     document
       .querySelectorAll<HTMLButtonElement>("#debug-overlay-editor button[type='button']")[1]

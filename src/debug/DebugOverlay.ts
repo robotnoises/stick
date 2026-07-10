@@ -22,6 +22,7 @@ export class DebugOverlay implements GameSystem {
   private readonly _readOnlyPanel: DebugReadOnlyPanel
   private readonly _settingsEditor: DebugSettingsEditor
   private _isEditing = false
+  private _isVisible = false
 
   public constructor(
     private readonly _player: PlayerController,
@@ -40,14 +41,41 @@ export class DebugOverlay implements GameSystem {
       onSubmit: this._handleSubmit,
     })
     this._element.id = "debug-overlay"
+    this._element.hidden = true
     this._element.addEventListener("pointerdown", this._handleOpenEditor)
     this._element.addEventListener("click", this._handleOpenEditor)
 
     document.body.appendChild(this._element)
   }
 
-  public update(_deltaSeconds: number): void {
+  public get visible(): boolean {
+    return this._isVisible
+  }
+
+  public setVisible(visible: boolean): void {
+    this._isVisible = visible
+    this._element.hidden = !visible
+
+    if (!visible) {
+      return
+    }
+
     if (this._isEditing) {
+      this._renderEditor()
+      return
+    }
+
+    this._renderReadOnly()
+  }
+
+  public toggleVisible(): boolean {
+    this.setVisible(!this._isVisible)
+
+    return this._isVisible
+  }
+
+  public update(_deltaSeconds: number): void {
+    if (!this._isVisible || this._isEditing) {
       return
     }
 
@@ -98,7 +126,7 @@ export class DebugOverlay implements GameSystem {
   private readonly _handleOpenEditor = (event: Event): void => {
     event.stopPropagation()
 
-    if (this._isEditing) {
+    if (!this._isVisible || this._isEditing) {
       return
     }
 

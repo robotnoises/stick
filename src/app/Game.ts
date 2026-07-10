@@ -19,11 +19,13 @@ import { EngineContext } from "./EngineContext"
 import { defaultGameConfig, type GameConfig } from "./GameConfig"
 import { defaultGameSettings, type GameSettings } from "./GameSettings"
 import type { GameSystem } from "./GameSystem"
+import { StickGlobalApiInstaller, type StickGlobalApi } from "./StickGlobalApi"
 
 export class Game {
   private _context: EngineContext | null = null
   private readonly _systems: GameSystem[] = []
   private _lastFrameTime = 0
+  private _globalApi: StickGlobalApi | null = null
   private _player: PlayerController | null = null
   private _time: TimeOfDaySystem | null = null
 
@@ -113,6 +115,8 @@ export class Game {
       setWorldSeed: (seed) => this._setWorldSeed(seed, chunkRepository),
     })
 
+    this._globalApi = StickGlobalApiInstaller.install(debug)
+
     this._systems.push(
       time,
       player,
@@ -179,6 +183,11 @@ export class Game {
 
   public dispose(): void {
     window.removeEventListener("resize", this._handleResize)
+
+    if (this._globalApi) {
+      StickGlobalApiInstaller.uninstall(this._globalApi)
+      this._globalApi = null
+    }
 
     for (const system of [...this._systems].reverse()) {
       system.dispose?.()
