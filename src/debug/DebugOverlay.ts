@@ -2,6 +2,7 @@ import type { GameSystem } from "../app/GameSystem"
 import type { TimeOfDaySystem } from "../environment/TimeOfDaySystem"
 import type { PlayerController } from "../player/PlayerController"
 import { DebugReadOnlyPanel } from "./DebugReadOnlyPanel"
+import { DebugSettingsEditor } from "./DebugSettingsEditor"
 import type { DebugMapData, DebugMapRiverData, DebugOverlayActions } from "./DebugOverlayTypes"
 
 export type {
@@ -17,6 +18,7 @@ export type {
 export class DebugOverlay implements GameSystem {
   private readonly _element: HTMLDivElement
   private readonly _readOnlyPanel: DebugReadOnlyPanel
+  private readonly _settingsEditor: DebugSettingsEditor
   private _isEditing = false
 
   public constructor(
@@ -26,6 +28,14 @@ export class DebugOverlay implements GameSystem {
   ) {
     this._element = document.createElement("div")
     this._readOnlyPanel = new DebugReadOnlyPanel(this._player, this._time, this._actions)
+    this._settingsEditor = new DebugSettingsEditor(this._player, this._time, this._actions, {
+      onCancel: this._handleCancel,
+      onClick: this._handleEditorClick,
+      onNewWorld: this._handleNewWorld,
+      onResetTerrainCache: this._handleResetTerrainCache,
+      onRevealMap: this._handleRevealMap,
+      onSubmit: this._handleSubmit,
+    })
     this._element.id = "debug-overlay"
     this._element.addEventListener("pointerdown", this._handleOpenEditor)
     this._element.addEventListener("click", this._handleOpenEditor)
@@ -52,152 +62,8 @@ export class DebugOverlay implements GameSystem {
   }
 
   private _renderEditor(): void {
-    const position = this._player.position
-    const form = document.createElement("form")
-    const submitButton = document.createElement("button")
-    const cancelButton = document.createElement("button")
-    const resetTerrainCacheButton = document.createElement("button")
-    const newWorldButton = document.createElement("button")
-    const revealMapButton = document.createElement("button")
-
     this._isEditing = true
-    this._element.classList.remove("debug-overlay-readonly-mode")
-    this._element.classList.add("debug-overlay-editor-mode")
-    form.id = "debug-overlay-editor"
-    form.noValidate = true
-    form.addEventListener("click", this._handleEditorClick)
-    form.addEventListener("submit", this._handleSubmit)
-    submitButton.type = "submit"
-    submitButton.textContent = "Apply"
-    cancelButton.type = "button"
-    cancelButton.textContent = "Cancel"
-    cancelButton.addEventListener("click", this._handleCancel)
-    resetTerrainCacheButton.type = "button"
-    resetTerrainCacheButton.textContent = "Reset terrain cache"
-    resetTerrainCacheButton.addEventListener("click", this._handleResetTerrainCache)
-    newWorldButton.type = "button"
-    newWorldButton.textContent = "New random world"
-    newWorldButton.addEventListener("click", this._handleNewWorld)
-    revealMapButton.type = "button"
-    revealMapButton.textContent = "Reveal world map"
-    revealMapButton.addEventListener("click", this._handleRevealMap)
-
-    form.append(
-      this._createHeading(),
-      this._createNumberField("positionX", "x", position.x),
-      this._createNumberField("positionY", "y", position.y),
-      this._createNumberField("positionZ", "z", position.z),
-      this._createNumberField("heading", "heading", this._player.headingDegrees),
-      this._createNumberField("day", "day", this._time.day),
-      this._createNumberField("timeOfDay", "time", this._time.timeOfDayHours),
-      this._createOptionalSeedField(),
-      this._createOptionalChunkBoundaryField(),
-      this._createButtonRow(submitButton, cancelButton),
-      this._createDebugToolRow(revealMapButton),
-      this._createDangerRow(resetTerrainCacheButton, newWorldButton),
-    )
-
-    this._element.replaceChildren(form)
-  }
-
-  private _createHeading(): HTMLDivElement {
-    const heading = document.createElement("div")
-
-    heading.className = "debug-overlay-heading"
-    heading.textContent = "Edit debug values"
-
-    return heading
-  }
-
-  private _createOptionalSeedField(): HTMLLabelElement | DocumentFragment {
-    const seed = this._actions.getWorldSeed?.()
-
-    if (seed === undefined) {
-      return document.createDocumentFragment()
-    }
-
-    return this._createNumberField("worldSeed", "seed", seed)
-  }
-
-  private _createOptionalChunkBoundaryField(): HTMLLabelElement | DocumentFragment {
-    const enabled = this._actions.getChunkBoundariesDebugEnabled?.()
-
-    if (enabled === undefined) {
-      return document.createDocumentFragment()
-    }
-
-    return this._createCheckboxField("chunkBoundaries", "chunks", enabled)
-  }
-
-  private _createCheckboxField(
-    name: string,
-    labelText: string,
-    checked: boolean,
-  ): HTMLLabelElement {
-    const label = document.createElement("label")
-    const labelSpan = document.createElement("span")
-    const input = document.createElement("input")
-
-    labelSpan.textContent = labelText
-    input.name = name
-    input.type = "checkbox"
-    input.checked = checked
-
-    label.append(labelSpan, input)
-
-    return label
-  }
-
-  private _createNumberField(name: string, labelText: string, value: number): HTMLLabelElement {
-    const label = document.createElement("label")
-    const labelSpan = document.createElement("span")
-    const input = document.createElement("input")
-
-    labelSpan.textContent = labelText
-    input.name = name
-    input.type = "number"
-    input.step = "any"
-    input.value = value.toFixed(2)
-
-    label.append(labelSpan, input)
-
-    return label
-  }
-
-  private _createButtonRow(...buttons: HTMLButtonElement[]): HTMLDivElement {
-    const row = document.createElement("div")
-
-    row.className = "debug-overlay-actions"
-    row.append(...buttons)
-
-    return row
-  }
-
-  private _createDebugToolRow(button: HTMLButtonElement): HTMLDivElement {
-    const row = document.createElement("div")
-    const heading = document.createElement("div")
-
-    row.className = "debug-overlay-command-section"
-    heading.className = "debug-overlay-command-heading"
-    heading.textContent = "Debug tools"
-    row.append(heading, this._createButtonRow(button))
-
-    return row
-  }
-
-  private _createDangerRow(
-    resetTerrainCacheButton: HTMLButtonElement,
-    newWorldButton: HTMLButtonElement,
-  ): HTMLDivElement {
-    const row = document.createElement("div")
-    const heading = document.createElement("div")
-
-    row.className = "debug-overlay-command-section debug-overlay-danger-section"
-    heading.className = "debug-overlay-command-heading"
-    heading.textContent = "Danger zone"
-    row.append(heading, this._createButtonRow(resetTerrainCacheButton, newWorldButton))
-
-    return row
+    this._settingsEditor.render(this._element)
   }
 
   private _renderDebugMap(data: DebugMapData): void {
