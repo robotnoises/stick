@@ -1,82 +1,22 @@
 import type { GameSystem } from "../app/GameSystem"
 import type { TimeOfDaySystem } from "../environment/TimeOfDaySystem"
 import type { PlayerController } from "../player/PlayerController"
+import { DebugReadOnlyPanel } from "./DebugReadOnlyPanel"
+import type { DebugMapData, DebugMapRiverData, DebugOverlayActions } from "./DebugOverlayTypes"
 
-export interface DebugMapLakeData {
-  readonly id: string
-  readonly centerX: number
-  readonly centerZ: number
-  readonly radiusX: number
-  readonly radiusZ: number
-  readonly shoreFalloffMeters: number
-}
-
-export interface DebugMapRiverData {
-  readonly id: string
-  readonly points: ReadonlyArray<readonly [number, number]>
-  readonly widthMeters: number
-  readonly bankFalloffMeters: number
-}
-
-export interface DebugMapData {
-  readonly worldBounds: {
-    readonly minX: number
-    readonly maxX: number
-    readonly minZ: number
-    readonly maxZ: number
-  }
-  readonly playerPosition: {
-    readonly x: number
-    readonly z: number
-  }
-  readonly playerHeadingDegrees: number
-  readonly chunkSizeMeters: number
-  readonly lakes: readonly DebugMapLakeData[]
-  readonly rivers: readonly DebugMapRiverData[]
-}
-
-export interface DebugTerrainGenerationStats {
-  readonly workerAvailable: boolean
-  readonly pendingRequestCount: number
-  readonly completedWorkerRequestCount: number
-  readonly fallbackGenerationCount: number
-  readonly workerErrorCount: number
-  readonly lastWorkerErrorMessage: string | null
-  readonly lastGenerationMilliseconds: number | null
-  readonly averageGenerationMilliseconds: number | null
-}
-
-export interface DebugTerrainMeshBuildStats {
-  readonly builtChunkCount: number
-  readonly lastBuildMilliseconds: number | null
-  readonly averageBuildMilliseconds: number | null
-}
-
-export interface DebugTerrainStreamingStats {
-  readonly activeChunkCount: number
-  readonly queuedChunkCount: number
-  readonly inFlightChunkCount: number
-  readonly cachedChunkDataCount: number
-  readonly maxChunkLoadsPerFrame: number | null
-  readonly terrainGeneration: DebugTerrainGenerationStats | null
-  readonly terrainMeshBuild: DebugTerrainMeshBuildStats
-}
-
-export interface DebugOverlayActions {
-  createNewWorld?(): Promise<void> | void
-  getChunkBoundariesDebugEnabled?(): boolean
-  getDebugMapData?(): DebugMapData
-  getTerrainStreamingStats?(): DebugTerrainStreamingStats
-  getWorldSeed?(): number
-  resetTerrainCache?(): Promise<void> | void
-  setChunkBoundariesDebugEnabled?(enabled: boolean): void
-  setWorldSeed?(seed: number): Promise<void> | void
-}
+export type {
+  DebugMapData,
+  DebugMapLakeData,
+  DebugMapRiverData,
+  DebugOverlayActions,
+  DebugTerrainGenerationStats,
+  DebugTerrainMeshBuildStats,
+  DebugTerrainStreamingStats,
+} from "./DebugOverlayTypes"
 
 export class DebugOverlay implements GameSystem {
-  private static readonly _playerEyeHeightMeters = 1.7
-
   private readonly _element: HTMLDivElement
+  private readonly _readOnlyPanel: DebugReadOnlyPanel
   private _isEditing = false
 
   public constructor(
@@ -85,6 +25,7 @@ export class DebugOverlay implements GameSystem {
     private readonly _actions: DebugOverlayActions = {},
   ) {
     this._element = document.createElement("div")
+    this._readOnlyPanel = new DebugReadOnlyPanel(this._player, this._time, this._actions)
     this._element.id = "debug-overlay"
     this._element.addEventListener("pointerdown", this._handleOpenEditor)
     this._element.addEventListener("click", this._handleOpenEditor)
@@ -107,113 +48,7 @@ export class DebugOverlay implements GameSystem {
   }
 
   private _renderReadOnly(): void {
-    this._element.classList.remove("debug-overlay-editor-mode")
-    this._element.classList.add("debug-overlay-readonly-mode")
-
-    const position = this._player.position
-    const elevationMeters = position.y - DebugOverlay._playerEyeHeightMeters
-    const rows: Array<readonly [string, string]> = [
-      ["pos", `${position.x.toFixed(1)}, ${position.y.toFixed(1)}, ${position.z.toFixed(1)}`],
-      ["elevation", `${elevationMeters.toFixed(1)}m`],
-      ["water", `${this._player.waterState}, depth ${this._player.waterDepthMeters.toFixed(1)}m`],
-      ["heading", `${this._player.headingDegrees.toFixed(0)}°`],
-      ["day", String(this._time.day)],
-      ["time", `${this._time.timeOfDayHours.toFixed(2)}h`],
-      ...this._getTerrainStreamingDebugRows(),
-    ]
-
-    this._element.replaceChildren(
-      this._createReadOnlyTitle(),
-      ...rows.map((row) => this._createReadOnlyRow(row[0], row[1])),
-    )
-  }
-
-  private _createReadOnlyTitle(): HTMLDivElement {
-    const title = document.createElement("div")
-
-    title.className = "debug-overlay-readonly-title"
-    title.textContent = "Stick prototype"
-
-    return title
-  }
-
-  private _createReadOnlyRow(labelText: string, valueText: string): HTMLDivElement {
-    const row = document.createElement("div")
-    const label = document.createElement("span")
-    const value = document.createElement("span")
-
-    row.className = "debug-overlay-readonly-row"
-    label.className = "debug-overlay-readonly-label"
-    value.className = "debug-overlay-readonly-value"
-    label.textContent = `${labelText}: `
-    value.textContent = valueText
-    row.append(label, value)
-
-    return row
-  }
-
-  private _getTerrainStreamingDebugRows(): Array<readonly [string, string]> {
-    const stats = this._actions.getTerrainStreamingStats?.()
-
-    if (!stats) {
-      return []
-    }
-
-    const maxLoads = stats.maxChunkLoadsPerFrame ?? "unlimited"
-
-    return [
-      [
-        "chunks",
-        `active ${stats.activeChunkCount}, queued ${stats.queuedChunkCount}, loading ${stats.inFlightChunkCount}`,
-      ],
-      ["chunk cache", String(stats.cachedChunkDataCount)],
-      ["budget", `${maxLoads}/frame`],
-      ...this._getTerrainGenerationDebugRows(stats.terrainGeneration),
-      ...this._getTerrainMeshBuildDebugRows(stats.terrainMeshBuild),
-    ]
-  }
-
-  private _getTerrainGenerationDebugRows(
-    stats: DebugTerrainGenerationStats | null,
-  ): Array<readonly [string, string]> {
-    if (!stats) {
-      return []
-    }
-
-    const last = this._formatOptionalMilliseconds(stats.lastGenerationMilliseconds)
-    const average = this._formatOptionalMilliseconds(stats.averageGenerationMilliseconds)
-    const mode = stats.workerAvailable ? "worker" : "fallback"
-
-    return [
-      ["terrain gen", `${mode}, pending ${stats.pendingRequestCount}`],
-      ["worker done", String(stats.completedWorkerRequestCount)],
-      ["fallback", String(stats.fallbackGenerationCount)],
-      ["worker errors", String(stats.workerErrorCount)],
-      ...this._getTerrainGenerationErrorRows(stats.lastWorkerErrorMessage),
-      ["terrain gen ms", `last ${last}, avg ${average}`],
-    ]
-  }
-
-  private _getTerrainGenerationErrorRows(
-    errorMessage: string | null,
-  ): Array<readonly [string, string]> {
-    return errorMessage ? [["worker error", errorMessage]] : []
-  }
-
-  private _getTerrainMeshBuildDebugRows(
-    stats: DebugTerrainMeshBuildStats,
-  ): Array<readonly [string, string]> {
-    const last = this._formatOptionalMilliseconds(stats.lastBuildMilliseconds)
-    const average = this._formatOptionalMilliseconds(stats.averageBuildMilliseconds)
-
-    return [
-      ["mesh builds", String(stats.builtChunkCount)],
-      ["mesh build ms", `last ${last}, avg ${average}`],
-    ]
-  }
-
-  private _formatOptionalMilliseconds(value: number | null): string {
-    return value === null ? "n/a" : value.toFixed(1)
+    this._readOnlyPanel.render(this._element)
   }
 
   private _renderEditor(): void {
