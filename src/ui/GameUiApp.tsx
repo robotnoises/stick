@@ -1,5 +1,6 @@
 import { useEffect, useState } from "preact/hooks"
 import type { GameSettings } from "../app/GameSettings"
+import { GameIndicators } from "./components/GameIndicators"
 import { Hud } from "./components/Hud"
 import { InGameMenu } from "./components/InGameMenu"
 import type { GameUiCommands, GameUiState } from "./GameUiState"
@@ -17,17 +18,27 @@ export function GameUiApp({ commands, initialSettings }: GameUiAppProps) {
     settings: initialSettings,
     headingDegrees: commands.getHeadingDegrees(),
     isDebugVisible: commands.getDebugVisible(),
+    survivalStatus: commands.getSurvivalStatus(),
+    worldTime: commands.getWorldTime(),
   })
 
   useEffect(() => {
     const interval = window.setInterval(() => {
       const visible = commands.getDebugVisible()
       const headingDegrees = commands.getHeadingDegrees()
+      const survivalStatus = commands.getSurvivalStatus()
+      const worldTime = commands.getWorldTime()
 
       setState((current) =>
-        current.isDebugVisible === visible && Math.abs(current.headingDegrees - headingDegrees) < 0.1
+        current.isDebugVisible === visible &&
+        Math.abs(current.headingDegrees - headingDegrees) < 0.1 &&
+        Math.abs(current.survivalStatus.fatigue - survivalStatus.fatigue) < 0.01 &&
+        Math.abs(current.survivalStatus.hunger - survivalStatus.hunger) < 0.01 &&
+        Math.abs(current.survivalStatus.thirst - survivalStatus.thirst) < 0.01 &&
+        current.worldTime.day === worldTime.day &&
+        Math.abs(current.worldTime.timeOfDayHours - worldTime.timeOfDayHours) < 0.01
           ? current
-          : { ...current, headingDegrees, isDebugVisible: visible },
+          : { ...current, headingDegrees, isDebugVisible: visible, survivalStatus, worldTime },
       )
     }, 50)
 
@@ -81,6 +92,13 @@ export function GameUiApp({ commands, initialSettings }: GameUiAppProps) {
 
   return (
     <>
+      <GameIndicators
+        day={state.worldTime.day}
+        fatigue={state.survivalStatus.fatigue}
+        hunger={state.survivalStatus.hunger}
+        thirst={state.survivalStatus.thirst}
+        timeOfDayHours={state.worldTime.timeOfDayHours}
+      />
       <Hud headingDegrees={state.headingDegrees} onMenuOpen={() => setMenuOpen(true)} />
       <InGameMenu
         isDebugVisible={state.isDebugVisible}

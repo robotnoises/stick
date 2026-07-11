@@ -161,6 +161,21 @@ export class Game {
     return this._player?.headingDegrees ?? 0
   }
 
+  public getWorldTime(): { readonly day: number; readonly timeOfDayHours: number } {
+    return {
+      day: this._time?.day ?? 1,
+      timeOfDayHours: this._time?.timeOfDayHours ?? 12,
+    }
+  }
+
+  public getSurvivalStatus(): { readonly fatigue: number; readonly hunger: number; readonly thirst: number } {
+    return {
+      fatigue: 0.72,
+      hunger: 0.84,
+      thirst: 0.66,
+    }
+  }
+
   public async saveGame(): Promise<void> {
     if (!this._saveGameRepository || !this._player || !this._time) {
       return
