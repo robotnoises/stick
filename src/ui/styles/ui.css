@@ -678,6 +678,8 @@
 
 .stick-map-start-label {
   fill: rgb(72 45 27 / 72%);
+  pointer-events: none;
+  user-select: none;
   font:
     700 9px/1 Georgia,
     "Times New Roman",
