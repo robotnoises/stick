@@ -19,7 +19,7 @@ export interface MapModalProps {
 }
 
 const mapSize = 520
-const mapPadding = 34
+const mapPadding = 0
 const gridMeters = 1000
 const pencilColor = "#5b3624"
 const pencilWidthMeters = 32
@@ -405,7 +405,9 @@ function createGridValues(min: number, max: number, step: number): number[] {
   const first = Math.ceil(min / step) * step
 
   for (let value = first; value <= max; value += step) {
-    values.push(value)
+    if (value > min && value < max) {
+      values.push(value)
+    }
   }
 
   return values
