@@ -118,7 +118,9 @@ export function GameUiApp({ commands, initialSettings }: GameUiAppProps) {
       />
       {state.isMapOpen ? (
         <MapModal
+          drawings={commands.getMapDrawings()}
           onClose={() => setMapOpen(false)}
+          onSaveDrawings={commands.onMapDrawingsSaved}
           playerHeadingDegrees={commands.getMapPosition().headingDegrees}
           playerX={commands.getMapPosition().x}
           playerZ={commands.getMapPosition().z}

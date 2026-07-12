@@ -546,6 +546,76 @@
     inset 0 -16px 30px rgb(70 34 14 / 18%);
 }
 
+.stick-map-toolbar {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  justify-content: flex-start;
+  margin-bottom: 8px;
+  color: rgb(72 45 27 / 82%);
+  font:
+    700 12px/1 Georgia,
+    "Times New Roman",
+    serif;
+}
+
+.stick-map-tool-active,
+.stick-map-toolbar button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+}
+
+.stick-map-tool-active {
+  border: 1px solid rgb(76 49 29 / 28%);
+  border-radius: 5px;
+  background: rgb(235 215 166 / 24%);
+}
+
+.stick-map-toolbar button {
+  padding: 0;
+  border: 1px solid rgb(76 49 29 / 34%);
+  border-radius: 5px;
+  color: rgb(72 45 27 / 88%);
+  background: rgb(235 215 166 / 36%);
+  cursor: pointer;
+  font: inherit;
+}
+
+.stick-map-toolbar button.stick-map-tool-active {
+  border-color: rgb(76 49 29 / 56%);
+  background: rgb(235 215 166 / 58%);
+}
+
+.stick-map-toolbar button:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.stick-map-tool-icon {
+  display: block;
+  width: 18px;
+  height: 18px;
+  background: currentcolor;
+  mask-position: center;
+  mask-repeat: no-repeat;
+  mask-size: contain;
+}
+
+.stick-map-tool-icon-pencil {
+  mask-image: url("../../../assets/exported/icons/pencil.svg");
+}
+
+.stick-map-tool-icon-eraser {
+  mask-image: url("../../../assets/exported/icons/eraser.svg");
+}
+
+.stick-map-tool-icon-undo {
+  mask-image: url("../../../assets/exported/icons/undo.svg");
+}
+
 .stick-map {
   display: block;
   width: 100%;
@@ -558,6 +628,15 @@
   box-shadow:
     inset 0 0 24px rgb(67 39 18 / 18%),
     0 2px 6px rgb(0 0 0 / 16%);
+}
+
+.stick-map-drawing-enabled {
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.stick-map-tool-eraser {
+  cursor: url("../../../assets/exported/icons/eraser-cursor.svg") 12 12, cell;
 }
 
 .stick-map-paper {
@@ -573,6 +652,14 @@
 .stick-map-grid {
   stroke: rgb(76 49 29 / 16%);
   stroke-width: 0.9;
+}
+
+.stick-map-user-stroke {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.82;
+  pointer-events: none;
 }
 
 .stick-map-start-marker {

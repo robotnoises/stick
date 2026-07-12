@@ -1,6 +1,7 @@
 import type { GameSettings } from "../app/GameSettings"
 
 import type { WorldBounds } from "../app/GameConfig"
+import type { MapDrawing } from "../cartography/MapDrawing"
 
 export interface GameUiWorldTime {
   readonly day: number
@@ -35,8 +36,10 @@ export interface GameUiCommands {
   readonly onSettingsChanged: (settings: GameSettings) => void
   readonly onSaveGame: () => Promise<void>
   readonly onDebugVisibleChanged: (visible: boolean) => void
+  readonly onMapDrawingsSaved: (drawings: readonly MapDrawing[]) => Promise<void>
   readonly getDebugVisible: () => boolean
   readonly getHeadingDegrees: () => number
+  readonly getMapDrawings: () => readonly MapDrawing[]
   readonly getMapPosition: () => GameUiMapPosition
   readonly getSurvivalStatus: () => GameUiSurvivalStatus
   readonly getWorldBounds: () => WorldBounds

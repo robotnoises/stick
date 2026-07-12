@@ -1,4 +1,5 @@
 import { AnimalSystem } from "../animals/AnimalSystem"
+import type { MapDrawing } from "../cartography/MapDrawing"
 import { BabylonBootstrap } from "../engine/BabylonBootstrap"
 import { LocalForageChunkRepository } from "../data/LocalForageChunkRepository"
 import type { SaveGameData, SaveGameRepository } from "../data/SaveGameRepository"
@@ -28,6 +29,7 @@ export class Game {
   private _globalApi: StickGlobalApi | null = null
   private _player: PlayerController | null = null
   private _time: TimeOfDaySystem | null = null
+  private _mapDrawings: readonly MapDrawing[] = []
 
   public constructor(
     private readonly _canvas: HTMLCanvasElement,
@@ -171,6 +173,15 @@ export class Game {
     }
   }
 
+  public getMapDrawings(): readonly MapDrawing[] {
+    return this._mapDrawings
+  }
+
+  public async saveMapDrawings(drawings: readonly MapDrawing[]): Promise<void> {
+    this._mapDrawings = drawings
+    await this.saveGame()
+  }
+
   public getWorldBounds(): GameConfig["worldBounds"] {
     return this._config.worldBounds
   }
@@ -211,6 +222,9 @@ export class Game {
         timeOfDayHours: this._time.timeOfDayHours,
         elapsedWorldSeconds: this._time.elapsedWorldSeconds,
       },
+      map: {
+        drawings: this._mapDrawings,
+      },
     })
   }
 
@@ -240,6 +254,7 @@ export class Game {
       return
     }
 
+    this._mapDrawings = saveGame.map?.drawings ?? []
     player.setPosition(...saveGame.player.position)
     player.setHeadingDegrees(saveGame.player.headingDegrees)
     time.setWorldClock(

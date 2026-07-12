@@ -1,8 +1,12 @@
+import { useRef, useState } from "preact/hooks"
 import type { WorldBounds } from "../../app/GameConfig"
+import type { MapDrawing, MapDrawingPoint, MapDrawingStroke } from "../../cartography/MapDrawing"
 import { Modal } from "./Modal"
 
 export interface MapModalProps {
+  readonly drawings: readonly MapDrawing[]
   readonly onClose: () => void
+  readonly onSaveDrawings: (drawings: readonly MapDrawing[]) => Promise<void>
   readonly playerHeadingDegrees: number
   readonly playerX: number
   readonly playerZ: number
@@ -12,35 +16,203 @@ export interface MapModalProps {
 const mapSize = 520
 const mapPadding = 34
 const gridMeters = 1000
+const pencilColor = "#5b3624"
+const pencilWidthMeters = 32
+const eraserRadiusMeters = 95
+type MapTool = "eraser" | "pencil"
 
-export function MapModal({ onClose, playerHeadingDegrees, playerX, playerZ, worldBounds }: MapModalProps) {
+export function MapModal({
+  drawings,
+  onClose,
+  onSaveDrawings,
+  playerHeadingDegrees,
+  playerX,
+  playerZ,
+  worldBounds,
+}: MapModalProps) {
+  const [activeTool, setActiveTool] = useState<MapTool>("pencil")
+  const [mapDrawings, setMapDrawings] = useState<readonly MapDrawing[]>(drawings)
+  const [activeStroke, setActiveStroke] = useState<MapDrawingStroke | null>(null)
+  const [undoableStrokeIds, setUndoableStrokeIds] = useState<readonly string[]>([])
+  const isErasing = useRef(false)
+  const svgRef = useRef<SVGSVGElement | null>(null)
   const plotSize = mapSize - mapPadding * 2
   const toMapX = (worldX: number): number =>
     mapPadding + ((worldX - worldBounds.minX) / (worldBounds.maxX - worldBounds.minX)) * plotSize
   const toMapY = (worldZ: number): number =>
     mapPadding + ((worldBounds.maxZ - worldZ) / (worldBounds.maxZ - worldBounds.minZ)) * plotSize
+  const toWorldX = (mapX: number): number =>
+    worldBounds.minX + ((mapX - mapPadding) / plotSize) * (worldBounds.maxX - worldBounds.minX)
+  const toWorldZ = (mapY: number): number =>
+    worldBounds.maxZ - ((mapY - mapPadding) / plotSize) * (worldBounds.maxZ - worldBounds.minZ)
   const centerX = toMapX(0)
   const centerY = toMapY(0)
   const playerMapX = toMapX(playerX)
   const playerMapY = toMapY(playerZ)
   const verticalGridLines = createGridValues(worldBounds.minX, worldBounds.maxX, gridMeters)
   const horizontalGridLines = createGridValues(worldBounds.minZ, worldBounds.maxZ, gridMeters)
+  const renderedDrawings = activeStroke ? [...mapDrawings, activeStroke] : mapDrawings
+
+  const saveAndClose = (): void => {
+    void onSaveDrawings(mapDrawings).finally(onClose)
+  }
+
+  const undo = (): void => {
+    const strokeId = undoableStrokeIds.at(-1)
+
+    if (!strokeId) {
+      return
+    }
+
+    setMapDrawings((current) => current.filter((drawing) => drawing.id !== strokeId))
+    setUndoableStrokeIds((current) => current.slice(0, -1))
+  }
+
+  const eraseAt = (point: MapDrawingPoint): void => {
+    setMapDrawings((current) => {
+      let changed = false
+      const replacedIds = new Set<string>()
+      const nextDrawings = current.flatMap((drawing) => {
+        const erased = eraseStrokeAtPoint(drawing, point, eraserRadiusMeters)
+
+        if (erased.length === 1 && erased[0] === drawing) {
+          return [drawing]
+        }
+
+        changed = true
+        replacedIds.add(drawing.id)
+        return erased
+      })
+
+      if (!changed) {
+        return current
+      }
+
+      setUndoableStrokeIds((ids) => ids.filter((id) => !replacedIds.has(id)))
+
+      return nextDrawings
+    })
+  }
+
+  const handlePointerDown = (event: PointerEvent): void => {
+    const point = getMapPoint(event, svgRef.current)
+
+    if (!point) {
+      return
+    }
+
+    ;(event.currentTarget as SVGSVGElement | null)?.setPointerCapture(event.pointerId)
+
+    if (activeTool === "eraser") {
+      isErasing.current = true
+      return
+    }
+
+    setActiveStroke({
+      id: createStrokeId(),
+      type: "stroke",
+      color: pencilColor,
+      widthMeters: pencilWidthMeters,
+      points: [point],
+    })
+  }
+
+  const handlePointerMove = (event: PointerEvent): void => {
+    const point = getMapPoint(event, svgRef.current)
+
+    if (!point) {
+      return
+    }
+
+    if (activeTool === "eraser") {
+      if (isErasing.current) {
+        eraseAt(point)
+      }
+
+      return
+    }
+
+    if (!activeStroke) {
+      return
+    }
+
+    const previous = activeStroke.points[activeStroke.points.length - 1]
+
+    if (previous && Math.hypot(previous.x - point.x, previous.z - point.z) < 18) {
+      return
+    }
+
+    setActiveStroke({ ...activeStroke, points: [...activeStroke.points, point] })
+  }
+
+  const handlePointerUp = (): void => {
+    isErasing.current = false
+
+    if (!activeStroke) {
+      return
+    }
+
+    if (activeStroke.points.length > 1) {
+      setMapDrawings((current) => [...current, activeStroke])
+      setUndoableStrokeIds((current) => [...current, activeStroke.id])
+    }
+
+    setActiveStroke(null)
+  }
+
+  const mapPointToSvg = (point: MapDrawingPoint): string => `${toMapX(point.x)},${toMapY(point.z)}`
 
   return (
     <Modal
       dismissOnBackdropClick
       showClose
-      onClose={onClose}
+      onClose={saveAndClose}
       panelClassName="stick-map-modal-panel"
       subtitle="Cartography"
       title="My Map"
     >
       <div class="stick-map-modal-content">
+        <div class="stick-map-toolbar" aria-label="Map drawing tools">
+          <button
+            class={activeTool === "pencil" ? "stick-map-tool-active" : ""}
+            type="button"
+            onClick={() => setActiveTool("pencil")}
+            title="Pencil"
+            aria-label="Pencil"
+            aria-pressed={activeTool === "pencil"}
+          >
+            <span class="stick-map-tool-icon stick-map-tool-icon-pencil" aria-hidden="true" />
+          </button>
+          <button
+            class={activeTool === "eraser" ? "stick-map-tool-active" : ""}
+            type="button"
+            onClick={() => setActiveTool("eraser")}
+            title="Eraser"
+            aria-label="Eraser"
+            aria-pressed={activeTool === "eraser"}
+          >
+            <span class="stick-map-tool-icon stick-map-tool-icon-eraser" aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            onClick={undo}
+            disabled={undoableStrokeIds.length === 0}
+            title="Undo last stroke"
+            aria-label="Undo last stroke"
+          >
+            <span class="stick-map-tool-icon stick-map-tool-icon-undo" aria-hidden="true" />
+          </button>
+        </div>
         <svg
-          class="stick-map"
+          ref={svgRef}
+          class={`stick-map stick-map-drawing-enabled stick-map-tool-${activeTool}`}
           viewBox={`0 0 ${mapSize} ${mapSize}`}
           role="img"
           aria-label="Blank gridded map with starting point revealed"
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerUp}
         >
           <rect class="stick-map-paper" x="0" y="0" width={mapSize} height={mapSize} />
           <rect
@@ -70,6 +242,14 @@ export function MapModal({ onClose, playerHeadingDegrees, playerX, playerZ, worl
               y2={toMapY(z)}
             />
           ))}
+          {renderedDrawings.map((drawing) => (
+            <polyline
+              key={drawing.id}
+              class="stick-map-user-stroke"
+              points={drawing.points.map(mapPointToSvg).join(" ")}
+              style={{ stroke: drawing.color, strokeWidth: toMapStrokeWidth(drawing.widthMeters, worldBounds) }}
+            />
+          ))}
           <path
             class="stick-map-start-marker"
             d={`M ${centerX - 5} ${centerY - 5} L ${centerX + 5} ${centerY + 5} M ${centerX + 5} ${centerY - 5} L ${centerX - 5} ${centerY + 5}`}
@@ -87,6 +267,22 @@ export function MapModal({ onClose, playerHeadingDegrees, playerX, playerZ, worl
       </div>
     </Modal>
   )
+
+  function getMapPoint(event: PointerEvent, svg: SVGSVGElement | null): MapDrawingPoint | null {
+    if (!svg) {
+      return null
+    }
+
+    const bounds = svg.getBoundingClientRect()
+    const mapX = ((event.clientX - bounds.left) / bounds.width) * mapSize
+    const mapY = ((event.clientY - bounds.top) / bounds.height) * mapSize
+
+    if (mapX < mapPadding || mapX > mapPadding + plotSize || mapY < mapPadding || mapY > mapPadding + plotSize) {
+      return null
+    }
+
+    return { x: toWorldX(mapX), z: toWorldZ(mapY) }
+  }
 }
 
 function createGridValues(min: number, max: number, step: number): number[] {
@@ -99,3 +295,54 @@ function createGridValues(min: number, max: number, step: number): number[] {
 
   return values
 }
+
+function toMapStrokeWidth(widthMeters: number, worldBounds: WorldBounds): number {
+  const worldWidth = worldBounds.maxX - worldBounds.minX
+
+  return (widthMeters / worldWidth) * (mapSize - mapPadding * 2)
+}
+
+function eraseStrokeAtPoint(
+  stroke: MapDrawingStroke,
+  point: MapDrawingPoint,
+  radiusMeters: number,
+): readonly MapDrawingStroke[] {
+  const keptRuns: MapDrawingPoint[][] = []
+  let currentRun: MapDrawingPoint[] = []
+
+  for (const strokePoint of stroke.points) {
+    if (getDistance(point, strokePoint) <= radiusMeters) {
+      if (currentRun.length > 1) {
+        keptRuns.push(currentRun)
+      }
+
+      currentRun = []
+      continue
+    }
+
+    currentRun.push(strokePoint)
+  }
+
+  if (currentRun.length > 1) {
+    keptRuns.push(currentRun)
+  }
+
+  if (keptRuns.length === 1 && keptRuns[0]?.length === stroke.points.length) {
+    return [stroke]
+  }
+
+  return keptRuns.map((points) => ({
+    ...stroke,
+    id: createStrokeId(),
+    points,
+  }))
+}
+
+function createStrokeId(): string {
+  return `stroke_${Date.now()}_${Math.random().toString(36).slice(2)}`
+}
+
+function getDistance(a: MapDrawingPoint, b: MapDrawingPoint): number {
+  return Math.hypot(a.x - b.x, a.z - b.z)
+}
+

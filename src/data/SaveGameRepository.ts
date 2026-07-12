@@ -1,3 +1,5 @@
+import type { MapDrawing } from "../cartography/MapDrawing"
+
 export interface WorldConfigSaveData {
   readonly worldId: string
   readonly worldSeed: number
@@ -16,6 +18,9 @@ export interface SaveGameData {
     readonly day: number
     readonly timeOfDayHours: number
     readonly elapsedWorldSeconds: number
+  }
+  readonly map?: {
+    readonly drawings: readonly MapDrawing[]
   }
 }
 
