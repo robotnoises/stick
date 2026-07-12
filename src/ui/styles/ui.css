@@ -616,6 +616,17 @@
   mask-image: url("../../../assets/exported/icons/undo.svg");
 }
 
+.stick-map-tool-star {
+  color: currentcolor;
+  font-size: 18px;
+  line-height: 1;
+  transform: translateY(-1px);
+}
+
+.stick-map-stage {
+  position: relative;
+}
+
 .stick-map {
   display: block;
   width: 100%;
@@ -631,12 +642,19 @@
 }
 
 .stick-map-drawing-enabled {
-  cursor: crosshair;
   touch-action: none;
+}
+
+.stick-map-tool-pencil {
+  cursor: url("../../../assets/exported/icons/pencil-cursor.svg") 4 20, crosshair;
 }
 
 .stick-map-tool-eraser {
   cursor: url("../../../assets/exported/icons/eraser-cursor.svg") 12 12, cell;
+}
+
+.stick-map-tool-label {
+  cursor: url("../../../assets/exported/icons/star-cursor.svg") 12 12, copy;
 }
 
 .stick-map-paper {
@@ -660,6 +678,55 @@
   stroke-linejoin: round;
   opacity: 0.82;
   pointer-events: none;
+}
+
+.stick-map-user-label {
+  cursor: help;
+  outline: none;
+}
+
+.stick-map-user-label-star {
+  fill: rgb(118 34 43 / 90%);
+  stroke: rgb(55 18 23 / 62%);
+  stroke-width: 0.6;
+  font:
+    700 18px/1 Georgia,
+    "Times New Roman",
+    serif;
+  pointer-events: all;
+  user-select: none;
+}
+
+.stick-map-label-tooltip {
+  position: absolute;
+  z-index: 2;
+  max-width: 180px;
+  padding: 6px 8px;
+  border: 1px solid rgb(76 49 29 / 32%);
+  border-radius: 6px;
+  color: rgb(44 29 18 / 92%);
+  background: rgb(241 222 179 / 96%);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 24%);
+  font:
+    12px/1.25 Georgia,
+    "Times New Roman",
+    serif;
+  pointer-events: none;
+  transform: translate(-50%, calc(-100% - 12px));
+  white-space: normal;
+}
+
+.stick-map-label-tooltip::after {
+  position: absolute;
+  bottom: -5px;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  border-right: 1px solid rgb(76 49 29 / 32%);
+  border-bottom: 1px solid rgb(76 49 29 / 32%);
+  background: inherit;
+  content: "";
+  transform: translateX(-50%) rotate(45deg);
 }
 
 .stick-map-start-marker {

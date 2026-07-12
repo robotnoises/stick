@@ -11,4 +11,11 @@ export interface MapDrawingStroke {
   readonly widthMeters: number
 }
 
-export type MapDrawing = MapDrawingStroke
+export interface MapDrawingLabel {
+  readonly id: string
+  readonly type: "label"
+  readonly point: MapDrawingPoint
+  readonly text: string
+}
+
+export type MapDrawing = MapDrawingLabel | MapDrawingStroke

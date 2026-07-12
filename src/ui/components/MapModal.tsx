@@ -1,6 +1,11 @@
 import { useRef, useState } from "preact/hooks"
 import type { WorldBounds } from "../../app/GameConfig"
-import type { MapDrawing, MapDrawingPoint, MapDrawingStroke } from "../../cartography/MapDrawing"
+import type {
+  MapDrawing,
+  MapDrawingLabel,
+  MapDrawingPoint,
+  MapDrawingStroke,
+} from "../../cartography/MapDrawing"
 import { Modal } from "./Modal"
 
 export interface MapModalProps {
@@ -19,9 +24,10 @@ const gridMeters = 1000
 const pencilColor = "#5b3624"
 const pencilWidthMeters = 32
 const eraserRadiusMeters = 95
-type MapTool = "eraser" | "pencil"
+type MapTool = "eraser" | "label" | "pencil"
+type ActiveMapTool = MapTool | null
 type MapEditAction =
-  | { readonly type: "add-stroke"; readonly strokeId: string }
+  | { readonly type: "add-drawing"; readonly drawingId: string }
   | { readonly type: "restore-drawings"; readonly drawings: readonly MapDrawing[] }
 
 export function MapModal({
@@ -33,7 +39,8 @@ export function MapModal({
   playerZ,
   worldBounds,
 }: MapModalProps) {
-  const [activeTool, setActiveTool] = useState<MapTool>("pencil")
+  const [activeTool, setActiveTool] = useState<ActiveMapTool>(null)
+  const [hoveredLabel, setHoveredLabel] = useState<MapDrawingLabel | null>(null)
   const [mapDrawings, setMapDrawings] = useState<readonly MapDrawing[]>(drawings)
   const [activeStroke, setActiveStroke] = useState<MapDrawingStroke | null>(null)
   const [unsavedActions, setUnsavedActions] = useState<readonly MapEditAction[]>([])
@@ -69,8 +76,8 @@ export function MapModal({
       return
     }
 
-    if (action.type === "add-stroke") {
-      setMapDrawings((current) => current.filter((drawing) => drawing.id !== action.strokeId))
+    if (action.type === "add-drawing") {
+      setMapDrawings((current) => current.filter((drawing) => drawing.id !== action.drawingId))
     } else {
       setMapDrawings(action.drawings)
     }
@@ -82,7 +89,17 @@ export function MapModal({
     setMapDrawings((current) => {
       let changed = false
       const replacedIds = new Set<string>()
-      const nextDrawings = current.flatMap((drawing) => {
+      const nextDrawings = current.flatMap<MapDrawing>((drawing) => {
+        if (drawing.type === "label") {
+          if (getDistance(point, drawing.point) > eraserRadiusMeters) {
+            return [drawing]
+          }
+
+          changed = true
+          replacedIds.add(drawing.id)
+          return []
+        }
+
         const erased = eraseStrokeAtPoint(drawing, point, eraserRadiusMeters)
 
         if (erased.length === 1 && erased[0] === drawing) {
@@ -99,7 +116,9 @@ export function MapModal({
       }
 
       setUnsavedActions((actions) =>
-        actions.filter((action) => action.type !== "add-stroke" || !replacedIds.has(action.strokeId)),
+        actions.filter(
+          (action) => action.type !== "add-drawing" || !replacedIds.has(action.drawingId),
+        ),
       )
 
       didErase.current = true
@@ -124,13 +143,34 @@ export function MapModal({
       return
     }
 
-    setActiveStroke({
-      id: createStrokeId(),
-      type: "stroke",
-      color: pencilColor,
-      widthMeters: pencilWidthMeters,
-      points: [point],
-    })
+    if (activeTool === "label") {
+      const text = window.prompt("Map note")?.trim()
+
+      if (!text) {
+        return
+      }
+
+      const label: MapDrawingLabel = {
+        id: createDrawingId(),
+        type: "label",
+        point,
+        text,
+      }
+
+      setMapDrawings((current) => [...current, label])
+      setUnsavedActions((current) => [...current, { type: "add-drawing", drawingId: label.id }])
+      return
+    }
+
+    if (activeTool === "pencil") {
+      setActiveStroke({
+        id: createDrawingId(),
+        type: "stroke",
+        color: pencilColor,
+        widthMeters: pencilWidthMeters,
+        points: [point],
+      })
+    }
   }
 
   const handlePointerMove = (event: PointerEvent): void => {
@@ -145,6 +185,10 @@ export function MapModal({
         eraseAt(point)
       }
 
+      return
+    }
+
+    if (activeTool === "label") {
       return
     }
 
@@ -179,7 +223,10 @@ export function MapModal({
 
     if (activeStroke.points.length > 1) {
       setMapDrawings((current) => [...current, activeStroke])
-      setUnsavedActions((current) => [...current, { type: "add-stroke", strokeId: activeStroke.id }])
+      setUnsavedActions((current) => [
+        ...current,
+        { type: "add-drawing", drawingId: activeStroke.id },
+      ])
     }
 
     setActiveStroke(null)
@@ -219,6 +266,16 @@ export function MapModal({
             <span class="stick-map-tool-icon stick-map-tool-icon-eraser" aria-hidden="true" />
           </button>
           <button
+            class={activeTool === "label" ? "stick-map-tool-active" : ""}
+            type="button"
+            onClick={() => setActiveTool("label")}
+            title="Label"
+            aria-label="Label"
+            aria-pressed={activeTool === "label"}
+          >
+            <span class="stick-map-tool-star" aria-hidden="true">★</span>
+          </button>
+          <button
             type="button"
             onClick={undo}
             disabled={unsavedActions.length === 0}
@@ -228,17 +285,18 @@ export function MapModal({
             <span class="stick-map-tool-icon stick-map-tool-icon-undo" aria-hidden="true" />
           </button>
         </div>
-        <svg
-          ref={svgRef}
-          class={`stick-map stick-map-drawing-enabled stick-map-tool-${activeTool}`}
-          viewBox={`0 0 ${mapSize} ${mapSize}`}
-          role="img"
-          aria-label="Blank gridded map with starting point revealed"
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUp}
-          onPointerCancel={handlePointerUp}
-        >
+        <div class="stick-map-stage">
+          <svg
+            ref={svgRef}
+            class={`stick-map${activeTool ? ` stick-map-drawing-enabled stick-map-tool-${activeTool}` : ""}`}
+            viewBox={`0 0 ${mapSize} ${mapSize}`}
+            role="img"
+            aria-label="Blank gridded map with starting point revealed"
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerUp}
+          >
           <rect class="stick-map-paper" x="0" y="0" width={mapSize} height={mapSize} />
           <rect
             class="stick-map-border"
@@ -267,14 +325,34 @@ export function MapModal({
               y2={toMapY(z)}
             />
           ))}
-          {renderedDrawings.map((drawing) => (
-            <polyline
-              key={drawing.id}
-              class="stick-map-user-stroke"
-              points={drawing.points.map(mapPointToSvg).join(" ")}
-              style={{ stroke: drawing.color, strokeWidth: toMapStrokeWidth(drawing.widthMeters, worldBounds) }}
-            />
-          ))}
+          {renderedDrawings.map((drawing) =>
+            drawing.type === "stroke" ? (
+              <polyline
+                key={drawing.id}
+                class="stick-map-user-stroke"
+                points={drawing.points.map(mapPointToSvg).join(" ")}
+                style={{ stroke: drawing.color, strokeWidth: toMapStrokeWidth(drawing.widthMeters, worldBounds) }}
+              />
+            ) : (
+              <g
+                key={drawing.id}
+                class="stick-map-user-label"
+                transform={`translate(${toMapX(drawing.point.x)} ${toMapY(drawing.point.z)})`}
+                role="button"
+                tabIndex={0}
+                aria-label={`Map note: ${drawing.text}`}
+                onBlur={() => setHoveredLabel(null)}
+                onFocus={() => setHoveredLabel(drawing)}
+                onPointerDown={(event) => event.stopPropagation()}
+                onPointerEnter={() => setHoveredLabel(drawing)}
+                onPointerLeave={() => setHoveredLabel(null)}
+              >
+                <text class="stick-map-user-label-star" text-anchor="middle" dominant-baseline="middle">
+                  ★
+                </text>
+              </g>
+            ),
+          )}
           <path
             class="stick-map-start-marker"
             d={`M ${centerX - 5} ${centerY - 5} L ${centerX + 5} ${centerY + 5} M ${centerX + 5} ${centerY - 5} L ${centerX - 5} ${centerY + 5}`}
@@ -288,7 +366,19 @@ export function MapModal({
           >
             <path d="M 0 -7 L 5 5 L 0 2.5 L -5 5 Z" />
           </g>
-        </svg>
+          </svg>
+          {hoveredLabel ? (
+            <div
+              class="stick-map-label-tooltip"
+              style={{
+                left: `${(toMapX(hoveredLabel.point.x) / mapSize) * 100}%`,
+                top: `${(toMapY(hoveredLabel.point.z) / mapSize) * 100}%`,
+              }}
+            >
+              {hoveredLabel.text}
+            </div>
+          ) : null}
+        </div>
       </div>
     </Modal>
   )
@@ -358,13 +448,13 @@ function eraseStrokeAtPoint(
 
   return keptRuns.map((points) => ({
     ...stroke,
-    id: createStrokeId(),
+    id: createDrawingId(),
     points,
   }))
 }
 
-function createStrokeId(): string {
-  return `stroke_${Date.now()}_${Math.random().toString(36).slice(2)}`
+function createDrawingId(): string {
+  return `map_drawing_${Date.now()}_${Math.random().toString(36).slice(2)}`
 }
 
 function getDistance(a: MapDrawingPoint, b: MapDrawingPoint): number {
