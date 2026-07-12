@@ -20,6 +20,9 @@ const pencilColor = "#5b3624"
 const pencilWidthMeters = 32
 const eraserRadiusMeters = 95
 type MapTool = "eraser" | "pencil"
+type MapEditAction =
+  | { readonly type: "add-stroke"; readonly strokeId: string }
+  | { readonly type: "restore-drawings"; readonly drawings: readonly MapDrawing[] }
 
 export function MapModal({
   drawings,
@@ -33,7 +36,9 @@ export function MapModal({
   const [activeTool, setActiveTool] = useState<MapTool>("pencil")
   const [mapDrawings, setMapDrawings] = useState<readonly MapDrawing[]>(drawings)
   const [activeStroke, setActiveStroke] = useState<MapDrawingStroke | null>(null)
-  const [undoableStrokeIds, setUndoableStrokeIds] = useState<readonly string[]>([])
+  const [unsavedActions, setUnsavedActions] = useState<readonly MapEditAction[]>([])
+  const eraseStartDrawings = useRef<readonly MapDrawing[] | null>(null)
+  const didErase = useRef(false)
   const isErasing = useRef(false)
   const svgRef = useRef<SVGSVGElement | null>(null)
   const plotSize = mapSize - mapPadding * 2
@@ -58,14 +63,19 @@ export function MapModal({
   }
 
   const undo = (): void => {
-    const strokeId = undoableStrokeIds.at(-1)
+    const action = unsavedActions.at(-1)
 
-    if (!strokeId) {
+    if (!action) {
       return
     }
 
-    setMapDrawings((current) => current.filter((drawing) => drawing.id !== strokeId))
-    setUndoableStrokeIds((current) => current.slice(0, -1))
+    if (action.type === "add-stroke") {
+      setMapDrawings((current) => current.filter((drawing) => drawing.id !== action.strokeId))
+    } else {
+      setMapDrawings(action.drawings)
+    }
+
+    setUnsavedActions((current) => current.slice(0, -1))
   }
 
   const eraseAt = (point: MapDrawingPoint): void => {
@@ -88,7 +98,11 @@ export function MapModal({
         return current
       }
 
-      setUndoableStrokeIds((ids) => ids.filter((id) => !replacedIds.has(id)))
+      setUnsavedActions((actions) =>
+        actions.filter((action) => action.type !== "add-stroke" || !replacedIds.has(action.strokeId)),
+      )
+
+      didErase.current = true
 
       return nextDrawings
     })
@@ -104,6 +118,8 @@ export function MapModal({
     ;(event.currentTarget as SVGSVGElement | null)?.setPointerCapture(event.pointerId)
 
     if (activeTool === "eraser") {
+      eraseStartDrawings.current = mapDrawings
+      didErase.current = false
       isErasing.current = true
       return
     }
@@ -146,7 +162,16 @@ export function MapModal({
   }
 
   const handlePointerUp = (): void => {
+    if (isErasing.current && didErase.current && eraseStartDrawings.current) {
+      setUnsavedActions((current) => [
+        ...current,
+        { type: "restore-drawings", drawings: eraseStartDrawings.current ?? [] },
+      ])
+    }
+
     isErasing.current = false
+    didErase.current = false
+    eraseStartDrawings.current = null
 
     if (!activeStroke) {
       return
@@ -154,7 +179,7 @@ export function MapModal({
 
     if (activeStroke.points.length > 1) {
       setMapDrawings((current) => [...current, activeStroke])
-      setUndoableStrokeIds((current) => [...current, activeStroke.id])
+      setUnsavedActions((current) => [...current, { type: "add-stroke", strokeId: activeStroke.id }])
     }
 
     setActiveStroke(null)
@@ -196,7 +221,7 @@ export function MapModal({
           <button
             type="button"
             onClick={undo}
-            disabled={undoableStrokeIds.length === 0}
+            disabled={unsavedActions.length === 0}
             title="Undo last stroke"
             aria-label="Undo last stroke"
           >
