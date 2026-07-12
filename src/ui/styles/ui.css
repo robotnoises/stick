@@ -531,6 +531,81 @@
   text-transform: uppercase;
 }
 
+.stick-map-modal-panel {
+  width: min(85vh, calc(100vw - 32px));
+}
+
+.stick-map-modal-content {
+  padding: 14px 16px 12px;
+  background:
+    radial-gradient(circle at 18% 12%, rgb(255 255 255 / 10%), transparent 28%),
+    radial-gradient(circle at 88% 82%, rgb(74 37 16 / 14%), transparent 36%),
+    linear-gradient(180deg, rgb(215 185 122 / 58%), rgb(170 128 75 / 62%));
+  box-shadow:
+    inset 0 10px 24px rgb(82 45 18 / 12%),
+    inset 0 -16px 30px rgb(70 34 14 / 18%);
+}
+
+.stick-map {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  border: 1px solid rgb(83 54 31 / 38%);
+  border-radius: 4px;
+  background:
+    radial-gradient(circle at 20% 18%, rgb(255 255 255 / 12%), transparent 28%),
+    linear-gradient(180deg, rgb(226 202 148 / 82%), rgb(205 169 105 / 84%));
+  box-shadow:
+    inset 0 0 24px rgb(67 39 18 / 18%),
+    0 2px 6px rgb(0 0 0 / 16%);
+}
+
+.stick-map-paper {
+  fill: transparent;
+}
+
+.stick-map-border {
+  fill: none;
+  stroke: rgb(76 49 29 / 42%);
+  stroke-width: 1.4;
+}
+
+.stick-map-grid {
+  stroke: rgb(76 49 29 / 16%);
+  stroke-width: 0.9;
+}
+
+.stick-map-start-marker {
+  fill: none;
+  stroke: rgb(103 44 30 / 82%);
+  stroke-linecap: round;
+  stroke-width: 2.4;
+}
+
+.stick-map-player-marker {
+  fill: rgb(118 34 43 / 90%);
+  stroke: rgb(55 18 23 / 84%);
+  stroke-linejoin: round;
+  stroke-width: 1.2;
+}
+
+.stick-map-start-label {
+  fill: rgb(72 45 27 / 72%);
+  font:
+    700 9px/1 Georgia,
+    "Times New Roman",
+    serif;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.stick-map-caption {
+  margin: 9px 0 0;
+  color: var(--stick-ui-ink-soft);
+  font-size: 12px;
+  font-style: italic;
+}
+
 .stick-menu-section {
   padding: 12px 15px 4px;
 }

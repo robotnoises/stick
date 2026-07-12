@@ -161,6 +161,20 @@ export class Game {
     return this._player?.headingDegrees ?? 0
   }
 
+  public getMapPosition(): { readonly headingDegrees: number; readonly x: number; readonly z: number } {
+    const position = this._player?.position
+
+    return {
+      headingDegrees: this.getPlayerHeadingDegrees(),
+      x: position?.x ?? 0,
+      z: position?.z ?? 0,
+    }
+  }
+
+  public getWorldBounds(): GameConfig["worldBounds"] {
+    return this._config.worldBounds
+  }
+
   public getWorldTime(): { readonly day: number; readonly timeOfDayHours: number } {
     return {
       day: this._time?.day ?? 1,

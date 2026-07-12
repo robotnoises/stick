@@ -2,16 +2,17 @@ import { Compass } from "./Compass"
 
 export interface HudProps {
   readonly headingDegrees: number
+  readonly onMapOpen: () => void
   readonly onMenuOpen: () => void
 }
 
-export function Hud({ headingDegrees, onMenuOpen }: HudProps) {
+export function Hud({ headingDegrees, onMapOpen, onMenuOpen }: HudProps) {
   const noopAction = (): void => undefined
 
   return (
     <nav class="stick-hud" aria-label="Game actions">
       <div class="stick-hud-rail stick-hud-rail-left">
-        <button class="stick-hud-action" type="button" onClick={noopAction}>
+        <button class="stick-hud-action" type="button" onClick={onMapOpen}>
           Map
         </button>
         <button class="stick-hud-action" type="button" onClick={noopAction}>

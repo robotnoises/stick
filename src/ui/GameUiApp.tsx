@@ -3,6 +3,7 @@ import type { GameSettings } from "../app/GameSettings"
 import { GameIndicators } from "./components/GameIndicators"
 import { Hud } from "./components/Hud"
 import { InGameMenu } from "./components/InGameMenu"
+import { MapModal } from "./components/MapModal"
 import type { GameUiCommands, GameUiState } from "./GameUiState"
 
 export interface GameUiAppProps {
@@ -12,6 +13,7 @@ export interface GameUiAppProps {
 
 export function GameUiApp({ commands, initialSettings }: GameUiAppProps) {
   const [state, setState] = useState<GameUiState>({
+    isMapOpen: false,
     isMenuOpen: false,
     isSaving: false,
     saveStatus: "",
@@ -52,13 +54,23 @@ export function GameUiApp({ commands, initialSettings }: GameUiAppProps) {
       }
 
       event.preventDefault()
-      setState((current) => ({ ...current, isMenuOpen: !current.isMenuOpen }))
+      setState((current) => {
+        if (current.isMapOpen) {
+          return { ...current, isMapOpen: false }
+        }
+
+        return { ...current, isMenuOpen: !current.isMenuOpen }
+      })
     }
 
     window.addEventListener("keydown", handleKeyDown)
 
     return () => window.removeEventListener("keydown", handleKeyDown)
   }, [])
+
+  const setMapOpen = (isMapOpen: boolean): void => {
+    setState((current) => ({ ...current, isMapOpen }))
+  }
 
   const setMenuOpen = (isMenuOpen: boolean): void => {
     setState((current) => ({ ...current, isMenuOpen }))
@@ -99,7 +111,20 @@ export function GameUiApp({ commands, initialSettings }: GameUiAppProps) {
         thirst={state.survivalStatus.thirst}
         timeOfDayHours={state.worldTime.timeOfDayHours}
       />
-      <Hud headingDegrees={state.headingDegrees} onMenuOpen={() => setMenuOpen(true)} />
+      <Hud
+        headingDegrees={state.headingDegrees}
+        onMapOpen={() => setMapOpen(true)}
+        onMenuOpen={() => setMenuOpen(true)}
+      />
+      {state.isMapOpen ? (
+        <MapModal
+          onClose={() => setMapOpen(false)}
+          playerHeadingDegrees={commands.getMapPosition().headingDegrees}
+          playerX={commands.getMapPosition().x}
+          playerZ={commands.getMapPosition().z}
+          worldBounds={commands.getWorldBounds()}
+        />
+      ) : null}
       <InGameMenu
         isDebugVisible={state.isDebugVisible}
         isMenuOpen={state.isMenuOpen}

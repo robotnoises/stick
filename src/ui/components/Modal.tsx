@@ -5,6 +5,7 @@ export interface ModalProps {
   readonly children: ComponentChildren
   readonly dismissOnBackdropClick?: boolean
   readonly onClose: () => void
+  readonly panelClassName?: string
   readonly showClose?: boolean
   readonly subtitle: string
   readonly title: string
@@ -14,6 +15,7 @@ export function Modal({
   children,
   dismissOnBackdropClick = false,
   onClose,
+  panelClassName = "",
   showClose = false,
   subtitle,
   title,
@@ -28,7 +30,7 @@ export function Modal({
         aria-label="Close modal"
         onClick={dismissOnBackdropClick ? onClose : undefined}
       />
-      <div className="stick-modal-panel" role="dialog" aria-modal="true" aria-labelledby={titleId}>
+      <div className={`stick-modal-panel ${panelClassName}`} role="dialog" aria-modal="true" aria-labelledby={titleId}>
         <header className="stick-modal-header">
           <div>
             <p className="stick-menu-kicker">{subtitle}</p>

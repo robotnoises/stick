@@ -29,7 +29,9 @@ await game.start()
 const ui = new GameUiController(uiRoot, settings, {
   getDebugVisible: () => window.stick?.debug.visible() ?? false,
   getHeadingDegrees: () => game.getPlayerHeadingDegrees(),
+  getMapPosition: () => game.getMapPosition(),
   getSurvivalStatus: () => game.getSurvivalStatus(),
+  getWorldBounds: () => game.getWorldBounds(),
   getWorldTime: () => game.getWorldTime(),
   onDebugVisibleChanged: (visible) => window.stick?.debug.show(visible),
   onSaveGame: () => game.saveGame(),
