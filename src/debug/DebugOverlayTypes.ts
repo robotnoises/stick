@@ -64,6 +64,7 @@ export interface DebugOverlayActions {
   getDebugMapData?(): DebugMapData
   getTerrainStreamingStats?(): DebugTerrainStreamingStats
   getWorldSeed?(): number
+  placeMediumFire?(): void
   resetTerrainCache?(): Promise<void> | void
   setChunkBoundariesDebugEnabled?(enabled: boolean): void
   setWorldSeed?(seed: number): Promise<void> | void

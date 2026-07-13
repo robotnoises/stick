@@ -171,6 +171,7 @@ export class ChunkMaterialFactory {
   ): void {
     this._configureTexturedMaterial(material, textureUrl, 10, tint)
     material.ambientColor = new Color3(0.22, 0.22, 0.22)
+    material.maxSimultaneousLights = 8
     material.backFaceCulling = false
     material.twoSidedLighting = true
   }
@@ -187,6 +188,7 @@ export class ChunkMaterialFactory {
     texture.vScale = scale
     material.diffuseTexture = texture
     material.diffuseColor = tint
+    material.maxSimultaneousLights = 8
     material.specularColor = Color3.Black()
   }
 }

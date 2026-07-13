@@ -36,13 +36,13 @@
 
 ## Campfire System
 
-- [ ] Add `CampfireSystem`.
+- [x] Add `CampfireSystem`.
 - [ ] Track placed wood piles in world coordinates.
-- [ ] Track active fires in world coordinates.
-- [ ] Track remaining burn time per fire.
-- [ ] Update burn timers using world time.
-- [ ] Extinguish fires when burn time reaches zero.
-- [ ] Dispose campfire meshes/lights cleanly.
+- [x] Track active fires in world coordinates.
+- [x] Track remaining burn time per fire.
+- [x] Update burn timers using world time.
+- [x] Extinguish fires when burn time reaches zero.
+- [x] Dispose campfire meshes/lights cleanly.
 
 ## Placing Wood
 
@@ -77,13 +77,58 @@
 
 ## Fire Visuals
 
-- [ ] Add small flame visual for low fire.
-- [ ] Add warm point light for low fire.
-- [ ] Keep initial fire low and not super bright.
-- [ ] Add subtle flicker to light intensity.
-- [ ] Add ember/glow visual near kindling.
+- [x] Add small flame visual for low fire.
+- [x] Add warm point light for low fire.
+- [x] Keep initial fire low and not super bright.
+- [x] Add subtle flicker to light intensity.
+- [x] Add ember/glow visual near kindling.
 - [ ] Add smoke later, if desired.
 - [ ] Scale visuals with burn intensity later.
+
+## Fire Lighting Investigation
+
+Current status:
+
+- [x] Campfire has visible procedural 3D flame geometry.
+- [x] Campfire has a Babylon `PointLight` and downward `SpotLight`.
+- [x] Terrain materials have `maxSimultaneousLights = 8`.
+- [x] Campfire lights use high `renderPriority`.
+- [x] Campfire creation calls `scene.markAllMaterialsAsDirty(Material.LightDirtyFlag)`.
+- [ ] Real campfire lights visibly illuminate terrain/nearby props.
+
+Observed behavior:
+
+- Fireflies appear to glow, but their visible glow is mostly a small emissive billboard/halo mesh, not strong terrain illumination.
+- Campfire point/spot lights do not visibly illuminate terrain, even at very high intensity/range.
+- Fake flat ground-glow discs can make the ground look lit, but they create obvious artifacts on slopes/terrain seams.
+- Billboard-style fire halo creates a large flat orange arch and is not suitable for campfires.
+
+Working theory:
+
+- Babylon punctual lights are either not being selected by terrain/prop materials at runtime, or the scene/material setup makes their contribution too weak/invisible compared with existing ambient/emissive/vertex-color terrain shading.
+- Since the terrain is chunked and materials are shared/compiled before campfire lights are created, dynamic lights may require a more deliberate lighting strategy than simply adding more `PointLight`s.
+- The reliable visual approach is probably a custom fire illumination layer rather than relying entirely on Babylon's standard lighting.
+
+Possible next approach: terrain-conforming fire light overlay:
+
+- [ ] Create a dedicated `FireLightOverlaySystem` or integrate into `CampfireSystem`.
+- [ ] Generate a terrain-conforming radial mesh around each fire by sampling terrain height.
+- [ ] Use vertex alpha/color for warm falloff.
+- [ ] Keep it very subtle and texture/noise-modulated so it reads as illumination, not an orange disk.
+- [ ] Break the overlay into irregular/noisy patches to avoid a perfect circular edge.
+- [ ] Use multiple rings with low alpha and warm color blended into terrain.
+- [ ] Offset just above terrain to avoid z-fighting.
+- [ ] Rebuild/update overlay if fire position or terrain chunk changes.
+- [ ] Fade overlay with burn intensity/flicker.
+- [ ] Consider clipping overlay to loaded terrain chunks if needed.
+
+Alternative/parallel approach:
+
+- [ ] Add a small emissive local glow around the fire/flames only, similar to fireflies but much smaller.
+- [ ] Keep actual `PointLight` for props if it eventually works.
+- [ ] Test a simple isolated material/plane near fire to verify whether campfire light affects any standard material at all.
+- [ ] If isolated test works, compare terrain material configuration against test material.
+- [ ] If isolated test does not work, investigate scene light limits, light masks, render groups, and material compilation.
 
 ## Adding More Wood
 

@@ -17,6 +17,7 @@
   "dependencies": {
     "@babylonjs/core": "latest",
     "@babylonjs/loaders": "latest",
+    "@babylonjs/materials": "^9.14.0",
     "localforage": "latest",
     "preact": "^10.29.7"
   },

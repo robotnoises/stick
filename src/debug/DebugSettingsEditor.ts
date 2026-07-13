@@ -27,6 +27,7 @@ export class DebugSettingsEditor {
     const resetTerrainCacheButton = document.createElement("button")
     const newWorldButton = document.createElement("button")
     const revealMapButton = document.createElement("button")
+    const placeFireButton = document.createElement("button")
 
     element.classList.remove("debug-overlay-readonly-mode")
     element.classList.add("debug-overlay-editor-mode")
@@ -48,6 +49,10 @@ export class DebugSettingsEditor {
     revealMapButton.type = "button"
     revealMapButton.textContent = "Reveal world map"
     revealMapButton.addEventListener("click", this._handlers.onRevealMap)
+    placeFireButton.type = "button"
+    placeFireButton.textContent = "Place medium fire"
+    placeFireButton.addEventListener("click", () => this._actions.placeMediumFire?.())
+    placeFireButton.hidden = !this._actions.placeMediumFire
 
     form.append(
       this._createHeading(),
@@ -60,7 +65,7 @@ export class DebugSettingsEditor {
       this._createOptionalSeedField(),
       this._createOptionalChunkBoundaryField(),
       this._createButtonRow(submitButton, cancelButton),
-      this._createDebugToolRow(revealMapButton),
+      this._createDebugToolRow(revealMapButton, placeFireButton),
       this._createDangerRow(resetTerrainCacheButton, newWorldButton),
     )
 
@@ -140,14 +145,14 @@ export class DebugSettingsEditor {
     return row
   }
 
-  private _createDebugToolRow(button: HTMLButtonElement): HTMLDivElement {
+  private _createDebugToolRow(...buttons: HTMLButtonElement[]): HTMLDivElement {
     const row = document.createElement("div")
     const heading = document.createElement("div")
 
     row.className = "debug-overlay-command-section"
     heading.className = "debug-overlay-command-heading"
     heading.textContent = "Debug tools"
-    row.append(heading, this._createButtonRow(button))
+    row.append(heading, this._createButtonRow(...buttons))
 
     return row
   }

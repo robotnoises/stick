@@ -6,6 +6,7 @@ import type { SaveGameData, SaveGameRepository } from "../data/SaveGameRepositor
 import { DebugOverlay } from "../debug/DebugOverlay"
 import { CloudSystem } from "../environment/CloudSystem"
 import { DistantBackdropSystem } from "../environment/DistantBackdropSystem"
+import { CampfireSystem } from "../fire/CampfireSystem"
 import { LightingController } from "../environment/LightingController"
 import { TimeOfDaySystem } from "../environment/TimeOfDaySystem"
 import { createCoreBackpack } from "../items/CoreItems"
@@ -83,6 +84,9 @@ export class Game {
     const backdrop = new DistantBackdropSystem(this._context, player, time)
     const clouds = new CloudSystem(this._context, time, player)
     const lighting = new LightingController(this._context, time)
+    const campfires = new CampfireSystem(this._context, player, {
+      getHeightAt: (worldX, worldZ) => terrain.getHeightAt(worldX, worldZ),
+    })
     const flashlight = new FlashlightController(this._context, player)
     const inventory = new InventorySystem(createCoreBackpack(flashlight))
 
@@ -116,6 +120,7 @@ export class Game {
       getTerrainStreamingStats: () => terrain.getStreamingDebugStats(),
       getWorldSeed: () => this._config.worldSeed,
       resetTerrainCache: () => this._resetTerrainCache(chunkRepository),
+      placeMediumFire: () => campfires.placeMediumFireInFrontOfPlayer(),
       setChunkBoundariesDebugEnabled: (enabled) => terrain.setChunkBoundariesDebugEnabled(enabled),
       setWorldSeed: (seed) => this._setWorldSeed(seed, chunkRepository),
     })
@@ -130,6 +135,7 @@ export class Game {
       backdrop,
       clouds,
       lighting,
+      campfires,
       flashlight,
       inventory,
       debug,
