@@ -29,14 +29,20 @@ await game.start()
 const ui = new GameUiController(uiRoot, settings, {
   getDebugVisible: () => window.stick?.debug.visible() ?? false,
   getHeadingDegrees: () => game.getPlayerHeadingDegrees(),
+  getInventoryItems: () => game.getInventoryItems(),
   getMapDrawings: () => game.getMapDrawings(),
   getMapPosition: () => game.getMapPosition(),
+  getSelectedInventoryItem: () => game.getSelectedInventoryItem(),
   getSurvivalStatus: () => game.getSurvivalStatus(),
   getWorldBounds: () => game.getWorldBounds(),
   getWorldTime: () => game.getWorldTime(),
   onDebugVisibleChanged: (visible) => window.stick?.debug.show(visible),
+  onInventoryItemSelected: (itemId) => game.selectInventoryItem(itemId),
   onMapDrawingsSaved: (drawings) => game.saveMapDrawings(drawings),
   onSaveGame: () => game.saveGame(),
+  onSelectedItemUsed: () => {
+    game.useSelectedInventoryItem()
+  },
   onSettingsChanged: (nextSettings) => {
     settings.invertMouseY = nextSettings.invertMouseY
     saveGameSettings(settings)

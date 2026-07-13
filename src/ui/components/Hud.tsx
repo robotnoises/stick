@@ -4,18 +4,26 @@ export interface HudProps {
   readonly headingDegrees: number
   readonly onMapOpen: () => void
   readonly onMenuOpen: () => void
+  readonly onPackOpen: () => void
+  readonly onSelectedItemUsed: () => void
+  readonly selectedItemName: string | null
 }
 
-export function Hud({ headingDegrees, onMapOpen, onMenuOpen }: HudProps) {
-  const noopAction = (): void => undefined
-
+export function Hud({
+  headingDegrees,
+  onMapOpen,
+  onMenuOpen,
+  onPackOpen,
+  onSelectedItemUsed,
+  selectedItemName,
+}: HudProps) {
   return (
     <nav class="stick-hud" aria-label="Game actions">
       <div class="stick-hud-rail stick-hud-rail-left">
         <button class="stick-hud-action" type="button" onClick={onMapOpen}>
           Map
         </button>
-        <button class="stick-hud-action" type="button" onClick={noopAction}>
+        <button class="stick-hud-action" type="button" onClick={onPackOpen}>
           Pack
         </button>
       </div>
@@ -25,8 +33,8 @@ export function Hud({ headingDegrees, onMapOpen, onMenuOpen }: HudProps) {
       </div>
 
       <div class="stick-hud-rail stick-hud-rail-right">
-        <button class="stick-hud-action" type="button" onClick={noopAction}>
-          Camp
+        <button class="stick-hud-action" type="button" onClick={onSelectedItemUsed}>
+          {selectedItemName ?? "?"}
         </button>
         <button class="stick-hud-action" type="button" onClick={onMenuOpen}>
           Menu

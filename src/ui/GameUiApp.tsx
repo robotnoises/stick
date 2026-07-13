@@ -4,6 +4,7 @@ import { GameIndicators } from "./components/GameIndicators"
 import { Hud } from "./components/Hud"
 import { InGameMenu } from "./components/InGameMenu"
 import { MapModal } from "./components/MapModal"
+import { PackModal } from "./components/PackModal"
 import type { GameUiCommands, GameUiState } from "./GameUiState"
 
 export interface GameUiAppProps {
@@ -15,11 +16,14 @@ export function GameUiApp({ commands, initialSettings }: GameUiAppProps) {
   const [state, setState] = useState<GameUiState>({
     isMapOpen: false,
     isMenuOpen: false,
+    isPackOpen: false,
     isSaving: false,
     saveStatus: "",
     settings: initialSettings,
     headingDegrees: commands.getHeadingDegrees(),
+    inventoryItems: commands.getInventoryItems(),
     isDebugVisible: commands.getDebugVisible(),
+    selectedItem: commands.getSelectedInventoryItem(),
     survivalStatus: commands.getSurvivalStatus(),
     worldTime: commands.getWorldTime(),
   })
@@ -28,19 +32,31 @@ export function GameUiApp({ commands, initialSettings }: GameUiAppProps) {
     const interval = window.setInterval(() => {
       const visible = commands.getDebugVisible()
       const headingDegrees = commands.getHeadingDegrees()
+      const inventoryItems = commands.getInventoryItems()
+      const selectedItem = commands.getSelectedInventoryItem()
       const survivalStatus = commands.getSurvivalStatus()
       const worldTime = commands.getWorldTime()
 
       setState((current) =>
         current.isDebugVisible === visible &&
         Math.abs(current.headingDegrees - headingDegrees) < 0.1 &&
+        current.inventoryItems === inventoryItems &&
+        current.selectedItem?.id === selectedItem?.id &&
         Math.abs(current.survivalStatus.fatigue - survivalStatus.fatigue) < 0.01 &&
         Math.abs(current.survivalStatus.hunger - survivalStatus.hunger) < 0.01 &&
         Math.abs(current.survivalStatus.thirst - survivalStatus.thirst) < 0.01 &&
         current.worldTime.day === worldTime.day &&
         Math.abs(current.worldTime.timeOfDayHours - worldTime.timeOfDayHours) < 0.01
           ? current
-          : { ...current, headingDegrees, isDebugVisible: visible, survivalStatus, worldTime },
+          : {
+              ...current,
+              headingDegrees,
+              inventoryItems,
+              isDebugVisible: visible,
+              selectedItem,
+              survivalStatus,
+              worldTime,
+            },
       )
     }, 50)
 
@@ -49,6 +65,18 @@ export function GameUiApp({ commands, initialSettings }: GameUiAppProps) {
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent): void => {
+      if (event.key.toLowerCase() === "m") {
+        event.preventDefault()
+        setState((current) => ({ ...current, isMapOpen: !current.isMapOpen }))
+        return
+      }
+
+      if (event.key.toLowerCase() === "p") {
+        event.preventDefault()
+        setState((current) => ({ ...current, isPackOpen: !current.isPackOpen }))
+        return
+      }
+
       if (event.key !== "Escape") {
         return
       }
@@ -57,6 +85,10 @@ export function GameUiApp({ commands, initialSettings }: GameUiAppProps) {
       setState((current) => {
         if (current.isMapOpen) {
           return { ...current, isMapOpen: false }
+        }
+
+        if (current.isPackOpen) {
+          return { ...current, isPackOpen: false }
         }
 
         return { ...current, isMenuOpen: !current.isMenuOpen }
@@ -74,6 +106,19 @@ export function GameUiApp({ commands, initialSettings }: GameUiAppProps) {
 
   const setMenuOpen = (isMenuOpen: boolean): void => {
     setState((current) => ({ ...current, isMenuOpen }))
+  }
+
+  const setPackOpen = (isPackOpen: boolean): void => {
+    setState((current) => ({ ...current, isPackOpen }))
+  }
+
+  const selectInventoryItem = (itemId: string): void => {
+    commands.onInventoryItemSelected(itemId)
+    setState((current) => ({
+      ...current,
+      inventoryItems: commands.getInventoryItems(),
+      selectedItem: commands.getSelectedInventoryItem(),
+    }))
   }
 
   const setSettings = (settings: GameSettings): void => {
@@ -115,6 +160,9 @@ export function GameUiApp({ commands, initialSettings }: GameUiAppProps) {
         headingDegrees={state.headingDegrees}
         onMapOpen={() => setMapOpen(true)}
         onMenuOpen={() => setMenuOpen(true)}
+        onPackOpen={() => setPackOpen(true)}
+        onSelectedItemUsed={commands.onSelectedItemUsed}
+        selectedItemName={state.selectedItem?.name ?? null}
       />
       {state.isMapOpen ? (
         <MapModal
@@ -125,6 +173,14 @@ export function GameUiApp({ commands, initialSettings }: GameUiAppProps) {
           playerX={commands.getMapPosition().x}
           playerZ={commands.getMapPosition().z}
           worldBounds={commands.getWorldBounds()}
+        />
+      ) : null}
+      {state.isPackOpen ? (
+        <PackModal
+          items={state.inventoryItems}
+          onClose={() => setPackOpen(false)}
+          onItemSelected={selectInventoryItem}
+          selectedItemId={state.selectedItem?.id ?? null}
         />
       ) : null}
       <InGameMenu

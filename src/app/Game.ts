@@ -30,6 +30,7 @@ export class Game {
   private _player: PlayerController | null = null
   private _time: TimeOfDaySystem | null = null
   private _mapDrawings: readonly MapDrawing[] = []
+  private _inventory: InventorySystem | null = null
 
   public constructor(
     private readonly _canvas: HTMLCanvasElement,
@@ -84,6 +85,8 @@ export class Game {
     const lighting = new LightingController(this._context, time)
     const flashlight = new FlashlightController(this._context, player)
     const inventory = new InventorySystem(createCoreBackpack(flashlight))
+
+    this._inventory = inventory
     const debug = new DebugOverlay(player, time, {
       createNewWorld: () => this._createNewWorld(chunkRepository),
       getChunkBoundariesDebugEnabled: () => terrain.chunkBoundariesDebugEnabled,
@@ -193,6 +196,40 @@ export class Game {
     }
   }
 
+  public getInventoryItems(): readonly {
+    readonly id: string
+    readonly name: string
+    readonly description: string
+    readonly category: "supply" | "tool"
+    readonly consumable: boolean
+    readonly maxQuantity: number
+    readonly quantity: number
+  }[] {
+    return this._inventory?.items.map((item) => ({
+      id: item.id,
+      name: item.name,
+      description: item.description,
+      category: item.category,
+      consumable: item.consumable,
+      maxQuantity: item.maxQuantity,
+      quantity: item.quantity,
+    })) ?? []
+  }
+
+  public getSelectedInventoryItem(): { readonly id: string; readonly name: string } | null {
+    const selected = this._inventory?.items.find((item) => item.id === this._inventory?.selectedItemId)
+
+    return selected ? { id: selected.id, name: selected.name } : null
+  }
+
+  public selectInventoryItem(itemId: string): void {
+    this._inventory?.selectItem(itemId)
+  }
+
+  public useSelectedInventoryItem(): string {
+    return this._inventory?.useSelectedItem() ?? "No item selected."
+  }
+
   public getSurvivalStatus(): { readonly fatigue: number; readonly hunger: number; readonly thirst: number } {
     return {
       fatigue: 0.72,
@@ -243,6 +280,7 @@ export class Game {
     this._systems.length = 0
     this._player = null
     this._time = null
+    this._inventory = null
     this._context?.engine.dispose()
     this._context = null
   }

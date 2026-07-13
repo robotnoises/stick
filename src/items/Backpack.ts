@@ -22,12 +22,36 @@ export class Backpack {
     return this.getItem(this._selectedItemId)
   }
 
-  public addItem(item: Item): void {
+  public addItem(item: Item, quantity = item.quantity): void {
+    const existingItem = this.getItem(item.id)
+
+    if (existingItem) {
+      existingItem.quantity = Math.min(existingItem.quantity + quantity, existingItem.maxQuantity)
+      return
+    }
+
+    item.quantity = Math.min(Math.max(quantity, 0), item.maxQuantity)
     this._items.set(item.id, item)
   }
 
   public getItem(id: string): Item | null {
     return this._items.get(id) ?? null
+  }
+
+  public removeItemQuantity(id: string, quantity = 1): boolean {
+    const item = this.getItem(id)
+
+    if (!item || quantity <= 0 || item.quantity < quantity) {
+      return false
+    }
+
+    item.quantity -= quantity
+
+    if (item.quantity <= 0) {
+      return this.discardItem(id)
+    }
+
+    return true
   }
 
   public selectItem(id: string): boolean {
