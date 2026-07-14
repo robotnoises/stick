@@ -1,5 +1,6 @@
 import { PointLight } from "@babylonjs/core/Lights/pointLight"
 import { SpotLight } from "@babylonjs/core/Lights/spotLight"
+import { Material } from "@babylonjs/core/Materials/material"
 import { Color3 } from "@babylonjs/core/Maths/math.color"
 import type { Vector3 } from "@babylonjs/core/Maths/math.vector"
 import type { EngineContext } from "../app/EngineContext"
@@ -63,14 +64,21 @@ export class FlashlightController implements GameSystem, FlashlightUseAction {
     this._light.specular = new Color3(0.7, 0.72, 0.62)
     this._light.range = FlashlightController._rangeMeters
     this._light.intensity = 0
+    this._light.shadowEnabled = false
+    this._light.renderPriority = 20_000
     this._spillLight.diffuse = new Color3(0.62, 0.68, 0.58)
     this._spillLight.specular = new Color3(0.25, 0.28, 0.22)
     this._spillLight.range = FlashlightController._spillRangeMeters
     this._spillLight.intensity = 0
+    this._spillLight.shadowEnabled = false
+    this._spillLight.renderPriority = 19_999
     this._fillLight.diffuse = new Color3(0.48, 0.52, 0.43)
     this._fillLight.specular = new Color3(0.12, 0.13, 0.1)
     this._fillLight.range = FlashlightController._fillRangeMeters
     this._fillLight.intensity = 0
+    this._fillLight.shadowEnabled = false
+    this._fillLight.renderPriority = 19_998
+    this._setLightsEnabled(false)
   }
 
   public get enabled(): boolean {
@@ -88,10 +96,12 @@ export class FlashlightController implements GameSystem, FlashlightUseAction {
 
   public setEnabled(enabled: boolean): void {
     this._enabled = enabled
+    this._setLightsEnabled(enabled)
     this._light.intensity = enabled ? FlashlightController._enabledIntensity : 0
     this._spillLight.intensity = enabled ? FlashlightController._spillIntensity : 0
     this._fillLight.intensity = enabled ? FlashlightController._fillIntensity : 0
     this._updateLightTransform()
+    this._refreshSceneLighting()
   }
 
   public update(_deltaSeconds: number): void {
@@ -102,6 +112,25 @@ export class FlashlightController implements GameSystem, FlashlightUseAction {
     this._light.dispose()
     this._spillLight.dispose()
     this._fillLight.dispose()
+  }
+
+  private _setLightsEnabled(enabled: boolean): void {
+    this._light.setEnabled(enabled)
+    this._spillLight.setEnabled(enabled)
+    this._fillLight.setEnabled(enabled)
+  }
+
+  private _refreshSceneLighting(): void {
+    this._context.scene.requireLightSorting = true
+    this._context.scene.sortLightsByPriority()
+
+    for (const mesh of this._context.scene.meshes) {
+      ;(mesh as unknown as { _resyncLightSources?: () => void })._resyncLightSources?.()
+      mesh.material?.markAsDirty(Material.LightDirtyFlag)
+    }
+
+    this._context.scene.markAllMaterialsAsDirty(Material.LightDirtyFlag)
+    this._context.scene.resetCachedMaterial()
   }
 
   private _updateLightTransform(): void {

@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <defs>
+    <radialGradient id="baseGlow" cx="50%" cy="92%" r="70%">
+      <stop offset="0" stop-color="#fff8bc"/>
+      <stop offset="0.17" stop-color="#ffd33f"/>
+      <stop offset="0.36" stop-color="#ff7a08"/>
+      <stop offset="0.62" stop-color="#c92302"/>
+      <stop offset="1" stop-color="#210100"/>
+    </radialGradient>
+    <linearGradient id="hotCore" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0" stop-color="#fffbd0"/>
+      <stop offset="0.38" stop-color="#ffe24c"/>
+      <stop offset="0.72" stop-color="#ff7c08"/>
+      <stop offset="1" stop-color="#4b0300"/>
+    </linearGradient>
+    <filter id="campfireWarp" x="-18%" y="-18%" width="136%" height="136%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.04 0.18" numOctaves="4" seed="29"/>
+      <feDisplacementMap in="SourceGraphic" scale="10" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+  </defs>
+  <rect width="256" height="256" fill="#120000"/>
+  <g filter="url(#campfireWarp)">
+    <ellipse cx="128" cy="228" rx="110" ry="36" fill="#ff5206" opacity="0.95"/>
+    <path d="M31 236 C50 190 86 174 75 123 C103 136 106 86 130 31 C153 87 151 125 184 108 C171 162 217 193 225 236 Z" fill="url(#baseGlow)"/>
+    <path d="M78 237 C90 197 116 184 107 143 C128 154 128 105 145 65 C156 119 179 156 180 237 Z" fill="url(#hotCore)" opacity="0.9"/>
+    <path d="M113 237 C121 206 136 194 132 160 C146 170 150 125 158 98 C170 150 177 185 172 237 Z" fill="#fff3a3" opacity="0.56"/>
+  </g>
+</svg>

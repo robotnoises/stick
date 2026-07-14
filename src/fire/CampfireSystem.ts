@@ -70,9 +70,7 @@ export class CampfireSystem implements GameSystem {
       fire.remainingBurnSeconds -= worldDeltaSeconds
 
       if (fire.remainingBurnSeconds <= 0) {
-        fire.visual.light.dispose()
-        fire.visual.spillLight.dispose()
-        fire.visual.root.dispose(false, true)
+        this._disposeFireVisual(fire)
         this._fires.splice(index, 1)
         continue
       }
@@ -83,9 +81,7 @@ export class CampfireSystem implements GameSystem {
 
   public dispose(): void {
     for (const fire of this._fires) {
-      fire.visual.light.dispose()
-      fire.visual.spillLight.dispose()
-      fire.visual.root.dispose(false, true)
+      this._disposeFireVisual(fire)
     }
 
     this._fires.length = 0
@@ -99,18 +95,37 @@ export class CampfireSystem implements GameSystem {
       Math.sin(fire.flickerSeed) * 0.08 +
       Math.sin(fire.flickerSeed * 2.41 + 1.7) * 0.05 +
       Math.random() * 0.035
-    const intensity = 8.5 + flicker * 3.5
+    const intensity = 68 + flicker * 12
 
-    fire.visual.light.intensity = Math.max(5, intensity)
-    fire.visual.spillLight.intensity = Math.max(2.8, intensity * 0.55)
+    fire.visual.light.intensity = Math.max(52, intensity)
+    fire.visual.spillLight.intensity = Math.max(14, intensity * 0.3)
+
+    fire.visual.fillLights.forEach((fillLight, index) => {
+      const fillFlicker =
+        Math.sin(fire.flickerSeed * (0.82 + index * 0.09) + index * 1.6) * 0.1 +
+        Math.sin(fire.flickerSeed * 1.9 + index) * 0.05
+
+      fillLight.intensity = Math.max(24, 32 + fillFlicker * 12)
+    })
 
     fire.visual.flameMeshes.forEach((mesh, index) => {
       const pulse = 1 + Math.sin(fire.flickerSeed * (1.1 + index * 0.07) + index) * 0.08
       const stretch = 1 + Math.sin(fire.flickerSeed * 1.7 + index * 0.9) * 0.1
 
-      mesh.scaling.x = (index % 2 === 0 ? 0.1 : 0.055) * pulse
-      mesh.scaling.y = (index % 2 === 0 ? 0.7 : 0.5) * stretch
-      mesh.visibility = 0.78 + Math.sin(fire.flickerSeed * 1.3 + index) * 0.12
+      mesh.scaling.x = pulse
+      mesh.scaling.y = stretch
+      mesh.visibility = 0.82 + Math.sin(fire.flickerSeed * 1.3 + index) * 0.08
     })
+  }
+
+  private _disposeFireVisual(fire: CampfireInstance): void {
+    fire.visual.light.dispose()
+
+    for (const fillLight of fire.visual.fillLights) {
+      fillLight.dispose()
+    }
+
+    fire.visual.spillLight.dispose()
+    fire.visual.root.dispose(false, true)
   }
 }

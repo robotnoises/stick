@@ -7,6 +7,7 @@ export interface CampfireVisual {
   readonly root: TransformNode
   readonly flameMeshes: readonly Mesh[]
   readonly light: PointLight
+  readonly fillLights: readonly PointLight[]
   readonly spillLight: SpotLight
 }
 

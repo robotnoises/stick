@@ -52,6 +52,8 @@ export class FireflyMeshFactory {
     light.specular = new Color3(0.2, 0.45, 0.05)
     light.range = 5.2 * scale
     light.intensity = 0
+    light.shadowEnabled = false
+    light.renderPriority = -10_000
 
     body.material = bodyMaterial
     body.position = position.clone()
@@ -63,6 +65,7 @@ export class FireflyMeshFactory {
     halo.isPickable = false
     halo.alwaysSelectAsActiveMesh = true
     halo.billboardMode = Mesh.BILLBOARDMODE_ALL
+    light.includedOnlyMeshes.push(body, halo)
 
     return { body, halo, light, bodyMaterial, haloMaterial, scale }
   }
