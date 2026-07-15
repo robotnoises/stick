@@ -21,6 +21,9 @@ export interface FireflySpawnerOptions {
 }
 
 export class FireflySpawner {
+  private static readonly _maxWorldLightingFireflies = 3
+  private static readonly _worldLightingRadiusMeters = 18
+
   private readonly _fireflies = new Map<string, FireflyController>()
   private readonly _meshFactory: FireflyMeshFactory
   private _maxFireflies: number
@@ -50,6 +53,8 @@ export class FireflySpawner {
     for (const firefly of this._fireflies.values()) {
       firefly.update(deltaSeconds)
     }
+
+    this._updateWorldLightingFireflies()
   }
 
   public dispose(): void {
@@ -105,6 +110,47 @@ export class FireflySpawner {
     const hour = ((this._options.timeProvider.timeOfDayHours % 24) + 24) % 24
 
     return hour >= 18 || hour < 4
+  }
+
+  private _updateWorldLightingFireflies(): void {
+    const shouldSuppressWorldLighting = this._hasCompetingRuntimeLight()
+    const playerPosition = this._options.player.position
+    const firefliesByDistance = [...this._fireflies.values()]
+      .map((firefly) => {
+        const position = firefly.position
+        const distance = Math.hypot(position.x - playerPosition.x, position.z - playerPosition.z)
+
+        return { firefly, distance }
+      })
+      .sort((a, b) => a.distance - b.distance)
+
+    const worldLightingFireflies = new Set(
+      shouldSuppressWorldLighting
+        ? []
+        : firefliesByDistance
+            .filter(({ distance }) => distance <= FireflySpawner._worldLightingRadiusMeters)
+            .slice(0, FireflySpawner._maxWorldLightingFireflies)
+            .map(({ firefly }) => firefly),
+    )
+    let changed = false
+
+    for (const firefly of this._fireflies.values()) {
+      changed = firefly.setWorldLightingEnabled(worldLightingFireflies.has(firefly)) || changed
+    }
+
+    if (changed) {
+      this._options.context.scene.resetCachedMaterial()
+    }
+  }
+
+  private _hasCompetingRuntimeLight(): boolean {
+    return this._options.context.scene.lights.some((light) => {
+      if (!light.isEnabled() || light.intensity <= 0.01) {
+        return false
+      }
+
+      return light.name.startsWith("medium-campfire-") || light.name.startsWith("solar-flashlight-")
+    })
   }
 
   private _disposeDistant(): void {

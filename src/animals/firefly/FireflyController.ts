@@ -32,6 +32,7 @@ export class FireflyController {
   private _elapsedSeconds = 0
   private _targetAgeSeconds = 0
   private _phase: number
+  private _worldLightingEnabled = false
 
   public constructor(private readonly _options: FireflyControllerOptions) {
     this._body = this._options.visual.body
@@ -51,6 +52,17 @@ export class FireflyController {
 
   public get position(): Vector3 {
     return this._position.clone()
+  }
+
+  public setWorldLightingEnabled(enabled: boolean): boolean {
+    if (this._worldLightingEnabled === enabled) {
+      return false
+    }
+
+    this._worldLightingEnabled = enabled
+    this._light.includedOnlyMeshes = enabled ? [] : [this._body, this._halo]
+
+    return true
   }
 
   public update(deltaSeconds: number): void {
@@ -107,14 +119,16 @@ export class FireflyController {
 
     this._body.position = this._position.clone()
     this._body.visibility = pulse * 0.5
-    this._body.scaling = new Vector3(0.75 + pulse * 0.8, 0.75 + pulse * 0.8, 0.75 + pulse * 0.8).scale(
-      this._scale,
-    )
+    this._body.scaling = new Vector3(
+      0.75 + pulse * 0.8,
+      0.75 + pulse * 0.8,
+      0.75 + pulse * 0.8,
+    ).scale(this._scale)
     this._halo.position = this._position.clone()
     this._halo.visibility = pulse * 0.52
     this._halo.scaling = new Vector3(0.8 + pulse * 0.45, 0.8 + pulse * 0.45, 0.8 + pulse * 0.45)
     this._light.position = this._position.clone()
-    this._light.intensity = pulse * 0.38
+    this._light.intensity = pulse * (this._worldLightingEnabled ? 0.7 : 0.38)
   }
 
   private _smoothStep(edge0: number, edge1: number, value: number): number {

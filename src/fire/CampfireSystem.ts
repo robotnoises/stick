@@ -95,17 +95,17 @@ export class CampfireSystem implements GameSystem {
       Math.sin(fire.flickerSeed) * 0.08 +
       Math.sin(fire.flickerSeed * 2.41 + 1.7) * 0.05 +
       Math.random() * 0.035
-    const intensity = 68 + flicker * 12
+    const intensity = 18 + flicker * 4
 
-    fire.visual.light.intensity = Math.max(52, intensity)
-    fire.visual.spillLight.intensity = Math.max(14, intensity * 0.3)
+    fire.visual.light.intensity = Math.max(12, intensity)
+    fire.visual.spillLight.intensity = Math.max(1.8, intensity * 0.18)
 
     fire.visual.fillLights.forEach((fillLight, index) => {
       const fillFlicker =
         Math.sin(fire.flickerSeed * (0.82 + index * 0.09) + index * 1.6) * 0.1 +
         Math.sin(fire.flickerSeed * 1.9 + index) * 0.05
 
-      fillLight.intensity = Math.max(24, 32 + fillFlicker * 12)
+      fillLight.intensity = Math.max(4, 7 + fillFlicker * 3)
     })
 
     fire.visual.flameMeshes.forEach((mesh, index) => {

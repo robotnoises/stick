@@ -26,12 +26,12 @@ export class CampfireMeshFactory {
 
   public constructor(private readonly _scene: Scene) {
     this._woodMaterial = new StandardMaterial("campfire-wood-material", this._scene)
-    this._woodMaterial.diffuseColor = new Color3(0.28, 0.15, 0.08)
+    this._woodMaterial.diffuseColor = new Color3(0.075, 0.04, 0.024)
     this._woodMaterial.specularColor = Color3.Black()
     this._woodMaterial.maxSimultaneousLights = 8
 
     this._charMaterial = new StandardMaterial("campfire-char-material", this._scene)
-    this._charMaterial.diffuseColor = new Color3(0.045, 0.035, 0.028)
+    this._charMaterial.diffuseColor = new Color3(0.012, 0.01, 0.009)
     this._charMaterial.specularColor = Color3.Black()
     this._charMaterial.maxSimultaneousLights = 8
 
@@ -51,7 +51,6 @@ export class CampfireMeshFactory {
     this._emberMaterial.diffuseColor = Color3.Black()
     this._emberMaterial.emissiveColor = new Color3(1, 0.18, 0.035)
     this._emberMaterial.disableLighting = true
-
   }
 
   public createMediumFire(position: Vector3): CampfireVisual {
@@ -68,17 +67,10 @@ export class CampfireMeshFactory {
       position.add(new Vector3(0, 1.05, 0)),
       this._scene,
     )
-    const fillLightOffsets = [
-      new Vector3(1.7, 0.72, 0.9),
-      new Vector3(-1.2, 0.64, -1.35),
-    ]
+    const fillLightOffsets = [new Vector3(1.7, 0.72, 0.9), new Vector3(-1.2, 0.64, -1.35)]
     const fillLights = fillLightOffsets.map(
       (offset, index) =>
-        new PointLight(
-          `medium-campfire-warm-fill-${index}`,
-          position.add(offset),
-          this._scene,
-        ),
+        new PointLight(`medium-campfire-warm-fill-${index}`, position.add(offset), this._scene),
     )
     const spillLight = new SpotLight(
       "medium-campfire-ground-spill",
@@ -89,28 +81,38 @@ export class CampfireMeshFactory {
       this._scene,
     )
 
-    light.diffuse = new Color3(1, 0.5, 0.18)
-    light.specular = new Color3(1, 0.35, 0.12)
+    light.diffuse = new Color3(1, 0.2, 0.035)
+    light.specular = Color3.Black()
     light.shadowEnabled = false
-    light.intensity = 68
-    light.range = 40
+    light.intensity = 18
+    light.range = 16
     light.renderPriority = 10_000
 
     fillLights.forEach((fillLight, index) => {
-      fillLight.diffuse = new Color3(1, 0.42, 0.13)
-      fillLight.specular = new Color3(0.45, 0.16, 0.05)
+      fillLight.diffuse = new Color3(1, 0.16, 0.025)
+      fillLight.specular = Color3.Black()
       fillLight.shadowEnabled = false
-      fillLight.intensity = 32
-      fillLight.range = 32
+      fillLight.intensity = 7
+      fillLight.range = 11
       fillLight.renderPriority = 10_010 + index
     })
 
-    spillLight.diffuse = new Color3(1, 0.42, 0.12)
-    spillLight.specular = new Color3(0.6, 0.18, 0.04)
+    spillLight.diffuse = new Color3(1, 0.14, 0.02)
+    spillLight.specular = Color3.Black()
     spillLight.shadowEnabled = false
-    spillLight.intensity = 20
-    spillLight.range = 34
+    spillLight.intensity = 3.5
+    spillLight.range = 10
     spillLight.renderPriority = 10_001
+
+    const logMeshes = root.getChildMeshes().filter((mesh) => mesh.name.startsWith("campfire-stick-"))
+
+    light.excludedMeshes.push(...logMeshes)
+    spillLight.excludedMeshes.push(...logMeshes)
+
+    for (const fillLight of fillLights) {
+      fillLight.excludedMeshes.push(...logMeshes)
+    }
+
     this._refreshSceneLighting()
 
     window.setTimeout(() => this._refreshSceneLighting(), 0)
@@ -210,9 +212,9 @@ export class CampfireMeshFactory {
   private _createFlames(root: TransformNode): Mesh[] {
     const flames: Mesh[] = []
     const flameSpecs = [
-      { width: 0.96, height: 0.64, y: 0.38, rotation: 0 },
-      { width: 0.78, height: 0.56, y: 0.34, rotation: Math.PI / 3 },
-      { width: 0.7, height: 0.5, y: 0.31, rotation: -Math.PI / 3 },
+      { width: 0.86, height: 0.58, y: 0.34, rotation: 0 },
+      { width: 0.7, height: 0.5, y: 0.31, rotation: Math.PI / 3 },
+      { width: 0.62, height: 0.46, y: 0.28, rotation: -Math.PI / 3 },
     ] as const
 
     flameSpecs.forEach((spec, index) => {
@@ -234,15 +236,15 @@ export class CampfireMeshFactory {
       const angle = (index / 5) * Math.PI
       const outer = this._createFlameLeaf(
         `campfire-flame-fallback-outer-${index}`,
-        0.42 + (index % 2) * 0.05,
-        0.42 + (index % 3) * 0.045,
+        0.34 + (index % 2) * 0.045,
+        0.38 + (index % 3) * 0.04,
         0.08,
         index * 0.37,
       )
       const inner = this._createFlameLeaf(
         `campfire-flame-fallback-inner-${index}`,
-        0.23 + (index % 2) * 0.03,
-        0.29 + (index % 3) * 0.035,
+        0.18 + (index % 2) * 0.025,
+        0.26 + (index % 3) * 0.03,
         0.045,
         index * 0.53 + 2,
       )
@@ -299,7 +301,8 @@ export class CampfireMeshFactory {
       const t = step / sideSteps
       const y = height * t
       const taper = Math.pow(Math.sin((1 - t) * Math.PI * 0.92), 1.35)
-      const lick = Math.sin(seed + 1.7 + t * Math.PI * 2.7) * 0.14 + Math.sin(seed * 1.6 + t * 8.1) * 0.07
+      const lick =
+        Math.sin(seed + 1.7 + t * Math.PI * 2.7) * 0.14 + Math.sin(seed * 1.6 + t * 8.1) * 0.07
       const x = (-width * (0.02 + taper * 0.98) * (1 + lick)) / 2
       const z = -sway * Math.sin(seed * 0.7 + t * Math.PI * 1.6) * t
       const alpha = Math.max(0, 0.68 * Math.pow(1 - t, 1.45))
