@@ -11,6 +11,7 @@ import foliage006ColorUrl from "../../../assets/exported/textures/terrain/foliag
 import foliage006OpacityUrl from "../../../assets/exported/textures/terrain/foliage006-opacity.png?url"
 import grass005ColorUrl from "../../../assets/exported/textures/terrain/grass005-color.png?url"
 import ground048ColorUrl from "../../../assets/exported/textures/terrain/ground048-color.png?url"
+import riverBedColorUrl from "../../../assets/exported/textures/terrain/river-bed-color-512.png?url"
 import rock064ColorUrl from "../../../assets/exported/textures/terrain/rock064-color.png?url"
 import pineNeedleClusterUrl from "../../../assets/exported/textures/props/pine-needle-cluster.png?url"
 import pineNeedleLitterUrl from "../../../assets/exported/textures/props/pine-needle-litter.png?url"
@@ -43,6 +44,10 @@ export class ChunkMaterialFactory {
       "progressive-pine-needles-terrain-material",
       this._context.scene,
     )
+    const riverBedTerrain = new StandardMaterial(
+      "progressive-river-bed-terrain-material",
+      this._context.scene,
+    )
     const trunk = new StandardMaterial("progressive-pine-trunk-material", this._context.scene)
     const deadWood = new StandardMaterial("progressive-dead-wood-material", this._context.scene)
     const needles = new StandardMaterial("progressive-pine-needles-material", this._context.scene)
@@ -54,7 +59,10 @@ export class ChunkMaterialFactory {
       "progressive-pine-needle-litter-material",
       this._context.scene,
     )
-    const grassFoliage = new StandardMaterial("progressive-grass-foliage-material", this._context.scene)
+    const grassFoliage = new StandardMaterial(
+      "progressive-grass-foliage-material",
+      this._context.scene,
+    )
     const rock = new StandardMaterial("progressive-rock-material", this._context.scene)
     const water = new StandardMaterial("progressive-water-material", this._context.scene)
 
@@ -70,6 +78,7 @@ export class ChunkMaterialFactory {
       ground048ColorUrl,
       new Color3(0.48, 0.38, 0.24),
     )
+    this._configureTerrainMaterial(riverBedTerrain, riverBedColorUrl, new Color3(0.7, 0.64, 0.55))
     this._configureTexturedMaterial(trunk, bark014ColorUrl, 1, new Color3(0.8, 0.72, 0.62))
     this._configureTexturedMaterial(deadWood, bark006ColorUrl, 1.5, new Color3(0.6, 0.46, 0.32))
     this._configureTexturedMaterial(rock, rock064ColorUrl, 2, new Color3(0.82, 0.86, 0.86))
@@ -126,15 +135,15 @@ export class ChunkMaterialFactory {
 
     waterTexture.uScale = 1.2
     waterTexture.vScale = 1.2
-    waterTexture.level = 0.24
+    waterTexture.level = 0.18
 
     water.emissiveTexture = waterTexture
-    water.diffuseColor = new Color3(0.08, 0.22, 0.38)
-    water.emissiveColor = new Color3(0.035, 0.1, 0.14)
-    water.specularColor = new Color3(1.35, 1.3, 1.12)
+    water.diffuseColor = new Color3(0.045, 0.11, 0.16)
+    water.emissiveColor = new Color3(0.018, 0.045, 0.055)
+    water.specularColor = new Color3(0.92, 1.02, 0.98)
     water.specularPower = 48
     water.roughness = 0.08
-    water.alpha = 0.38
+    water.alpha = 0.54
     water.useSpecularOverAlpha = true
     water.transparencyMode = Material.MATERIAL_ALPHABLEND
     water.backFaceCulling = false
@@ -150,7 +159,7 @@ export class ChunkMaterialFactory {
 
     return {
       materials: {
-        terrain: [grassTerrain, dirtTerrain, sandTerrain, pineNeedlesTerrain],
+        terrain: [grassTerrain, dirtTerrain, sandTerrain, pineNeedlesTerrain, riverBedTerrain],
         trunk,
         deadWood,
         needles,

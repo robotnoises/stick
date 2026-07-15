@@ -5,6 +5,7 @@ export const TerrainMaterial = {
   Dirt: 1,
   Sand: 2,
   PineNeedles: 3,
+  RiverBed: 4,
 } as const
 
 export type TerrainMaterialId = (typeof TerrainMaterial)[keyof typeof TerrainMaterial]

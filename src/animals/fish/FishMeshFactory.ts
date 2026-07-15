@@ -20,8 +20,9 @@ export class FishMeshFactory {
   public createFish(id: string, position: Vector3, scale: number): FishVisual {
     const material = new StandardMaterial(`${id}_material`, this._context.scene)
 
-    material.diffuseColor = new Color3(0.5, 0.68, 0.58)
-    material.specularColor = new Color3(0.12, 0.14, 0.12)
+    material.diffuseColor = new Color3(0.045, 0.13, 0.17)
+    material.specularColor = new Color3(0.11, 0.17, 0.19)
+    material.specularPower = 34
     material.backFaceCulling = false
 
     const body = MeshBuilder.CreateSphere(

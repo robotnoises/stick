@@ -24,7 +24,7 @@ interface ForestComposition {
 }
 
 export class TerrainGenerator {
-  public static readonly version = 2
+  public static readonly version = 3
 
   public constructor(private readonly _options: TerrainGeneratorOptions) {}
 
@@ -88,7 +88,11 @@ export class TerrainGenerator {
   ): TerrainMaterialId {
     const water = this._options.worldFeatures?.sample(worldX, worldZ).water
 
-    if (water?.isUnderWater || water?.isShore) {
+    if (water?.isUnderWater) {
+      return TerrainMaterial.RiverBed
+    }
+
+    if (water?.isShore) {
       return TerrainMaterial.Sand
     }
 

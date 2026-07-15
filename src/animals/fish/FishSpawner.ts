@@ -84,7 +84,7 @@ export class FishSpawner {
 
       const fishId = `fish_runtime_${this._nextId}`
       const y = column.bedY + column.depthMeters * (0.35 + this._options.random() * 0.3)
-      const scale = 0.55 + this._options.random() * 0.55
+      const scale = 0.35 + this._options.random() * 0.35
       const position = new Vector3(candidate.x, y, candidate.z)
       const visual = this._meshFactory.createFish(fishId, position, scale)
       const fish = new FishController({

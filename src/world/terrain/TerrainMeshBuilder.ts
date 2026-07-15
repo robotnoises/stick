@@ -17,7 +17,7 @@ export class TerrainMeshBuilder {
     const mesh = new Mesh(`terrain_${this._data.key}`, this._context.scene)
     const vertexData = new VertexData()
     const positions: number[] = []
-    const materialIndices: number[][] = [[], [], [], []]
+    const materialIndices: number[][] = this._materials.terrain.map(() => [])
     const indices: number[] = []
     const normals: number[] = []
     const uvs: number[] = []
@@ -131,6 +131,8 @@ export class TerrainMeshBuilder {
         return this._varyColor([0.63, 0.56, 0.39], noise, 0.045)
       case TerrainMaterial.PineNeedles:
         return this._varyColor([0.24, 0.21, 0.12], noise, 0.1)
+      case TerrainMaterial.RiverBed:
+        return this._varyColor([0.22, 0.19, 0.15], noise, 0.08)
       case TerrainMaterial.Grass:
       default:
         return this._varyGrassColor(noise)
