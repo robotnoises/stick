@@ -132,7 +132,7 @@ export class TerrainMeshBuilder {
       case TerrainMaterial.PineNeedles:
         return this._varyColor([0.24, 0.21, 0.12], noise, 0.1)
       case TerrainMaterial.RiverBed:
-        return this._varyColor([0.22, 0.19, 0.15], noise, 0.08)
+        return this._varyColor([0.48, 0.42, 0.32], noise, 0.06)
       case TerrainMaterial.Grass:
       default:
         return this._varyGrassColor(noise)

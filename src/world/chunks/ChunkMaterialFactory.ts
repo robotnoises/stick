@@ -78,7 +78,7 @@ export class ChunkMaterialFactory {
       ground048ColorUrl,
       new Color3(0.48, 0.38, 0.24),
     )
-    this._configureTerrainMaterial(riverBedTerrain, riverBedColorUrl, new Color3(0.7, 0.64, 0.55))
+    this._configureTerrainMaterial(riverBedTerrain, riverBedColorUrl, new Color3(0.95, 0.88, 0.74))
     this._configureTexturedMaterial(trunk, bark014ColorUrl, 1, new Color3(0.8, 0.72, 0.62))
     this._configureTexturedMaterial(deadWood, bark006ColorUrl, 1.5, new Color3(0.6, 0.46, 0.32))
     this._configureTexturedMaterial(rock, rock064ColorUrl, 2, new Color3(0.82, 0.86, 0.86))
