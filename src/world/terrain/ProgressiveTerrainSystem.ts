@@ -74,6 +74,10 @@ export class ProgressiveTerrainSystem implements GameSystem {
     return this._chunkManager.getHeightAt(worldX, worldZ)
   }
 
+  public resolvePlayerCollision(worldX: number, worldZ: number): { readonly x: number; readonly z: number } {
+    return this._chunkManager.resolvePlayerCollision(worldX, worldZ)
+  }
+
   public getStreamingDebugStats(): TerrainStreamingDebugStats {
     return this._chunkManager.getDebugStats()
   }

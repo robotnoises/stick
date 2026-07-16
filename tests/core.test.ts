@@ -16,6 +16,7 @@ import { createCoreBackpack } from "../src/items/CoreItems"
 import { FlashlightController } from "../src/items/FlashlightController"
 import { InventorySystem } from "../src/items/InventorySystem"
 import type { Item, ItemUseResult } from "../src/items/Item"
+import { CollisionResolver } from "../src/physics/CollisionResolver"
 import { SolarFlashlightItem } from "../src/items/implementations/SolarFlashlightItem"
 import { Compass } from "../src/player/Compass"
 import { PlayerController } from "../src/player/PlayerController"
@@ -193,6 +194,22 @@ describe("player, compass, debug overlay, and time", () => {
     }
 
     expect(new Compass(camera as unknown).getHeadingDegrees()).toBeCloseTo(90)
+  })
+
+  it("resolves player collision against blocking terrain props", () => {
+    const props = createSmallChunkData().props
+
+    expect(CollisionResolver.resolvePointAgainstProps({ x: 0.5, z: 0.5 }, props).x).toBeGreaterThan(
+      1,
+    )
+    expect(CollisionResolver.resolvePointAgainstProps({ x: 0.5, z: 0.5 }, [])).toEqual({
+      x: 0.5,
+      z: 0.5,
+    })
+    expect(CollisionResolver.resolvePointAgainstProps({ x: 100, z: 100 }, props)).toEqual({
+      x: 100,
+      z: 100,
+    })
   })
 
   it("configures player controls and follows terrain height", () => {

@@ -11,6 +11,10 @@ export interface PlayerWaterSampler {
   sampleColumn(worldX: number, worldZ: number): WaterColumnSample
 }
 
+export interface PlayerCollisionResolver {
+  resolveHorizontalPosition(worldX: number, worldZ: number): { readonly x: number; readonly z: number }
+}
+
 export class PlayerController implements GameSystem {
   private static readonly _eyeHeightMeters = 1.7
   private static readonly _mouseSensitivity = 1 / 2800
@@ -26,6 +30,7 @@ export class PlayerController implements GameSystem {
   private _positionClampProvider:
     ((worldX: number, worldZ: number) => { readonly x: number; readonly z: number }) | null = null
   private _waterSampler: PlayerWaterSampler | null = null
+  private _collisionResolver: PlayerCollisionResolver | null = null
   private _waterState: PlayerWaterState = "grounded"
   private _waterDepthMeters = 0
   private _verticalVelocityMetersPerSecond = 0
@@ -94,6 +99,10 @@ export class PlayerController implements GameSystem {
     this._waterSampler = sampler
   }
 
+  public setCollisionResolver(resolver: PlayerCollisionResolver): void {
+    this._collisionResolver = resolver
+  }
+
   public setPosition(x: number, y: number, z: number): void {
     this._camera.position.set(x, y, z)
   }
@@ -111,6 +120,26 @@ export class PlayerController implements GameSystem {
     if (clampedPosition) {
       this._camera.position.x = clampedPosition.x
       this._camera.position.z = clampedPosition.z
+    }
+
+    const collisionResolvedPosition = this._collisionResolver?.resolveHorizontalPosition(
+      this._camera.position.x,
+      this._camera.position.z,
+    )
+
+    if (collisionResolvedPosition) {
+      this._camera.position.x = collisionResolvedPosition.x
+      this._camera.position.z = collisionResolvedPosition.z
+    }
+
+    const reclampedPosition = this._positionClampProvider?.(
+      this._camera.position.x,
+      this._camera.position.z,
+    )
+
+    if (reclampedPosition) {
+      this._camera.position.x = reclampedPosition.x
+      this._camera.position.z = reclampedPosition.z
     }
 
     const groundHeight =

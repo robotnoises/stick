@@ -67,6 +67,9 @@ export class Game {
     player.setInvertMouseY(this._settings.invertMouseY)
     player.setPositionClampProvider((worldX, worldZ) => worldBounds.clampPosition(worldX, worldZ))
     player.setGroundHeightProvider((worldX, worldZ) => terrain.getHeightAt(worldX, worldZ))
+    player.setCollisionResolver({
+      resolveHorizontalPosition: (worldX, worldZ) => terrain.resolvePlayerCollision(worldX, worldZ),
+    })
     await this._restoreSaveGame(player, time)
     this._player = player
 

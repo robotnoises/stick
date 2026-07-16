@@ -3,6 +3,7 @@ import { Mesh } from "@babylonjs/core/Meshes/mesh"
 import type { Scene } from "@babylonjs/core/scene"
 import type { EngineContext } from "../app/EngineContext"
 import type { WorldBounds } from "../app/GameConfig"
+import { CollisionResolver } from "../physics/CollisionResolver"
 import type { ChunkRepository, PersistedChunkData } from "../data/ChunkRepository"
 import { ChunkCoord } from "./ChunkCoord"
 import { ChunkBoundaryDebugRenderer } from "./chunks/ChunkBoundaryDebugRenderer"
@@ -167,6 +168,19 @@ export class ChunkManager {
 
     cached.lastUsed = Date.now()
     return this._sampleChunkHeight(cached.data, worldX, worldZ)
+  }
+
+  public resolvePlayerCollision(worldX: number, worldZ: number): { readonly x: number; readonly z: number } {
+    const nearbyProps = [...this._dataCache.values()].flatMap((cached) =>
+      cached.data.props.filter((prop) => {
+        const dx = prop.position[0] - worldX
+        const dz = prop.position[2] - worldZ
+
+        return dx * dx + dz * dz <= 16
+      }),
+    )
+
+    return CollisionResolver.resolvePointAgainstProps({ x: worldX, z: worldZ }, nearbyProps)
   }
 
   public dispose(): void {
