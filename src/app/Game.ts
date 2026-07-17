@@ -13,6 +13,7 @@ import { createCoreBackpack } from "../items/CoreItems"
 import { FlashlightController } from "../items/FlashlightController"
 import { InventorySystem } from "../items/InventorySystem"
 import { PlayerController } from "../player/PlayerController"
+import { MusicSystem } from "../sounds/MusicSystem"
 import { ProgressiveTerrainSystem } from "../world/terrain/ProgressiveTerrainSystem"
 import { WorldBoundsHelper } from "../world/WorldBounds"
 import { WorldFeatureGenerator } from "../world/generation/WorldFeatureGenerator"
@@ -32,6 +33,7 @@ export class Game {
   private _time: TimeOfDaySystem | null = null
   private _mapDrawings: readonly MapDrawing[] = []
   private _inventory: InventorySystem | null = null
+  private _music: MusicSystem | null = null
 
   public constructor(
     private readonly _canvas: HTMLCanvasElement,
@@ -92,8 +94,10 @@ export class Game {
     })
     const flashlight = new FlashlightController(this._context, player)
     const inventory = new InventorySystem(createCoreBackpack(flashlight))
+    const music = new MusicSystem(this._settings.musicEnabled)
 
     this._inventory = inventory
+    this._music = music
     const debug = new DebugOverlay(player, time, {
       createNewWorld: () => this._createNewWorld(chunkRepository),
       getChunkBoundariesDebugEnabled: () => terrain.chunkBoundariesDebugEnabled,
@@ -141,6 +145,7 @@ export class Game {
       campfires,
       flashlight,
       inventory,
+      music,
       debug,
     )
 
@@ -169,6 +174,7 @@ export class Game {
   public updateSettings(settings: GameSettings): void {
     this._settings = settings
     this._player?.setInvertMouseY(settings.invertMouseY)
+    this._music?.setEnabled(settings.musicEnabled)
   }
 
   public getPlayerHeadingDegrees(): number {
@@ -239,6 +245,15 @@ export class Game {
     return this._inventory?.useSelectedItem() ?? "No item selected."
   }
 
+  public getMusicEnabled(): boolean {
+    return this._music?.enabled ?? this._settings.musicEnabled
+  }
+
+  public setMusicEnabled(enabled: boolean): void {
+    this._settings = { ...this._settings, musicEnabled: enabled }
+    this._music?.setEnabled(enabled)
+  }
+
   public getSurvivalStatus(): { readonly fatigue: number; readonly hunger: number; readonly thirst: number } {
     return {
       fatigue: 0.72,
@@ -290,6 +305,7 @@ export class Game {
     this._player = null
     this._time = null
     this._inventory = null
+    this._music = null
     this._context?.engine.dispose()
     this._context = null
   }

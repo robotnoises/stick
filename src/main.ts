@@ -32,6 +32,7 @@ const ui = new GameUiController(uiRoot, settings, {
   getInventoryItems: () => game.getInventoryItems(),
   getMapDrawings: () => game.getMapDrawings(),
   getMapPosition: () => game.getMapPosition(),
+  getMusicEnabled: () => game.getMusicEnabled(),
   getSelectedInventoryItem: () => game.getSelectedInventoryItem(),
   getSurvivalStatus: () => game.getSurvivalStatus(),
   getWorldBounds: () => game.getWorldBounds(),
@@ -39,6 +40,11 @@ const ui = new GameUiController(uiRoot, settings, {
   onDebugVisibleChanged: (visible) => window.stick?.debug.show(visible),
   onInventoryItemSelected: (itemId) => game.selectInventoryItem(itemId),
   onMapDrawingsSaved: (drawings) => game.saveMapDrawings(drawings),
+  onMusicEnabledChanged: (enabled) => {
+    settings.musicEnabled = enabled
+    saveGameSettings(settings)
+    game.setMusicEnabled(enabled)
+  },
   onSaveGame: () => game.saveGame(),
   onSelectedItemUsed: () => {
     game.useSelectedInventoryItem()

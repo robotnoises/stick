@@ -1,9 +1,11 @@
 export interface GameSettings {
   invertMouseY: boolean
+  musicEnabled: boolean
 }
 
 export const defaultGameSettings: GameSettings = {
   invertMouseY: false,
+  musicEnabled: true,
 }
 
 const storageKey = "stick.settings"
@@ -20,6 +22,7 @@ export function loadGameSettings(): GameSettings {
 
     return {
       invertMouseY: parsed.invertMouseY ?? defaultGameSettings.invertMouseY,
+      musicEnabled: parsed.musicEnabled ?? defaultGameSettings.musicEnabled,
     }
   } catch {
     return { ...defaultGameSettings }

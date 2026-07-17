@@ -4,6 +4,7 @@ import { GameIndicators } from "./components/GameIndicators"
 import { Hud } from "./components/Hud"
 import { InGameMenu } from "./components/InGameMenu"
 import { MapModal } from "./components/MapModal"
+import { MusicToggle } from "./components/MusicToggle"
 import { PackModal } from "./components/PackModal"
 import type { GameUiCommands, GameUiState } from "./GameUiState"
 
@@ -18,6 +19,7 @@ export function GameUiApp({ commands, initialSettings }: GameUiAppProps) {
     isMenuOpen: false,
     isPackOpen: false,
     isSaving: false,
+    isMusicEnabled: commands.getMusicEnabled(),
     saveStatus: "",
     settings: initialSettings,
     headingDegrees: commands.getHeadingDegrees(),
@@ -33,6 +35,7 @@ export function GameUiApp({ commands, initialSettings }: GameUiAppProps) {
       const visible = commands.getDebugVisible()
       const headingDegrees = commands.getHeadingDegrees()
       const inventoryItems = commands.getInventoryItems()
+      const isMusicEnabled = commands.getMusicEnabled()
       const selectedItem = commands.getSelectedInventoryItem()
       const survivalStatus = commands.getSurvivalStatus()
       const worldTime = commands.getWorldTime()
@@ -41,6 +44,7 @@ export function GameUiApp({ commands, initialSettings }: GameUiAppProps) {
         current.isDebugVisible === visible &&
         Math.abs(current.headingDegrees - headingDegrees) < 0.1 &&
         current.inventoryItems === inventoryItems &&
+        current.isMusicEnabled === isMusicEnabled &&
         current.selectedItem?.id === selectedItem?.id &&
         Math.abs(current.survivalStatus.fatigue - survivalStatus.fatigue) < 0.01 &&
         Math.abs(current.survivalStatus.hunger - survivalStatus.hunger) < 0.01 &&
@@ -53,6 +57,7 @@ export function GameUiApp({ commands, initialSettings }: GameUiAppProps) {
               headingDegrees,
               inventoryItems,
               isDebugVisible: visible,
+              isMusicEnabled,
               selectedItem,
               survivalStatus,
               worldTime,
@@ -131,6 +136,16 @@ export function GameUiApp({ commands, initialSettings }: GameUiAppProps) {
     setState((current) => ({ ...current, isDebugVisible: visible }))
   }
 
+  const toggleMusic = (): void => {
+    setState((current) => {
+      const isMusicEnabled = !current.isMusicEnabled
+
+      commands.onMusicEnabledChanged(isMusicEnabled)
+
+      return { ...current, isMusicEnabled }
+    })
+  }
+
   const saveGame = (): void => {
     setState((current) => ({ ...current, isSaving: true, saveStatus: "Saving…" }))
     void commands
@@ -156,6 +171,7 @@ export function GameUiApp({ commands, initialSettings }: GameUiAppProps) {
         thirst={state.survivalStatus.thirst}
         timeOfDayHours={state.worldTime.timeOfDayHours}
       />
+      <MusicToggle enabled={state.isMusicEnabled} onToggle={toggleMusic} />
       <Hud
         headingDegrees={state.headingDegrees}
         onMapOpen={() => setMapOpen(true)}

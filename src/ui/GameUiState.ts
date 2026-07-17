@@ -42,6 +42,7 @@ export interface GameUiState {
   readonly isMenuOpen: boolean
   readonly isPackOpen: boolean
   readonly isSaving: boolean
+  readonly isMusicEnabled: boolean
   readonly saveStatus: string
   readonly settings: GameSettings
   readonly headingDegrees: number
@@ -58,12 +59,14 @@ export interface GameUiCommands {
   readonly onDebugVisibleChanged: (visible: boolean) => void
   readonly onInventoryItemSelected: (itemId: string) => void
   readonly onMapDrawingsSaved: (drawings: readonly MapDrawing[]) => Promise<void>
+  readonly onMusicEnabledChanged: (enabled: boolean) => void
   readonly onSelectedItemUsed: () => void
   readonly getDebugVisible: () => boolean
   readonly getHeadingDegrees: () => number
   readonly getInventoryItems: () => readonly GameUiInventoryItem[]
   readonly getMapDrawings: () => readonly MapDrawing[]
   readonly getMapPosition: () => GameUiMapPosition
+  readonly getMusicEnabled: () => boolean
   readonly getSelectedInventoryItem: () => GameUiSelectedItem | null
   readonly getSurvivalStatus: () => GameUiSurvivalStatus
   readonly getWorldBounds: () => WorldBounds
